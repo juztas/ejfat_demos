@@ -3,8 +3,8 @@ This is a repository of EJFAT demos.  They will largely require no external depe
 
 # Prerequisites
 
-#. [Install E2SAR](https://github.com/JeffersonLab/E2SAR)
+  #. [Install E2SAR](https://github.com/JeffersonLab/E2SAR)
 
-#. Obtain an EJFAT URI from the administrator of your target FPGA load balancer
+  #. Obtain an EJFAT URI from the administrator of your target FPGA load balancer
 
-#. Test connectivity using E2SAR's supplied validation checklist
+  #. Test connectivity using E2SAR's supplied validation checklist
