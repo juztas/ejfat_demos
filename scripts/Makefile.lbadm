@@ -14,7 +14,7 @@
 
 # --------select one of several ways to invoke lbadm  -------------------------------------------------
 
-E2SAR = /Users/yak/Projects/EJFAT/E2SAR/
+E2SAR ?= ~/Projects/EJFAT/E2SAR/
 LBADM = $(E2SAR)/build/bin/lbadm
 E2SAR_PERF = $(E2SAR)/build/bin/e2sar_perf
 
