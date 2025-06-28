@@ -1,9 +1,8 @@
 #!/bin/bash
 
 DEMO_ROOT=`git rev-parse --show-toplevel`
-echo $DEMO_ROOT
 
-make -f $DEMO_ROOT/scripts/Makefile.lbadm e2sar_perf E2SAR_PERF_OPTIONS='--recv --ip 127.0.0.1' EJFAT_SESSION_URI="ejfat://token@127.0.0.1:18020/lb/36?data=127.0.0.1:10000"
+make -f $DEMO_ROOT/scripts/Makefile.lbadm e2sar_perf E2SAR_PERF_OPTIONS='--recv' MY_IP='127.0.0.1' EJFAT_INSTANCE_URI="ejfat://token@127.0.0.1:18020/lb/36?data=127.0.0.1:10000"
 
 
 

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+DEMO_ROOT=`git rev-parse --show-toplevel`
+
+echo $EJFAT_IP_VERSION
+
+if [ -z "${EJFAT_IP_VERSION+x}" ]; then
+    if [ $EJFAT_IP_VERSION -ne 6 ]; then
+	set EJFAT_IP_VERSION=4
+    fi
+fi
+
+echo "-----------------------------------------------------------------------"
+echo "  Getting overview of target load balancer, and confirming that it     "
+echo "  is reachable.                                                        "
+echo "-----------------------------------------------------------------------"
+
+make -f $DEMO_ROOT/scripts/Makefile.lbadm overview IP_VERSION=$EJFAT_IP_VERSION
+
+echo "-----------------------------------------------------------------------"
+echo "  Reserving a load balancer.                                           "
+echo "-----------------------------------------------------------------------"
+
+make -f $DEMO_ROOT/scripts/Makefile.lbadm reserve IP_VERSION=$EJFAT_IP_VERSION
+sleep 0.25
+
+echo "-----------------------------------------------------------------------"
+echo "  Getting overview of target load balancer, after reservation          "
+echo "-----------------------------------------------------------------------"
+
+make -f $DEMO_ROOT/scripts/Makefile.lbadm overview IP_VERSION=$EJFAT_IP_VERSION
+
+
+

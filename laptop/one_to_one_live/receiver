@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DEMO_ROOT=`git rev-parse --show-toplevel`
+
+make -f $DEMO_ROOT/scripts/Makefile.lbadm e2sar_perf E2SAR_PERF_OPTIONS='--recv --withcp'
+
+
+
+

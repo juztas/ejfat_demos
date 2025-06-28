@@ -18,12 +18,48 @@ E2SAR ?= ~/Projects/EJFAT/E2SAR/
 LBADM = $(E2SAR)/build/bin/lbadm
 E2SAR_PERF = $(E2SAR)/build/bin/e2sar_perf
 
+EJFAT_IP_VERSION ?= 4
+IP_VER := -$(EJFAT_IP_VERSION)
+
+ifeq ($(EJFAT_IP_VERSION),4)
+  LB_ADDR ?= $(shell dig ejfat-lb.es.net A +short | tail -1)
+else
+  LB_ADDR ?= $(shell dig ejfat-lb.es.net AAAA +short | tail -1)
+endif
+
+OS ?= $(shell uname)
+
+ifeq ($(OS),Darwin)
+
+  ifeq ($(EJFAT_IP_VERSION),6)
+    MY_INTERFACE = $(shell route -n get -inet6 $(LB_ADDR) | grep interface | awk '{print $$2}')
+    MY_IP = $(shell ifconfig $(MY_INTERFACE) | grep 'inet6' | grep -iv 'fe80' | awk '{print $$2}')
+  else ifeq ($(EJFAT_IP_VERSION),4)
+    MY_INTERFACE = $(shell route -n get $(LB_ADDR) | grep interface | awk '{print $$2}')
+    MY_IP = $(shell ifconfig $(MY_INTERFACE) | grep 'inet ' | awk '{print $$2}')    
+  endif
+
+else ifeq ($(OS),Linux)
+  MY_IP = "linux ip"
+  MY_INTERFACE = "linux interface"
+
+else
+  MY_IP = "UNKNOWN"
+  MY_INTERFACE = "UNKNOWN"
+
+endif
+
 # LBADM = docker run --rm  ibaldin/e2sar:latest lbadm
 # LBADM = lbadm
 
 #---------tricky way to find your own IP address to register with the LB Control Plane -----------------
 
-MY_IP    ?= $(shell ifconfig | grep 198.128 | awk '{print $$2}' )
+test :
+	@echo "LB IP is: $(LB_ADDR)"
+	@echo "My OS is: $(OS)"
+	@echo "MY Interface is: $(MY_INTERFACE)"
+	@echo "My IP is: $(MY_IP)"
+
 MY_NAME  ?= $(shell hostname)
 
 CN_PORTS = 9999 9998 9997 9996
@@ -46,20 +82,36 @@ SESSION_URI_FILENAME  ?= $(URI_DIR)/session_URI
 EJFAT_INSTANCE_URI ?= $(shell source $(INSTANCE_URI_FILENAME) ; echo $$EJFAT_URI)
 EJFAT_SESSION_URI ?= $(shell source $(SESSION_URI_FILENAME) ; echo $$EJFAT_URI)
 
+LB_DURATION ?= "00:30:00"
+
 # ------------------------DO NOT CUSTOMIZE BELOW THIS LINE.  UNLESS YOU REALLY NEED TO ---------------------------------------
 
 SHELL = bash
 
+.PHONY : overview free reserve status addsender addreceiver register deregister state heartbeat
+
 overview : 
-	$(LBADM) -v -u "$(EJFAT_ADMIN_URI)"  --overview -6 
+	$(LBADM) -v -u "$(EJFAT_ADMIN_URI)"  --overview $(IP_VER) 
 
 free :
-	$(LBADM) -v -u "$(EJFAT_INSTANCE_URI)"  --free 
+	$(LBADM) -v -u "$(EJFAT_INSTANCE_URI)"  --free $(IP_VER)
+
+status :
+	$(LBADM) -v -u "$(EJFAT_INSTANCE_URI)"  --status $(IP_VER)
 
 reserve :
 	@echo "My IP address is $(MY_IP)"
 	mkdir -p $(URI_DIR)
-	$(LBADM) -v -u "$(EJFAT_ADMIN_URI)"  --reserve  -d 06:05:00 --lbname yk_testing -a $(MY_IP) --export > $(INSTANCE_URI_FILENAME)
+	$(LBADM) -v -u "$(EJFAT_ADMIN_URI)" --reserve  -d $(LB_DURATION) --lbname yk_testing  -a $(MY_IP) $(IP_VER) --export > $(INSTANCE_URI_FILENAME).tmp
+	cp $(INSTANCE_URI_FILENAME).tmp $(INSTANCE_URI_FILENAME)
+
+addsender :
+	@echo "My Sender IP address is $(MY_IP)"
+	$(LBADM) -v -u "$(EJFAT_INSTANCE_URI)" --export --addsenders -a $(MY_IP) $(IP_VER) > $(INSTANCE_URI_FILENAME)
+
+addreceiver :
+	@echo "My Receiver IP address is $(MY_IP)"
+	$(LBADM) -v -u "$(EJFAT_INSTANCE_URI)" --export  --addreceivers -a $(MY_IP) $(IP_VER) > $(INSTANCE_URI_FILENAME)
 
 register :
 	@echo "----------------Registering ------------------------------"
@@ -99,7 +151,7 @@ heartbeat :
           )
 
 e2sar_perf :
-	$(E2SAR_PERF) $(E2SAR_PERF_OPTIONS) --uri "$(EJFAT_SESSION_URI)"
+	$(E2SAR_PERF) $(E2SAR_PERF_OPTIONS) --ip $(MY_IP) $(IP_VER) --uri "$(EJFAT_INSTANCE_URI)"
 
 help :
 	$(LBADM) --help
@@ -109,3 +161,6 @@ version :
 
 force_free :
 	$(LBADM) -v -u "$(EJFAT_ADMIN_URI)/$(FORCE_LBID)"  --free
+
+
+
