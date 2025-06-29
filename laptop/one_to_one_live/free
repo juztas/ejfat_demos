@@ -2,9 +2,9 @@
 
 DEMO_ROOT=`git rev-parse --show-toplevel`
 
-if [ -v $EJFAT_IP_VERSION ]; then
-    if [ ! $EJFAT_IP_VERSION -eq 6 ]; then
-	set EJFAT_IP_VERSION=4
+if [ -z "${EJFAT_IP_VERSION+x}" ]; then
+    if [ $EJFAT_IP_VERSION -ne 6 ]; then
+        set EJFAT_IP_VERSION=4
     fi
 fi
 
