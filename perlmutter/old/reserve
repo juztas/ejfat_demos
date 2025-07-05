@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo " The start of something big : reserving an lb"
+
+source /.env
+
+export DEMO_ROOT="/demo_scripts/ejfat_demos/"
+export EJFAT_IP_VERSION=4
+
+export LBADM=lbadm
+export E2SAR_PERF=e2sar_perf
+
+export EJFAT_URI=$EJFAT_URI_BETA
+
+echo " EJFAT URI IS "
+echo $EJFAT_URI_BETA
+echo $EJFAT_URI
+echo " End URI summary"
+
+echo "------------------------ "
+echo "reserve the load balancer   "
+echo "------------------------ "
+
+make -f /demo_scripts/ejfat_demos/script/Makefile.lbadm overview
+

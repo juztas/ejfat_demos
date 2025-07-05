@@ -1,0 +1,52 @@
+#!/bin/bash
+
+echo " The start of something big"
+echo " ---------------------------------------------------"
+echo "  test if e2sar_perf is in the path and works       "
+echo " ---------------------------------------------------"
+echo " "
+e2sar_perf --help
+lbadm --help
+echo " ---------------------------------------------------"
+echo " "
+echo " "
+
+export DEMO_ROOT="/ejfat_demos/"
+
+export EJFAT_IP_VERSION=4
+
+export LBADM=lbadm
+export E2SAR_PERF=e2sar_perf
+
+export EJFAT_URI=$EJFAT_URI_BETA
+
+echo " EJFAT URI IS "
+echo $EJFAT_URI_BETA
+echo $EJFAT_URI
+echo " End URI summary"
+
+echo "------------------------ "
+echo "reserve the load balancer   "
+echo "------------------------ "
+
+/ejfat_demos/laptop/one_to_one_live/reserve
+
+sleep 4
+
+echo "------------------- "
+echo "Starting a receiver "
+echo "------------------- "
+/ejfat_demos/laptop/one_to_one_live/receiver &
+
+sleep 4   # give the receiver time to start
+
+echo "------------------- "
+echo "Starting a sender   "
+echo "------------------- "
+/ejfat_demos/laptop/one_to_one_live/sender
+
+echo "------------------------ "
+echo "free the load balancer   "
+echo "------------------------ "
+
+/ejfat_demos/laptop/one_to_one_live/free

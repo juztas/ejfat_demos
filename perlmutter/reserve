@@ -1,0 +1,3 @@
+#!/bin/bash
+
+lbadm -v -u "$EJFAT_URI_BETA" --reserve -d 5 --lbname yk_testing -4 --export 

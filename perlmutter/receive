@@ -1,0 +1,3 @@
+#!/bin/bash
+
+e2sar_perf --recv --autoip --withcp --duration $RX_DURATION -4
