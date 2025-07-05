@@ -1,3 +1,0 @@
-#!/bin/bash
-
-e2sar_perf --send --autoip --withcp -4 
