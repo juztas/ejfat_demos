@@ -2,9 +2,9 @@ FROM ibaldin/e2sar
 
 COPY . /ejfat_demos
 
-# RUN apt -y install iproute2
-# RUN apt -y install traceroute
-# RUN apt -y install dnsutils
+RUN apt -y install iproute2
+RUN apt -y install dnsutils
 
+# RUN apt -y install traceroute
 
 

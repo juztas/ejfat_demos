@@ -1,3 +1,8 @@
 #!/bin/bash
 
-e2sar_perf --recv --autoip --withcp --duration $RX_DURATION -4
+export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
+echo "LB IP is $LB_IP"
+export  MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
+echo $MY_IP
+
+e2sar_perf --recv --withcp --duration $RX_DURATION -4 --ip $MY_IP
