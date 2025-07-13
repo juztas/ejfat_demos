@@ -11,6 +11,7 @@
 INSTANCE_URI := $(shell cat INSTANCE_URI | sed 's/^[^=]*=//' - )
 LB_IP ?= $(shell dig +short ejfat-lb.es.net | tail -1 )
 MY_IP ?= $(shell ip route get $(LB_IP) | awk '{ print $$7 }')
+RX_DURATION ?= 0
 
 test :
 	@echo $(MY_IP)
@@ -27,7 +28,7 @@ reserve :
 	podman-hpc run --env EJFAT_URI_BETA=$(EJFAT_URI_BETA) --network host --rm -it --entrypoint= e2sar_dev /ejfat_demos/perlmutter/reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
 
 receive :
-	podman-hpc run --env EJFAT_URI=$(INSTANCE_URI) --env RX_DURATION=0 --network host --rm -it --entrypoint= e2sar_dev /ejfat_demos/perlmutter/receive
+	podman-hpc run --env EJFAT_URI=$(INSTANCE_URI) --env RX_DURATION=$(RX_DURATION) --network host --rm -it --entrypoint= e2sar_dev /ejfat_demos/perlmutter/receive
 
 send :
 	podman-hpc run --env EJFAT_URI=$(INSTANCE_URI) --env NFRAMES=10000 --network host --rm -it --entrypoint= e2sar_dev /ejfat_demos/perlmutter/send

@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH -N 4
+#SBATCH -C cpu
+#SBATCH -q debug
+#SBATCH -J ejfat_traffic_test
+#SBATCH --mail-user=yak@es.net
+#SBATCH --mail-type=ALL
+#SBATCH -t 00:01:00
+
+#OpenMP settings:
+export OMP_NUM_THREADS=4
+export OMP_PLACES=threads
+export OMP_PROC_BIND=spread
+
+export RX_DURATION=45
+
+#run the application:
+mkdir -p slurm_output
+
+srun -n 1 -c 1 --cpu_bind=cores make receive > slurm_output/rx_1.out &
+srun -n 1 -c 1 --cpu_bind=cores make receive > slurm_output/rx_2.out &
+sleep 1
+srun -n 1 -c 1 --cpu_bind=cores make send > slurm_output/tx_1.out &
+srun -n 1 -c 1 --cpu_bind=cores make send > slurm_output/tx_2.out &
+
+sleep 60    # watchdog timeout
+
+
+
+
