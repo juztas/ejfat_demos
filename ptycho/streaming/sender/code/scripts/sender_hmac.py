@@ -37,7 +37,7 @@ HMAC_BYTES = os.environ.get("HMAC", SEG_URI).encode("utf-8")
 ####################
 ####################
 ####################
-def sign(self, key: bytes, msg: bytes) -> bytes:
+def sign(key: bytes, msg: bytes) -> bytes:
     """Compute the HMAC digest of msg, given signing key `key`"""
     return hmac.HMAC(
         key,

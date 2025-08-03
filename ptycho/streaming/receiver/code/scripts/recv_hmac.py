@@ -34,7 +34,7 @@ HMAC_BYTES = os.environ.get("HMAC", REAS_URI_).encode("utf-8")
 
 reas_uri = e2sar_py.EjfatURI(uri=REAS_URI_, tt=e2sar_py.EjfatURI.TokenType.instance)
 
-def sign(self, key: bytes, msg: bytes) -> bytes:
+def sign(key: bytes, msg: bytes) -> bytes:
     """Compute the HMAC digest of msg, given signing key `key`"""
     return hmac.HMAC(
         key,
@@ -42,16 +42,16 @@ def sign(self, key: bytes, msg: bytes) -> bytes:
         digestmod=hashlib.sha256,
     ).digest()
 
-def recv_signed_zipped_pickle(obj, key):
+def recv_signed_zipped_pickle(obj, sig):
     """inverse of send_signed_zipped_pickle"""
-    key = obj[0:32]
-    obj = [32:]
+    rhmac = obj[0:32]
+    obj = obj[32:]
 
     # check signature before deserializing
-    correct_signature = sign(key, z)
-    if not hmac.compare_digest(sig, correct_signature):
+    correct_signature = sign(sig, obj)
+    if not hmac.compare_digest(rhmac, correct_signature):
         raise ValueError("invalid signature")
-    p = zlib.decompress(z)
+    p = zlib.decompress(obj)
     return pickle.loads(p)
 
 # Make sure the token matches the one in the string
