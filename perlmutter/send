@@ -1,5 +1,6 @@
 #!/bin/bash
 
-export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
-export MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
-e2sar_perf --send --withcp -4 --rate 1 -n $NFRAMES --ip $MY_IP
+echo "Sender IP is : $MY_IP"
+echo "IP VERSION IS $IP_VERSION"
+
+e2sar_perf --send --withcp --ini /ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION  --rate $TX_RATE -n $NFRAMES --ip $MY_IP  --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth

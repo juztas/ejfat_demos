@@ -1,9 +1,12 @@
-FROM ibaldin/e2sar
+# FROM ibaldin/e2sar
+FROM ibaldin/e2sar:0.2.2a2
 
-COPY . /ejfat_demos
+# COPY . /ejfat_demos
 
 RUN apt -y install iproute2
 RUN apt -y install dnsutils
+RUN apt -y install iputils-ping
+RUN apt -y install netcat-traditional
 
 # RUN apt -y install traceroute
 

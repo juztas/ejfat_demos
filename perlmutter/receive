@@ -1,8 +1,6 @@
 #!/bin/bash
 
-export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
-echo "LB IP is $LB_IP"
-export  MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
-echo $MY_IP
+echo "Receiver IP is: $MY_IP"
+echo "IP VERSION IS $IP_VERSION"
 
-e2sar_perf --recv --withcp --duration $RX_DURATION -4 --ip $MY_IP
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --threads $RX_THREADS

@@ -1,29 +1,61 @@
 #!/bin/bash
-#SBATCH -N 4
+#SBATCH -N 2
 #SBATCH -C cpu
 #SBATCH -q debug
 #SBATCH -J ejfat_traffic_test
 #SBATCH --mail-user=yak@es.net
 #SBATCH --mail-type=ALL
-#SBATCH -t 00:01:00
+#SBATCH -t 00:05:00
 
-#OpenMP settings:
-export OMP_NUM_THREADS=4
+# OpenMP settings:
+export OMP_NUM_THREADS=10
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
-export RX_DURATION=45
+export RX_DURATION=120
+export RX_THREADS=64
+export TX_RATE=2
+export SEND_SOCKETS=16       # number of parallel threads / flows  e2sar_perf should invoke
 
-#run the application:
-mkdir -p slurm_output
+# -------------------------------------------
+# setup a log directory to hold run artifacts
+# -------------------------------------------
 
-srun -n 1 -c 1 --cpu_bind=cores make receive > slurm_output/rx_1.out &
-srun -n 1 -c 1 --cpu_bind=cores make receive > slurm_output/rx_2.out &
+mkdir -p slurm_output/$SLURM_JOB_ID
+export LOG_DIR=slurm_output/$SLURM_JOB_ID
+
+cp ejfat_traffic_test $LOG_DIR/ejfat_traffic_test.copy
+cp Makefile $LOG_DIR
+
+source INSTANCE_URI
+echo $EJFAT_URI | sed -n 's/.*data=\([0-9.]*[0-9]\)[^0-9].*/\1/p' > $LOG_DIR/dp_ipv4
+echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
+
+# -------------------------------------------
+# run the application:
+# -------------------------------------------
+
+date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
+
+srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_0.out &
+srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_1.out &
+
 sleep 1
-srun -n 1 -c 1 --cpu_bind=cores make send > slurm_output/tx_1.out &
-srun -n 1 -c 1 --cpu_bind=cores make send > slurm_output/tx_2.out &
 
-sleep 60    # watchdog timeout
+srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_0.out &
+
+sleep 1    # make sure this final transmitter is the last to finish
+srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_1.out  &
+
+wait
+
+date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/end_time
+
+scontrol show job $SLURM_JOB_ID >> slurm-$SLURM_JOB_ID.out
+mv slurm-$SLURM_JOB_ID.out $LOG_DIR
+
+
+
 
 
 

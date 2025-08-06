@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
+export MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
+
+e2sar_ft -s --ip $MY_IP  --extension root  --sockets 4 --rate 1 --smooth --withcp --path /data/

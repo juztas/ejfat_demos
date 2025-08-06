@@ -1,3 +1,5 @@
 #!/bin/bash
 
-lbadm -v -u "$EJFAT_URI_BETA" --reserve -d 5 --lbname yk_testing -4 --export 
+echo "ip version is $IP_VERSION"
+echo "EJFAT URI BETA IS $EJFAT_URI_BETA"
+lbadm -v -u "$EJFAT_URI_BETA" --reserve -d 5 --lbname yk_testing $IP_VERSION --export 

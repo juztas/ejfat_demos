@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
+echo "LB IP is $LB_IP"
+export  MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
+echo $MY_IP
+echo "IP VERSION IS $IP_VERSION"
+
+e2sar_ft -r --ip $MY_IP --path /data --extension root --prefix test --timeout 7000 --withcp --threads 4
