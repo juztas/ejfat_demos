@@ -1,0 +1,3 @@
+#!/bin/bash
+
+e2sar_perf --send --withcp --ini "$SEGMENTER_CONF" "$IP_VERSION"  --rate "$TX_RATE" -n "$NFRAMES" --ip "$MY_IP"  --sockets "$SEND_SOCKETS" --dataid "$DATA_ID" --smooth
