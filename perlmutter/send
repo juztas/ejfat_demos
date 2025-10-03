@@ -3,4 +3,4 @@
 echo "Sender IP is : $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 
-e2sar_perf --send --withcp --ini /ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION  --rate $TX_RATE -n $NFRAMES --ip $MY_IP  --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth
+e2sar_perf --send --withcp --ini /ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION  --rate $TX_RATE -n $NFRAMES --ip $MY_IP  --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length 2097152

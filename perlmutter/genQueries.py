@@ -33,8 +33,8 @@ FROM
         sum(packets) AS packets
     FROM ht.all_flows
     WHERE (export_time_ms > start_time) AND (export_time_ms < end_time) AND  (ip_proto_num = 17) AND 
-          (    ( (ip_dst = '{dp_ipv6}') AND (esdb_name_src = 'NERSC') )
-           OR  ( (ip_src = '{dp_ipv6}') AND (esdb_name_dst = 'NERSC') )
+          (    ( (ip_dst = '{dp_ipv4}') AND (esdb_name_src = 'NERSC') )
+           OR  ( (ip_src = '{dp_ipv4}') AND (esdb_name_dst = 'NERSC') )
           )
     GROUP BY
         ip_src,

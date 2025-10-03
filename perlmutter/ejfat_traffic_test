@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH -N 2
 #SBATCH -C cpu
-#SBATCH -q debug
+#SBATCH -q realtime
 #SBATCH -J ejfat_traffic_test
 #SBATCH --mail-user=yak@es.net
 #SBATCH --mail-type=ALL
 #SBATCH -t 00:05:00
+#SBATCH -A m3792
 
 # OpenMP settings:
 export OMP_NUM_THREADS=10
@@ -13,9 +14,9 @@ export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
 export RX_DURATION=120
-export RX_THREADS=64
+export RX_THREADS=4
 export TX_RATE=2
-export SEND_SOCKETS=16       # number of parallel threads / flows  e2sar_perf should invoke
+export SEND_SOCKETS=4       # number of parallel threads / flows  e2sar_perf should invoke
 
 # -------------------------------------------
 # setup a log directory to hold run artifacts
@@ -38,14 +39,12 @@ echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
 date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
 
 srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_0.out &
-srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_1.out &
+# srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_1.out &
 
-sleep 1
+sleep 5
 
 srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_0.out &
-
-sleep 1    # make sure this final transmitter is the last to finish
-srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_1.out  &
+# srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_1.out  &
 
 wait
 

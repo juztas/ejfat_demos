@@ -2,5 +2,18 @@
 
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
+echo "Writing logs to $LOG_DIR"
 
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --threads $RX_THREADS
+# tc -s qdisc show dev $MY_INTERFACE
+
+udp-socket-monitor.sh -p 10000-10015 -t 0.1 -o /ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+# e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --threads $RX_THREADS  --bufsize 536870912  --timeout 7000 
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize 400000000  --timeout 7000 --cores 1 --deq 16
+
+# tc -s qdisc show dev $MY_INTERFACE
+
+jobs
+kill -15 %1
+sleep 3
+jobs
+

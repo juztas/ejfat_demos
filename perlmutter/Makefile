@@ -1,3 +1,4 @@
+
 #
 #  This makefile runs on a Perlmutter login node, and provides the podman-hpc and slurm commands
 #  to build and operate the EJFAT load balancer.
@@ -7,6 +8,8 @@
 #------------------------------------------------------------------------------------------------
 
 .PHONY: help build reserve free receive send monitor send_file receive_file
+
+LOG_DIR ?= ./
 
 IP_VERSION ?= "-6"
 
@@ -21,16 +24,18 @@ endif
 INSTANCE_URI := $(shell cat INSTANCE_URI | sed 's/^[^=]*=//' - )
 LB_IP ?= $(shell dig +short ejfat-lb.es.net AAAA | tail -1 )
 MY_IP ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*src//' | awk '{ print $$1 }')
+MY_INTERFACE ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*dev//' | awk '{ print $$1 }')
 
 RX_DURATION ?= 120
 RX_THREADS ?= 16
 TX_RATE     ?= 0.1
 SEND_SOCKETS ?= 8
-NFRAMES = 20000
+NFRAMES = 10000
 DATA_ID ?= $(shell bash -c 'echo $$(( $$RANDOM % 1000 + 1 ))')
 
 test :
 	@echo $(MY_IP)
+	@echo $(MY_INTERFACE)
 	@echo "SCRATCH IS $(SCRATCH)"
 
 help : 
@@ -54,10 +59,13 @@ reserve :
 
 receive :
 	podman-hpc run \
+		--cap-add SYS_NICE \
 		-v ./:/ejfat_demos/perlmutter \
+		--env LOG_DIR=$(LOG_DIR) \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
 		--env MY_IP=$(MY_IP) \
+		--env MY_INTERFACE=$(MY_INTERFACE) \
 		--env RX_DURATION=$(RX_DURATION) \
 		--env RX_THREADS=$(RX_THREADS)  \
 		--network host --rm -it --entrypoint= \
