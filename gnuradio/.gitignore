@@ -1,2 +1,8 @@
 # E2SAR repository (if cloned locally for dependency checking)
 E2SAR/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
