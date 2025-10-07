@@ -184,6 +184,32 @@ echo "gRPC (libgrpc):" && conda list libgrpc
 echo "gRPC (grpcio):" && conda list grpcio
 echo "Protobuf:" && conda list protobuf | grep protobuf
 echo "Python:" && python --version
+
+# Step 8: Build and install ejfat_shm Python package
+cd ejfat_shm
+pip install -e .
+cd ..
+
+# Step 9: Install GNU Radio out-of-tree module (gr-ejfat)
+cd gr-ejfat
+
+# Check if there are C++ blocks that require CMake build
+if [ -f lib/CMakeLists.txt ] && grep -q "\.cc\|\.cpp" lib/CMakeLists.txt && ! grep -q "No C++ sources" lib/CMakeLists.txt; then
+    # C++ blocks detected - use full CMake build
+    echo "C++ blocks detected, using CMake build process..."
+    mkdir -p build
+    cd build
+    cmake ..
+    make
+    sudo make install
+    cd ..
+else
+    # Python-only blocks - use simple Makefile install
+    echo "Python-only blocks, using Makefile install..."
+    make install
+fi
+
+cd ..
 ```
 
 ## Testing E2SAR Integration
@@ -300,6 +326,32 @@ conda env create -f environment.yml
 # Activate environment
 conda activate gnuradio
 
+# Build and install ejfat_shm
+cd ejfat_shm
+pip install -e .
+cd ..
+
+# Install GNU Radio out-of-tree module (gr-ejfat)
+cd gr-ejfat
+
+# Check if there are C++ blocks that require CMake build
+if [ -f lib/CMakeLists.txt ] && grep -q "\.cc\|\.cpp" lib/CMakeLists.txt && ! grep -q "No C++ sources" lib/CMakeLists.txt; then
+    # C++ blocks detected - use full CMake build
+    echo "C++ blocks detected, using CMake build process..."
+    mkdir -p build
+    cd build
+    cmake ..
+    make
+    sudo make install
+    cd ..
+else
+    # Python-only blocks - use simple Makefile install
+    echo "Python-only blocks, using Makefile install..."
+    make install
+fi
+
+cd ..
+
 # Deactivate environment
 conda deactivate
 
@@ -314,6 +366,20 @@ gnuradio-companion
 
 # Run a flowgraph from command line
 python <flowgraph_name>.py
+
+# Test gr-ejfat blocks
+cd gr-ejfat
+
+# Run unit tests
+python python/ejfat/qa_ejfat_sink.py
+python python/ejfat/qa_ejfat_source.py
+python python/ejfat/qa_ejfat_shm_sink.py
+python python/ejfat/qa_ejfat_shm_source.py
+
+# Run example flowgraphs
+python examples/test_ejfat_shm_blocks.py
+
+cd ..
 ```
 
 ### Environment Management
