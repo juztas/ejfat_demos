@@ -1,0 +1,45 @@
+id: ejfat_ejfat_shm_sink
+label: EJFAT SHM Sink
+category: '[EJFAT]'
+
+documentation: |-
+  Sink block that writes complex vectors to a shared memory FIFO.
+
+  Uses the ejfat_shm package for high-performance inter-process communication.
+  The writer creates the shared memory region and semaphore.
+
+  Parameters:
+    - shm_name: Unique identifier for the shared memory FIFO
+    - capacity: Number of entries in the circular buffer
+    - entry_size: Maximum bytes per entry (including 16-byte metadata)
+    - vlen: Vector length for input
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.ejfat_shm_sink(shm_name=${shm_name}, capacity=${capacity}, entry_size=${entry_size}, vlen=${vlen})
+
+parameters:
+- id: shm_name
+  label: SHM Name
+  dtype: string
+  default: 'ejfat_fifo'
+- id: capacity
+  label: Capacity
+  dtype: int
+  default: '1024'
+- id: entry_size
+  label: Entry Size
+  dtype: int
+  default: '4096'
+- id: vlen
+  label: Vector Length
+  dtype: int
+  default: '1024'
+
+inputs:
+- label: in
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+file_format: 1

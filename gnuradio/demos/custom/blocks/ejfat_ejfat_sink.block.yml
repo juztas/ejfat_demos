@@ -1,0 +1,20 @@
+id: ejfat_ejfat_sink
+label: EJFAT Sink
+category: '[EJFAT]'
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.ejfat_sink(filename=${filename})
+
+parameters:
+- id: filename
+  label: Filename
+  dtype: file_save
+  default: ''
+
+inputs:
+- label: in
+  domain: stream
+  dtype: complex
+
+file_format: 1

@@ -1,0 +1,422 @@
+Metadata-Version: 2.4
+Name: ejfat_shm
+Version: 0.1.0
+Summary: High-performance FIFO queue using POSIX shared memory
+Author: EJFAT Project
+License: MIT
+Project-URL: Homepage, https://github.com/ejfat/ejfat_shm
+Project-URL: Repository, https://github.com/ejfat/ejfat_shm
+Project-URL: Issues, https://github.com/ejfat/ejfat_shm/issues
+Keywords: shared-memory,fifo,ipc,posix,queue
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Networking
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: posix_ipc>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-timeout>=2.1.0; extra == "dev"
+
+# ejfat_shm: High-Performance Shared Memory FIFO
+
+A high-performance FIFO queue implementation using POSIX shared memory with semaphore-based notifications for efficient inter-process communication.
+
+## Features
+
+- **Zero-copy data transfer** via shared memory
+- **Low latency** with direct memory access
+- **Efficient notifications** using semaphores (no polling)
+- **Lock-free design** for single-writer, single-reader scenarios
+- **Non-blocking writer** with immediate status feedback
+- **Circular buffer** with constant-time operations
+- **Drop detection** with atomic counters
+
+## Installation
+
+### From PyPI (when published)
+
+```bash
+pip install ejfat_shm
+```
+
+### From source
+
+```bash
+git clone https://github.com/ejfat/ejfat_shm.git
+cd ejfat_shm
+pip install .
+```
+
+### Development installation
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Quick Start
+
+### Writer Process
+
+```python
+from ejfat_shm import ShmFIFO, WriteStatus
+
+# Create FIFO (writer is responsible for creation)
+fifo = ShmFIFO("my_fifo", capacity=100, entry_size=4096, create=True)
+
+# Write data
+data = b"some packed data"
+event_num = 12345
+
+result = fifo.write_event(data, event_num)
+
+if result.status == WriteStatus.SUCCESS:
+    print("Data written successfully")
+elif result.status == WriteStatus.FIFO_FULL:
+    print(f"FIFO full! Total drops: {result.total_drops}")
+elif result.status == WriteStatus.DATA_TOO_LARGE:
+    print(f"Data too large! Total drops: {result.total_drops}")
+
+# Cleanup when done
+fifo.close()
+fifo.unlink()  # Remove shared memory
+```
+
+### Reader Process
+
+```python
+from ejfat_shm import ShmFIFO
+
+# Open existing FIFO (reader doesn't create)
+fifo = ShmFIFO("my_fifo", create=False)
+
+# Read data (blocks until available)
+while True:
+    result = fifo.read_event(timeout=5.0)
+    if result:
+        event_num, data = result
+        print(f"Event {event_num}: {len(data)} bytes")
+        # Process data
+    else:
+        print("No data for 5 seconds")
+        break
+
+# Cleanup
+fifo.close()
+```
+
+## API Reference
+
+### ShmFIFO Class
+
+#### `__init__(name, capacity=1024, entry_size=4096, create=True)`
+
+Initialize shared memory FIFO.
+
+**Parameters:**
+- `name` (str): Unique identifier for this FIFO
+- `capacity` (int): Number of entries in circular buffer (default: 1024)
+- `entry_size` (int): Max bytes per entry including 16-byte metadata (default: 4096)
+- `create` (bool): True for writer (creates shm/sem), False for reader (default: True)
+
+**Raises:**
+- `ShmFIFOExistsError`: If create=True and shared memory already exists
+- `ShmFIFONotFoundError`: If create=False and shared memory doesn't exist
+
+#### `write_event(data, event_number) -> WriteResult`
+
+Non-blocking write with status feedback.
+
+**Parameters:**
+- `data` (bytes): Packed byte array to queue
+- `event_number` (int): 64-bit event identifier
+
+**Returns:**
+- `WriteResult` with:
+  - `status`: SUCCESS, FIFO_FULL, or DATA_TOO_LARGE
+  - `total_drops`: Cumulative count of failed writes
+
+#### `read_event(timeout=None) -> tuple[int, bytes] | None`
+
+Block until data available, then read next entry.
+
+**Parameters:**
+- `timeout` (float): Seconds to wait (None = block forever, 0 = non-blocking)
+
+**Returns:**
+- `(event_number, data)` tuple or None if timeout/empty
+
+#### `get_stats() -> dict`
+
+Get current FIFO statistics.
+
+**Returns:**
+- Dictionary with:
+  - `write_index`: Current write position
+  - `read_index`: Current read position
+  - `entries_available`: Number of entries ready to read
+  - `capacity`: Maximum number of entries
+  - `entry_size`: Size of each entry in bytes
+  - `total_writes`: Total successful writes
+  - `total_reads`: Total successful reads
+  - `total_drops`: Total dropped writes
+
+#### `close()`
+
+Unmap memory and close semaphore.
+
+#### `unlink()`
+
+Remove shared memory and semaphore (writer only).
+
+### Write Status Codes
+
+```python
+class WriteStatus(Enum):
+    SUCCESS = 0          # Data written successfully
+    FIFO_FULL = 1       # FIFO is full, data dropped
+    DATA_TOO_LARGE = 2  # Data exceeds entry_size - 16
+```
+
+## Memory Layout
+
+```
+[Header Section - 64 bytes]
+- write_index: 8 bytes      (atomic counter for writer position)
+- read_index: 8 bytes       (atomic counter for reader position)
+- capacity: 8 bytes         (max number of entries)
+- entry_size: 8 bytes       (max size per entry including metadata)
+- total_writes: 8 bytes     (successful writes counter)
+- total_reads: 8 bytes      (successful reads counter)
+- total_drops: 8 bytes      (failed writes counter)
+- padding: 16 bytes         (reserved for future use)
+
+[Entry Array - capacity * entry_size bytes]
+- Entry 0: [event_number (8) | data_size (8) | data (variable)]
+- Entry 1: [event_number (8) | data_size (8) | data (variable)]
+- ...
+```
+
+## Examples
+
+The `examples/` directory contains:
+
+- **writer_example.py**: Basic writer demonstration
+- **reader_example.py**: Basic reader demonstration
+- **benchmark.py**: Performance benchmarking tool
+
+Run the examples:
+
+```bash
+# Terminal 1 - Start writer
+python examples/writer_example.py
+
+# Terminal 2 - Start reader
+python examples/reader_example.py
+
+# Run benchmark
+python examples/benchmark.py 100000 4096
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+pytest tests/test_fifo.py -v
+```
+
+## Performance Characteristics
+
+- **Zero-copy**: Data transferred via shared memory
+- **Low latency**: Direct memory access, no kernel buffering
+- **Efficient notification**: Semaphore blocks reader (no polling overhead)
+- **Fast writer**: No blocking, immediate return with status
+- **Circular buffer**: Constant-time operations for read/write
+
+Typical performance (depends on hardware):
+- Throughput: 1-10 million events/sec
+- Latency: 1-10 microseconds (p50)
+
+## Concurrency Guarantees
+
+- **Single Writer, Single Reader**: Lock-free using atomic index operations
+- **Notification-based**: Reader blocks on semaphore (zero CPU when idle)
+- **Non-blocking Writer**: Returns immediately with status if FIFO full
+- **Overflow Handling**: Writer fails and increments drop counter when full
+- **Graceful Shutdown**: Reader timeout allows clean exit
+
+## Limitations
+
+- Single writer, single reader only
+- Fixed capacity and entry size (set at creation)
+- POSIX systems only (Linux, macOS, BSD)
+- No built-in data persistence (memory-only)
+- Writer drops data when FIFO full (no backpressure blocking)
+
+## Platform Support
+
+- Linux (tested)
+- macOS (tested)
+- BSD variants (should work)
+- Windows: Not supported (requires POSIX shared memory)
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please ensure tests pass before submitting PRs.
+
+## C/C++ Daemon for EJFAT Integration
+
+The `daemon/` directory contains a high-performance C/C++ daemon that bridges shared memory FIFO events to the EJFAT network protocol for distributed event processing.
+
+### Overview
+
+The `ejfat_shm_daemon` reads events from the shared memory FIFO (created by the Python `ejfat_shm` package or any compatible writer) and broadcasts them using the EJFAT protocol via the E2SAR library. This enables zero-copy, low-latency event distribution from processes like GNU Radio to distributed compute nodes.
+
+```
+┌─────────────────┐
+│ Writer Process  │  (Python/GNU Radio/C)
+│   ejfat_shm     │
+└────────┬────────┘
+         │ POSIX SHM FIFO
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│ ejfat_shm_daemon│─────▶│  E2SAR Segmenter │
+│   (C/C++ daemon)│      │  (UDP/EJFAT)     │
+└─────────────────┘      └──────┬───────────┘
+                                │ Network
+                                ▼
+                         ┌──────────────────┐
+                         │  Load Balancer   │
+                         │    (UDPLBd)      │
+                         └──────────────────┘
+```
+
+### Core Components (~1,279 lines of C/C++)
+
+**SHM Reader Library** (`shm_reader.h/c` - 418 lines)
+- POSIX shared memory FIFO reader compatible with Python `ejfat_shm`
+- Semaphore-based blocking/non-blocking reads
+- Zero-copy event retrieval
+- Thread-safe atomic operations
+
+**Configuration System** (`config.h/c` - 386 lines)
+- INI-style configuration file parser
+- Comprehensive validation
+- Default values matching E2SAR Segmenter
+- Support for all EJFAT and performance parameters
+
+**Main Daemon** (`ejfat_shm_daemon.cpp` - 475 lines)
+- Full daemonization support (foreground/background modes)
+- E2SAR Segmenter integration
+- Signal handling (graceful shutdown)
+- Statistics reporting
+- syslog integration
+- PID file management
+- CPU affinity support
+
+### Key Features
+
+✅ **Compatible with Python ejfat_shm** - Reads from same SHM FIFO format
+✅ **E2SAR/EJFAT Integration** - Full protocol support via E2SAR library
+✅ **Production Ready** - Daemonization, logging, signal handling, PID files
+✅ **High Performance** - Zero-copy reads, configurable buffers, rate limiting
+✅ **Flexible Deployment** - Foreground debugging or background daemon
+✅ **Well Documented** - 600+ lines of documentation and examples
+✅ **Easy Testing** - Includes test scripts and configurations
+
+### Quick Start
+
+1. **Build E2SAR library** (prerequisite):
+   ```bash
+   cd ~/Projects/E2SAR
+   meson setup build && meson compile -C build
+   ```
+
+2. **Build the daemon**:
+   ```bash
+   cd daemon
+   make
+   ```
+
+3. **Test it**:
+   ```bash
+   # Terminal 1: Start daemon
+   ./ejfat_shm_daemon -c test_config.conf -f
+
+   # Terminal 2: Run test writer
+   ./test_writer.py
+   ```
+
+### Documentation
+
+- **[daemon/README_DAEMON.md](daemon/README_DAEMON.md)** - Complete reference documentation
+  - Architecture details
+  - Build instructions
+  - Configuration reference
+  - systemd integration
+  - Performance tuning
+  - Troubleshooting guide
+
+- **[daemon/QUICKSTART.md](daemon/QUICKSTART.md)** - Step-by-step getting started guide
+  - Prerequisites checklist
+  - Build instructions
+  - Quick testing procedures
+  - Common commands reference
+
+### Files Included
+
+```
+daemon/
+├── README_DAEMON.md                  # Complete documentation
+├── QUICKSTART.md                     # Quick start guide
+├── Makefile                          # Build system
+├── ejfat_shm_daemon.conf.example     # Production config template
+├── test_config.conf                  # Minimal test config
+├── test_writer.py                    # Python test script
+├── include/
+│   ├── shm_reader.h                 # SHM FIFO reader API
+│   └── config.h                     # Configuration structures
+└── src/
+    ├── shm_reader.c                 # SHM FIFO reader implementation
+    ├── config.c                     # Configuration parser
+    └── ejfat_shm_daemon.cpp         # Main daemon
+```
+
+### Prerequisites
+
+- **E2SAR Library**: EJFAT protocol implementation ([E2SAR on GitHub](https://github.com/JeffersonLab/E2SAR))
+- **System Libraries**: pthread, rt (POSIX shared memory/semaphores)
+- **C++17 compatible compiler** (g++ or clang++)
+- **E2SAR Dependencies**: Boost (≥1.70), gRPC (≥1.40), Protocol Buffers
+
+### Use Cases
+
+- **GNU Radio Integration**: Stream GNU Radio flowgraph output to distributed workers
+- **Real-time Event Processing**: Low-latency event distribution for physics experiments
+- **Data Acquisition Systems**: Bridge DAQ events to network processing nodes
+- **High-Performance Computing**: Zero-copy inter-process event streaming
+
+## See Also
+
+- [DESIGN.md](DESIGN.md) - Detailed design documentation
+- [daemon/README_DAEMON.md](daemon/README_DAEMON.md) - C daemon documentation
+- [daemon/QUICKSTART.md](daemon/QUICKSTART.md) - Quick start guide
+- [E2SAR Documentation](https://jeffersonlab.github.io/E2SAR-doc/)
+- [UDPLBd Documentation](https://github.com/esnet/udplbd)
+- [posix_ipc documentation](https://semanchuk.com/philip/posix_ipc/)

@@ -1,0 +1,5 @@
+posix_ipc>=1.0.0
+
+[dev]
+pytest>=7.0.0
+pytest-timeout>=2.1.0

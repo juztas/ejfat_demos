@@ -1,0 +1,68 @@
+name: gnuradio
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Python version (matching E2SAR support)
+  - python=3.11.*
+
+  # GNU Radio (will pull in appropriate Boost version automatically)
+  # GNU Radio 3.10.12 requires libboost >=1.86.0, which is compatible with E2SAR >=1.83.0, <=1.86.0
+  - gnuradio=3.10.*
+
+  # Core Python scientific stack
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+
+  # GUI support
+  - pyqt=5.*
+  - qt=5.*
+
+  # SDR Hardware support
+  - uhd                    # USRP devices
+  - rtl-sdr                # RTL-SDR dongles
+  - hackrf                 # HackRF devices
+  - gnuradio-osmosdr       # OsmoSDR support
+
+  # Development tools
+  - jupyter
+  - ipython
+  - pytest
+
+  # Networking
+  - zeromq
+  - cppzmq
+
+  # Build tools (for compiling OOT modules)
+  - cmake
+  - meson
+  - ninja
+  - make
+  - pkg-config
+  - swig
+  - pybind11
+
+  # Boost (E2SAR dependency)
+  # E2SAR requires Boost >=1.83.0, <=1.86.0
+  # Explicitly pinning to 1.86.0 (highest version in acceptable range)
+  # IMPORTANT: libboost-devel provides CMake config files needed by E2SAR's Meson build
+  - libboost=1.86.0
+  - libboost-devel=1.86.0
+
+  # gRPC and protobuf (E2SAR dependencies)
+  # E2SAR requires gRPC>=1.54.1 (as of 2025)
+  # Using libgrpc (runtime) + grpcio (Python) since grpc-cpp is limited to 1.51.1 on macOS ARM64
+  - libgrpc>=1.54.1
+  - grpcio>=1.54.1
+  - protobuf>=3.21.12
+  - glib
+
+  # Additional useful tools
+  - git
+
+  # Pip packages (if needed)
+  - pip
+  - pip:
+    - pyzmq

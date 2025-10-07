@@ -1,0 +1,145 @@
+# EJFAT SHM Daemon Configuration File
+#
+# This configuration file controls the behavior of the ejfat_shm_daemon,
+# which bridges events from a shared memory FIFO to the EJFAT network protocol.
+
+# ============================================================================
+# [SHM FIFO Settings]
+# ============================================================================
+
+# Name of the shared memory FIFO to read from
+# Must match the name used by the writer process
+fifo_name = ejfat_fifo
+
+# Read timeout in seconds
+# 0 = non-blocking, negative = infinite, positive = timeout in seconds
+# Default: 5.0
+read_timeout = 5.0
+
+
+# ============================================================================
+# [EJFAT Settings]
+# ============================================================================
+
+# EJFAT URI specifying the load balancer and endpoints
+# Format: ejfat[s]://[token@]<cp_host>:<cp_port>/lb/<lb_id>[?data=<data_addr>[:<port>]][&sync=<sync_addr>:<port>]
+# Required field
+ejfat_uri = ejfat://useless@192.168.100.1:18347/lb/1?sync=192.168.254.1:12345&data=10.250.100.123:19522
+
+# Data source identifier (16-bit value)
+# Identifies the originating segmentation point (e.g., a DAQ)
+# Default: 1
+data_id = 0x0001
+
+# Event source identifier (32-bit value)
+# Identifies the individual packet transmitting host/DAQ
+# Can use IP address or unique ID
+# Default: 0x12345678
+event_src_id = 0x12345678
+
+
+# ============================================================================
+# [Network Settings]
+# ============================================================================
+
+# Use IPv6 for data plane (true/false)
+# Default: false
+use_ipv6 = false
+
+# Use control plane for load balancer management (true/false)
+# Set to false for debugging without UDPLBd
+# Default: true
+use_control_plane = true
+
+# Maximum transmission unit (MTU) in bytes
+# Must accommodate IP, UDP, LB+RE headers and payload
+# Valid range: 64-9000
+# Default: 1500
+mtu = 1500
+
+# Warm-up period in milliseconds
+# Time between sync thread starting and data being allowed to be sent
+# Default: 1000
+warmup_ms = 1000
+
+# Sync message period in milliseconds
+# How often to send sync messages to the load balancer
+# Default: 1000
+sync_period_ms = 1000
+
+# Number of sync periods
+# How many sync periods to use for synchronization
+# Default: 2
+sync_periods = 2
+
+
+# ============================================================================
+# [Performance Settings]
+# ============================================================================
+
+# Number of send sockets to use
+# More sockets provide more randomness for LAG distribution to FPGA ports
+# Valid range: 1-128
+# Default: 4
+num_send_sockets = 4
+
+# Send socket buffer size in bytes
+# Set via SO_SNDBUF setsockopt
+# Note: System-wide max must be set higher via sysctl (net.core.wmem_max)
+# Default: 3145728 (3MB)
+send_socket_buffer_size = 3145728
+
+# Send rate limit in Gbps
+# Negative value means unlimited
+# Default: -1.0 (unlimited)
+rate_gbps = -1.0
+
+# Use smooth rate shaping (true/false)
+# Shape on per-sendmsg() call rather than per-event
+# Only works at low speeds (~<3Gbps)
+# Incompatible with send optimizations
+# Default: false
+smooth_rate = false
+
+# Use multiple destination ports (true/false)
+# Use num_send_sockets consecutive destination ports starting from data port
+# Incompatible with load balancer, only useful for back-to-back testing
+# Default: false
+multi_port = false
+
+
+# ============================================================================
+# [System Settings]
+# ============================================================================
+
+# CPU core affinity
+# Pin daemon to specific CPU core (-1 = no affinity)
+# Default: -1
+cpu_core = -1
+
+# Run in foreground (true/false)
+# If false, daemon will detach and run in background
+# Default: false
+foreground = false
+
+# PID file location (used in daemon mode)
+# Default: /var/run/ejfat_shm_daemon.pid
+pid_file = /var/run/ejfat_shm_daemon.pid
+
+# Log file location (used in daemon mode)
+# Default: /var/log/ejfat_shm_daemon.log
+log_file = /var/log/ejfat_shm_daemon.log
+
+# Log level (0=error, 1=warn, 2=info, 3=debug)
+# Default: 2
+log_level = 2
+
+
+# ============================================================================
+# [Statistics]
+# ============================================================================
+
+# Statistics reporting interval in seconds
+# 0 = disable periodic statistics
+# Default: 60
+stats_interval = 60

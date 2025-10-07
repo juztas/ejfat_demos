@@ -1,0 +1,1 @@
+- remember where to copy plugins to in the future

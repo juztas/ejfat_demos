@@ -1,0 +1,41 @@
+id: ejfat_ejfat_shm_source
+label: EJFAT SHM Source
+category: '[EJFAT]'
+
+documentation: |-
+  Source block that reads complex vectors from a shared memory FIFO.
+
+  Uses the ejfat_shm package for high-performance inter-process communication.
+  The reader connects to an existing shared memory region created by the writer.
+
+  Parameters:
+    - shm_name: Unique identifier for the shared memory FIFO (must match writer)
+    - timeout: Seconds to wait for data (None=block forever, 0=non-blocking)
+    - vlen: Vector length for output
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.ejfat_shm_source(shm_name=${shm_name}, timeout=${timeout}, vlen=${vlen})
+
+parameters:
+- id: shm_name
+  label: SHM Name
+  dtype: string
+  default: 'ejfat_fifo'
+- id: timeout
+  label: Timeout
+  dtype: real
+  default: '1.0'
+  hide: part
+- id: vlen
+  label: Vector Length
+  dtype: int
+  default: '1024'
+
+outputs:
+- label: out
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+file_format: 1

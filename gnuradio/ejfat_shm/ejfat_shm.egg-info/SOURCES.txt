@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+setup.py
+ejfat_shm/__init__.py
+ejfat_shm/constants.py
+ejfat_shm/exceptions.py
+ejfat_shm/fifo.py
+ejfat_shm.egg-info/PKG-INFO
+ejfat_shm.egg-info/SOURCES.txt
+ejfat_shm.egg-info/dependency_links.txt
+ejfat_shm.egg-info/requires.txt
+ejfat_shm.egg-info/top_level.txt
+tests/test_fifo.py

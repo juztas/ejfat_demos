@@ -1,0 +1,24 @@
+id: ejfat_ejfat_source
+label: EJFAT Source
+category: '[EJFAT]'
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.ejfat_source(filename=${filename}, repeat=${repeat})
+
+parameters:
+- id: filename
+  label: Filename
+  dtype: file_open
+  default: ''
+- id: repeat
+  label: Repeat
+  dtype: bool
+  default: 'True'
+
+outputs:
+- label: out
+  domain: stream
+  dtype: complex
+
+file_format: 1
