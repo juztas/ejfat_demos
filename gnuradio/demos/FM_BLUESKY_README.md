@@ -219,10 +219,93 @@ You can use the same patterns from `widget/gnuradio_bluesky/` to create more com
 ```
 **Solution**: Install Bluesky: `pip install bluesky ophyd` or use `--sweep` instead of `--bluesky-sweep`.
 
+## Automated Test Scripts
+
+### Ottawa FM Station Test Scripts
+
+Two automated test scripts are available that handle the entire workflow: starting GNU Radio components, sweeping through actual Ottawa FM radio stations, and cleaning up:
+
+#### Quick Test (5 stations)
+
+**`run_ottawa_fm_quick_test.py`** - Fast test with 5 representative Ottawa FM stations
+
+```bash
+# Default: 10 seconds per station
+python run_ottawa_fm_quick_test.py
+
+# Custom dwell time
+python run_ottawa_fm_quick_test.py --dwell 5
+python run_ottawa_fm_quick_test.py --dwell 15
+
+# Show help
+python run_ottawa_fm_quick_test.py --help
+```
+
+**Features:**
+- Auto-starts FM transmitter and receiver
+- Sweeps 5 Ottawa stations: 89.9, 93.9, 98.5, 102.5, 106.1 MHz
+- Default 10-second dwell time (configurable via `--dwell`)
+- Total runtime: ~40-65 seconds (depending on dwell time)
+- Automatic cleanup on exit or Ctrl+C
+
+#### Full Test (23 stations)
+
+**`run_ottawa_fm_test.py`** - Complete test of all Ottawa FM radio stations
+
+```bash
+# Default: 5 seconds per station
+python run_ottawa_fm_test.py
+
+# Custom dwell time
+python run_ottawa_fm_test.py --dwell 10
+python run_ottawa_fm_test.py --dwell 2   # Fast sweep
+
+# Show help
+python run_ottawa_fm_test.py --help
+```
+
+**Features:**
+- Auto-starts FM transmitter and receiver
+- Sweeps all 23 Ottawa FM stations (88.5 - 106.9 MHz)
+- Default 5-second dwell time (configurable via `--dwell`)
+- Bluesky integration with fallback to simple XML-RPC
+- Total runtime: ~2-4 minutes (depending on dwell time)
+- Automatic cleanup on exit or Ctrl+C
+
+**Ottawa FM Stations Included:**
+- 88.5 FM - CILV Live 88.5 (Adult Contemporary)
+- 89.9 FM - CIHT Hot 89.9 (Top 40)
+- 93.9 FM - CIMF FREQ 93.9 (Francophone)
+- 98.5 FM - CFMO EZ Rock (Adult Contemporary)
+- 100.3 FM - CHEZ The Bear (Classic Rock)
+- 102.5 FM - CIDV Move 102.5 (Rhythmic CHR)
+- 106.1 FM - CHEZ-FM (Classic Rock)
+- ... and 16 more stations
+
+**Test Workflow:**
+1. Cleanup any existing GNU Radio processes
+2. Start FM transmitter (5s initialization wait)
+3. Start FM receiver (3s initialization wait)
+4. Test XML-RPC connection
+5. Sweep through all Ottawa FM stations
+6. Clean shutdown of all processes
+
+**Command-Line Options:**
+```
+--dwell SECONDS    Dwell time per frequency in seconds
+                   Quick test default: 10s
+                   Full test default: 5s
+```
+
 ## Related Files
 
 - **FM Transmitter Flowgraph**: `fm/fm_transmitter_shm.grc`
 - **Generated Python**: `fm/fm_transmitter_shm.py`
+- **FM Receiver Flowgraph**: `fm/fm_receiver_shm.grc`
+- **Generated Python**: `fm/fm_receiver_shm.py`
+- **Manual Control Script**: `fm_bluesky_control.py`
+- **Quick Test Script**: `run_ottawa_fm_quick_test.py`
+- **Full Test Script**: `run_ottawa_fm_test.py`
 - **Bluesky Device Library**: `widget/gnuradio_bluesky/gnuradio_device.py`
 - **Bluesky Plans**: `widget/gnuradio_bluesky/sine_control_plan.py`
 
@@ -232,3 +315,4 @@ You can use the same patterns from `widget/gnuradio_bluesky/` to create more com
 - Create custom Bluesky plans for FM frequency characterization
 - Add data acquisition synchronized with frequency changes
 - Control multiple GNU Radio flowgraphs simultaneously
+- Extend test scripts for other regions or custom station lists
