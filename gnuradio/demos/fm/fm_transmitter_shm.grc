@@ -648,6 +648,20 @@ blocks:
     coordinate: [496, 396.0]
     rotation: 0
     state: enabled
+- name: xmlrpc_server_0
+  id: xmlrpc_server
+  parameters:
+    addr: localhost
+    alias: ''
+    comment: ''
+    port: '8080'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [608, 12.0]
+    rotation: 0
+    state: enabled
 
 connections:
 - [blocks_stream_to_vector_0, '0', ejfat_ejfat_shm_sink, '0']

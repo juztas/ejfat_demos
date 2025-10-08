@@ -25,6 +25,8 @@ install:
 	cp grc/ejfat_ejfat_source.block.yml ~/.grc_gnuradio/
 	cp grc/ejfat_ejfat_shm_sink.block.yml ~/.grc_gnuradio/
 	cp grc/ejfat_ejfat_shm_source.block.yml ~/.grc_gnuradio/
+	cp grc/ejfat_e2sar_segmenter_sink.block.yml ~/.grc_gnuradio/
+	cp grc/ejfat_e2sar_reassembler_source.block.yml ~/.grc_gnuradio/
 	@echo ""
 	@echo "✓ Installation complete!"
 	@echo ""
@@ -42,6 +44,8 @@ uninstall:
 	rm -f ~/.grc_gnuradio/ejfat_ejfat_source.block.yml
 	rm -f ~/.grc_gnuradio/ejfat_ejfat_shm_sink.block.yml
 	rm -f ~/.grc_gnuradio/ejfat_ejfat_shm_source.block.yml
+	rm -f ~/.grc_gnuradio/ejfat_e2sar_segmenter_sink.block.yml
+	rm -f ~/.grc_gnuradio/ejfat_e2sar_reassembler_source.block.yml
 	@echo ""
 	@echo "✓ Uninstall complete!"
 
@@ -60,6 +64,12 @@ test:
 	@echo ""
 	@echo "Testing ejfat_shm_source block..."
 	python python/ejfat/qa_ejfat_shm_source.py
+	@echo ""
+	@echo "Testing e2sar_segmenter_sink block..."
+	python python/ejfat/qa_e2sar_segmenter_sink.py
+	@echo ""
+	@echo "Testing e2sar_reassembler_source block..."
+	python python/ejfat/qa_e2sar_reassembler_source.py
 	@echo ""
 	@echo "✓ All tests complete!"
 

@@ -1,0 +1,49 @@
+id: ejfat_e2sar_reassembler_source
+label: E2SAR Reassembler Source
+category: '[EJFAT]'
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.e2sar_reassembler_source(uri=${uri}, data_ip=${data_ip}, starting_port=${starting_port}, vector_size=${vector_size}, num_recv_threads=${num_recv_threads}, use_cp=${use_cp}, with_lb_header=${with_lb_header}, event_timeout_ms=${event_timeout_ms})
+
+parameters:
+- id: uri
+  label: EJFAT URI
+  dtype: string
+  default: 'ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1'
+- id: data_ip
+  label: Data IP Address
+  dtype: string
+  default: '127.0.0.1'
+- id: starting_port
+  label: Starting Port
+  dtype: int
+  default: '19522'
+- id: vector_size
+  label: Vector Size
+  dtype: int
+  default: '1024'
+- id: num_recv_threads
+  label: Number of Receiver Threads
+  dtype: int
+  default: '1'
+- id: use_cp
+  label: Use Control Plane
+  dtype: bool
+  default: 'False'
+- id: with_lb_header
+  label: With Load Balancer Header
+  dtype: bool
+  default: 'True'
+- id: event_timeout_ms
+  label: Event Timeout (ms)
+  dtype: int
+  default: '5000'
+
+outputs:
+- label: out
+  domain: stream
+  dtype: complex
+  vlen: ${vector_size}
+
+file_format: 1

@@ -24,4 +24,12 @@ from .ejfat_sink import ejfat_sink
 from .ejfat_source import ejfat_source
 from .ejfat_shm_sink import ejfat_shm_sink
 from .ejfat_shm_source import ejfat_shm_source
+
+# E2SAR blocks - only import if e2sar_py is available
+try:
+    from .e2sar_segmenter_sink import e2sar_segmenter_sink
+    from .e2sar_reassembler_source import e2sar_reassembler_source
+except ImportError:
+    # e2sar_py not available - E2SAR blocks will not be available
+    pass
 #

@@ -7,10 +7,14 @@ gnuradio_ejfat.egg-info/namespace_packages.txt
 gnuradio_ejfat.egg-info/requires.txt
 gnuradio_ejfat.egg-info/top_level.txt
 python/ejfat/__init__.py
+python/ejfat/e2sar_reassembler_source.py
+python/ejfat/e2sar_segmenter_sink.py
 python/ejfat/ejfat_shm_sink.py
 python/ejfat/ejfat_shm_source.py
 python/ejfat/ejfat_sink.py
 python/ejfat/ejfat_source.py
+python/ejfat/qa_e2sar_reassembler_source.py
+python/ejfat/qa_e2sar_segmenter_sink.py
 python/ejfat/qa_ejfat_shm_sink.py
 python/ejfat/qa_ejfat_shm_source.py
 python/ejfat/qa_ejfat_sink.py

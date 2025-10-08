@@ -1,0 +1,45 @@
+id: ejfat_e2sar_segmenter_sink
+label: E2SAR Segmenter Sink
+category: '[EJFAT]'
+
+templates:
+  imports: from gnuradio import ejfat
+  make: ejfat.e2sar_segmenter_sink(uri=${uri}, data_id=${data_id}, event_src_id=${event_src_id}, vector_size=${vector_size}, use_cp=${use_cp}, mtu=${mtu}, rate_gbps=${rate_gbps})
+
+parameters:
+- id: uri
+  label: EJFAT URI
+  dtype: string
+  default: 'ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522'
+- id: data_id
+  label: Data ID
+  dtype: int
+  default: '1'
+- id: event_src_id
+  label: Event Source ID
+  dtype: int
+  default: '1'
+- id: vector_size
+  label: Vector Size
+  dtype: int
+  default: '1024'
+- id: use_cp
+  label: Use Control Plane
+  dtype: bool
+  default: 'False'
+- id: mtu
+  label: MTU
+  dtype: int
+  default: '9000'
+- id: rate_gbps
+  label: Rate (Gbps)
+  dtype: float
+  default: '1.0'
+
+inputs:
+- label: in
+  domain: stream
+  dtype: complex
+  vlen: ${vector_size}
+
+file_format: 1
