@@ -67,10 +67,12 @@ class fm_receiver_shm(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
+        self.samp_rate = samp_rate = 2400000
         self.volume = volume = 1
         self.vlen = vlen = 8192
         self.shm_name = shm_name = "fm_stream"
-        self.samp_rate = samp_rate = 2400000
+        self.fm_freq = fm_freq = 88.5
+        self.channel_rate = channel_rate = samp_rate/5
         self.audio_rate = audio_rate = 48000
 
         ##################################################
@@ -80,11 +82,6 @@ class fm_receiver_shm(gr.top_block, Qt.QWidget):
         self._volume_range = qtgui.Range(0, 10, 0.1, 1, 200)
         self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volume", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._volume_win)
-        self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
-                interpolation=1,
-                decimation=1,
-                taps=[],
-                fractional_bw=0)
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
                 interpolation=1,
                 decimation=5,
@@ -169,25 +166,28 @@ class fm_receiver_shm(gr.top_block, Qt.QWidget):
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
         self.ejfat_ejfat_shm_source = ejfat.ejfat_shm_source(shm_name=shm_name, timeout=1, vlen=vlen)
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vlen)
+        self.blocks_multiply_const_vxx_1 = blocks.multiply_const_ff(volume)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(volume)
         self.audio_sink_0 = audio.sink(audio_rate, '', True)
-        self.analog_wfm_rcv_0 = analog.wfm_rcv(
-        	quad_rate=(samp_rate/5),
+        self.analog_wfm_rcv_pll_0 = analog.wfm_rcv_pll(
+        	demod_rate=channel_rate,
         	audio_decimation=10,
+        	deemph_tau=(75e-6),
         )
 
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_wfm_rcv_0, 0), (self.rational_resampler_xxx_1, 0))
+        self.connect((self.analog_wfm_rcv_pll_0, 0), (self.blocks_multiply_const_vxx_0, 0))
+        self.connect((self.analog_wfm_rcv_pll_0, 1), (self.blocks_multiply_const_vxx_1, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.audio_sink_0, 1))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_waterfall_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.ejfat_ejfat_shm_source, 0), (self.blocks_vector_to_stream_0, 0))
-        self.connect((self.rational_resampler_xxx_0, 0), (self.analog_wfm_rcv_0, 0))
-        self.connect((self.rational_resampler_xxx_1, 0), (self.blocks_multiply_const_vxx_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.analog_wfm_rcv_pll_0, 0))
 
 
     def closeEvent(self, event):
@@ -198,12 +198,22 @@ class fm_receiver_shm(gr.top_block, Qt.QWidget):
 
         event.accept()
 
+    def get_samp_rate(self):
+        return self.samp_rate
+
+    def set_samp_rate(self, samp_rate):
+        self.samp_rate = samp_rate
+        self.set_channel_rate(self.samp_rate/5)
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
+        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.samp_rate)
+
     def get_volume(self):
         return self.volume
 
     def set_volume(self, volume):
         self.volume = volume
         self.blocks_multiply_const_vxx_0.set_k(self.volume)
+        self.blocks_multiply_const_vxx_1.set_k(self.volume)
 
     def get_vlen(self):
         return self.vlen
@@ -217,13 +227,17 @@ class fm_receiver_shm(gr.top_block, Qt.QWidget):
     def set_shm_name(self, shm_name):
         self.shm_name = shm_name
 
-    def get_samp_rate(self):
-        return self.samp_rate
+    def get_fm_freq(self):
+        return self.fm_freq
 
-    def set_samp_rate(self, samp_rate):
-        self.samp_rate = samp_rate
-        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.samp_rate)
+    def set_fm_freq(self, fm_freq):
+        self.fm_freq = fm_freq
+
+    def get_channel_rate(self):
+        return self.channel_rate
+
+    def set_channel_rate(self, channel_rate):
+        self.channel_rate = channel_rate
 
     def get_audio_rate(self):
         return self.audio_rate

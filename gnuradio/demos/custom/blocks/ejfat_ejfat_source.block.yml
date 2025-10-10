@@ -4,21 +4,173 @@ category: '[EJFAT]'
 
 templates:
   imports: from gnuradio import ejfat
-  make: ejfat.ejfat_source(filename=${filename}, repeat=${repeat})
+  make: |
+    ejfat.ejfat_source(
+        filename=${filename},
+        repeat=${repeat},
+        use_ejfat=${use_ejfat},
+        ejfat_uri=${ejfat_uri},
+        data_id=${data_id},
+        event_src_id=${event_src_id},
+        cpu_cores=${cpu_cores},
+        dpv6=${dpv6},
+        connected_socket=${connected_socket},
+        use_cp=${use_cp},
+        sync_period_ms=${sync_period_ms},
+        sync_periods=${sync_periods},
+        mtu=${mtu},
+        num_send_sockets=${num_send_sockets},
+        snd_socket_buf_size=${snd_socket_buf_size},
+        rate_gbps=${rate_gbps}
+    )
 
 parameters:
+# File Source Parameters
 - id: filename
-  label: Filename
+  label: Input Filename
   dtype: file_open
   default: ''
+  category: File Source
+
 - id: repeat
-  label: Repeat
+  label: Repeat File
   dtype: bool
   default: 'True'
+  category: File Source
+
+# EJFAT Enable
+- id: use_ejfat
+  label: Enable EJFAT Transmission
+  dtype: bool
+  default: 'False'
+  category: EJFAT
+
+# EJFAT Core Parameters
+- id: ejfat_uri
+  label: EJFAT URI
+  dtype: string
+  default: ''
+  category: EJFAT
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: data_id
+  label: Data ID
+  dtype: int
+  default: '0'
+  category: EJFAT
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: event_src_id
+  label: Event Source ID
+  dtype: int
+  default: '0'
+  category: EJFAT
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: cpu_cores
+  label: CPU Cores (comma-separated)
+  dtype: string
+  default: ''
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+# SegmenterFlags - Network Parameters
+- id: dpv6
+  label: Use IPv6 Dataplane
+  dtype: bool
+  default: 'False'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: connected_socket
+  label: Use Connected Sockets
+  dtype: bool
+  default: 'True'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: use_cp
+  label: Enable Control Plane
+  dtype: bool
+  default: 'True'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+# SegmenterFlags - Sync Parameters
+- id: sync_period_ms
+  label: Sync Period (ms)
+  dtype: int
+  default: '1000'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: sync_periods
+  label: Sync Periods for Averaging
+  dtype: int
+  default: '2'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+# SegmenterFlags - Performance Parameters
+- id: mtu
+  label: MTU (0=auto-detect)
+  dtype: int
+  default: '1500'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: num_send_sockets
+  label: Number of Send Sockets
+  dtype: int
+  default: '4'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: snd_socket_buf_size
+  label: Socket Buffer Size (bytes)
+  dtype: int
+  default: '3145728'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
+
+- id: rate_gbps
+  label: Rate Limit (Gbps, -1=unlimited)
+  dtype: float
+  default: '-1.0'
+  category: EJFAT Advanced
+  hide: ${ 'part' if use_ejfat else 'all' }
 
 outputs:
 - label: out
   domain: stream
   dtype: complex
+
+documentation: |
+  EJFAT Source Block
+
+  Reads complex samples from a binary file and optionally transmits them
+  via the EJFAT Segmenter for distributed processing.
+
+  File Source Parameters:
+  - Input Filename: Path to binary file containing complex64 samples
+  - Repeat File: Loop playback when enabled
+
+  EJFAT Parameters:
+  - Enable EJFAT Transmission: When enabled, sends data via EJFAT Segmenter
+  - EJFAT URI: Connection string (e.g., "ejfat://host:port?sync=host:port&data=host:port")
+  - Data ID: Unique identifier for this segmentation point (uint16)
+  - Event Source ID: Unique identifier for this transmitting host (uint32)
+
+  Advanced EJFAT Parameters:
+  - CPU Cores: Comma-separated list for thread affinity (e.g., "0,1,2,3")
+  - Use IPv6 Dataplane: Enable IPv6 for data transmission
+  - Use Connected Sockets: Use connected UDP sockets
+  - Enable Control Plane: Send sync packets to control plane
+  - Sync Period: Control plane sync interval in milliseconds
+  - Sync Periods: Number of periods to average for statistics
+  - MTU: Maximum transmission unit (0 for auto-detection)
+  - Number of Send Sockets: Socket count for LAG randomization
+  - Socket Buffer Size: OS socket buffer size in bytes
+  - Rate Limit: Maximum transmission rate in Gbps (-1 for unlimited)
 
 file_format: 1

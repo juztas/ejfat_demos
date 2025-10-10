@@ -191,6 +191,13 @@ Examples:
 
     dwell_time = args.dwell
 
+    # Enforce minimum dwell time to prevent GNU Radio segfaults
+    if dwell_time < 1.0:
+        print(f"\n⚠️  WARNING: Dwell time {dwell_time}s is too short!")
+        print("   GNU Radio can segfault if frequency is changed faster than 1s")
+        print("   Using minimum dwell time of 1.0s instead.\n")
+        dwell_time = 1.0
+
     signal.signal(signal.SIGINT, signal_handler)
 
     print("\n" + "="*70)

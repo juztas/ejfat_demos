@@ -1,0 +1,27 @@
+) Big idea (one sentence)
+Keep control & metadata in Bluesky (RunEngine, Start/Descriptor/Event/Stop) and move the raw sample stream to a specialized, low-latency data plane (FPGA / RDMA / Kafka / custom C++/CUDA consumers). Bluesky emits references to batches, not each sample.
+2) Components & roles
+Data plane (high-rate)
+Detector/FPGA: digitizes signals, applies deterministic pre-processing (decimation, packetization).
+Low-latency transport: RDMA, DPDK-based UDP, or a high-throughput Kafka cluster (with tuned producers and batching).
+Fast storage / buffer: circular GPU/host memory, NVMe, or object store (S3/Zarr/HDF5) written in large chunks.
+Realtime DSP nodes: C/C++/CUDA consumers that subscribe to the transport, do FFTs/filters, and write processed results and batch files.
+Control & provenance plane (Bluesky)
+Bluesky RunEngine: issues triggers, coordinates scans and metadata.
+AreaDetector / EPICS: integrates detector control and can publish image references.
+Broker/Databroker: receives RunEngine documents (start/descriptor/event/stop) and stores pointers to batch files or metrics.
+Message bridge: a lightweight publisher that takes RunEngine events and publishes minimal documents to Kafka/ZMQ (or just to Databroker).
+Observability & ops
+Metrics (Prometheus), logs, health checks, and an emergency slow-path (throttled recording to local disk).
+3) Key patterns & rules
+Batching — never emit individual low-level samples as Bluesky events. Choose a batch size so that Bluesky events are ≲ 1–1000 Hz depending on metadata complexity.
+Example: 1 000 000 samples/s →
+Batch=1 000 → 1 000 events/s (fairly aggressive for Bluesky)
+Batch=10 000 → 100 events/s (safer)
+Tradeoff: larger batches → less control granularity but far higher throughput.
+Pointers not payloads — Event documents should contain file/object URIs or memory buffer IDs and minimal summary stats (timestamps, checksums, ROI metrics). Use filled: {"det": False} until a consumer fills the data.
+Split responsibilities — FPGA/C-device keeps real-time loop; Bluesky handles experiment lifecycle, knobs, and provenance.
+Zero-copy where possible — use RDMA/shared memory and pass buffer IDs rather than copying arrays.
+Deterministic timestamps — all samples must include precise timestamps (clock sync across FPGA/host with PTP, GPS or NTP+offset).
+Backpressure & throttling — design a throttling/overload strategy (drop, downsample, or route to archival) rather than letting the system fail.
+Validation & checksums — add quick-feel checks (min/max, RMS) in the data plane and store results in the Event doc.

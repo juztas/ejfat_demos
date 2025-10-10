@@ -1,6 +1,19 @@
 # gr-ejfat: GNU Radio EJFAT Source and Sink Blocks
 
-GNU Radio out-of-tree module providing file-based and shared memory complex sample I/O blocks.
+GNU Radio out-of-tree module providing file-based, shared memory, and E2SAR network-based complex sample I/O blocks.
+
+## Test Summary
+
+The module includes comprehensive unit tests for all blocks:
+
+- **qa_ejfat_sink.py**: Tests file-based sink block instantiation and writing complex data to binary files
+- **qa_ejfat_source.py**: Tests file-based source block reading from files and repeat/loop mode
+- **qa_ejfat_shm_sink.py**: Tests shared memory sink block writing complex data to POSIX shared memory with multi-batch writes
+- **qa_ejfat_shm_source.py**: Tests shared memory source block reading complex data and handling multiple events with proper event sequencing
+- **qa_e2sar_segmenter_sink.py**: Tests E2SAR segmenter sink instantiation and vector input (requires e2sar_py)
+- **qa_e2sar_reassembler_source.py**: Tests E2SAR reassembler source instantiation and vector output (requires e2sar_py)
+
+All tests use the GNU Radio unittest framework and validate block behavior with temporary resources that are automatically cleaned up.
 
 ## Blocks
 
@@ -67,6 +80,71 @@ Reads complex (I/Q) samples from a POSIX shared memory FIFO created by EJFAT SHM
 - Event sequence validation
 - Missing event detection
 
+### E2SAR Network Blocks
+
+These blocks require the E2SAR library (e2sar_py) to be installed.
+
+#### E2SAR Segmenter Sink
+Transmits complex (I/Q) samples over the network using the E2SAR data plane segmenter.
+
+**Parameters:**
+- `uri`: EJFAT URI string (e.g., `'ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522'`)
+- `data_id`: Data identifier, uint16 (default: `1`)
+- `event_src_id`: Event source identifier, uint32 (default: `1`)
+- `vector_size`: Size of input complex vectors (integer, default: `1` for streaming samples)
+- `use_cp`: Use control plane (boolean, default: `False`)
+- `mtu`: Maximum transmission unit in bytes (integer, default: `9000`)
+- `rate_gbps`: Target data rate in Gbps (float, default: `1.0`)
+
+**Input:**
+- Complex float stream (gr_complex/fc32) or vectors
+
+**Features:**
+- E2SAR network transmission with load balancing
+- Configurable MTU and data rate
+- Automatic event numbering
+- Vector or streaming sample support
+
+#### E2SAR Reassembler Source
+Receives complex (I/Q) samples over the network using the E2SAR data plane reassembler.
+
+**Parameters:**
+- `uri`: EJFAT URI string (e.g., `'ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1'`)
+- `data_ip`: Data plane IP address (string, default: `'127.0.0.1'`)
+- `starting_port`: Starting UDP port for receiving data (integer, default: `19522`)
+- `vector_size`: Size of output complex vectors (integer, default: `1` for streaming samples)
+- `num_recv_threads`: Number of receiver threads (integer, default: `1`)
+- `use_cp`: Use control plane (boolean, default: `False`)
+- `use_host_address`: Use IP address for gRPC instead of hostname (boolean, default: `False`)
+- `period_ms`: SendState thread period in milliseconds (integer, default: `100`)
+- `validate_cert`: Validate control plane TLS certificate (boolean, default: `True`)
+- `with_lb_header`: Expect load balancer header (boolean, default: `True` for testing without LB)
+- `event_timeout_ms`: Event timeout in milliseconds (integer, default: `5000`)
+- `rcv_socket_buf_size`: Socket receive buffer size in bytes (integer, default: `3145728`)
+- `port_range`: 2^portRange listening ports, -1 = auto (integer, default: `-1`)
+
+**PID Control Parameters:**
+- `epoch_ms`: PID control epoch period in milliseconds (integer, default: `1000`)
+- `ki`: PID integral gain (float, default: `0.0`)
+- `kp`: PID proportional gain (float, default: `0.0`)
+- `kd`: PID derivative gain (float, default: `0.0`)
+- `set_point`: PID setpoint for queue occupancy % (float, default: `0.0`)
+
+**Load Balancing Parameters:**
+- `weight`: Node processing power weight (float, default: `1.0`)
+- `min_factor`: Min slot allocation factor (float, default: `0.5`)
+- `max_factor`: Max slot allocation factor (float, default: `2.0`)
+
+**Output:**
+- Complex float stream (gr_complex/fc32) or vectors
+
+**Features:**
+- E2SAR network reception with load balancing
+- Multi-threaded receiver
+- PID-based flow control
+- Event reassembly and sequencing
+- Vector or streaming sample output
+
 ## Installation
 
 ### Quick Install (Python-only)
@@ -81,6 +159,8 @@ cp grc/ejfat_ejfat_sink.block.yml ~/.grc_gnuradio/
 cp grc/ejfat_ejfat_source.block.yml ~/.grc_gnuradio/
 cp grc/ejfat_ejfat_shm_sink.block.yml ~/.grc_gnuradio/
 cp grc/ejfat_ejfat_shm_source.block.yml ~/.grc_gnuradio/
+cp grc/ejfat_e2sar_segmenter_sink.block.yml ~/.grc_gnuradio/
+cp grc/ejfat_e2sar_reassembler_source.block.yml ~/.grc_gnuradio/
 ```
 
 ### Full CMake Build (if dependencies are available)
@@ -106,6 +186,10 @@ python python/ejfat/qa_ejfat_source.py
 # Shared memory blocks
 python python/ejfat/qa_ejfat_shm_sink.py
 python python/ejfat/qa_ejfat_shm_source.py
+
+# E2SAR network blocks (requires e2sar_py)
+python python/ejfat/qa_e2sar_segmenter_sink.py
+python python/ejfat/qa_e2sar_reassembler_source.py
 ```
 
 ## Usage in GNU Radio Companion
@@ -116,6 +200,8 @@ python python/ejfat/qa_ejfat_shm_source.py
    - **EJFAT Source**: Read complex stream from file
    - **EJFAT SHM Sink**: Write complex stream to shared memory
    - **EJFAT SHM Source**: Read complex stream from shared memory
+   - **E2SAR Segmenter Sink**: Transmit complex stream over E2SAR network
+   - **E2SAR Reassembler Source**: Receive complex stream from E2SAR network
 
 ### Example Flowgraphs
 
@@ -153,6 +239,22 @@ Use matching `shm_name` in both blocks. Start the writer process first.
 ```bash
 # Run the included example demonstrating shared memory IPC
 python examples/test_ejfat_shm_blocks.py
+```
+
+**E2SAR Network: Inter-Process Communication over Network**
+```
+Transmitter Process:
+Signal Source → Throttle → E2SAR Segmenter Sink
+
+Receiver Process:
+E2SAR Reassembler Source → QT GUI Frequency Sink
+```
+Configure matching EJFAT URIs in both blocks. The Segmenter sends data through the EJFAT load balancer to the Reassembler. Requires E2SAR infrastructure to be running.
+
+**E2SAR Network: Example**
+```bash
+# Run the included example demonstrating E2SAR network blocks
+python examples/test_e2sar_blocks.py
 ```
 
 ## File Format Details
@@ -230,6 +332,53 @@ class reader_fg(gr.top_block):
         self.connect(shm_source, sink)
 
 # Start writer first, then reader
+```
+
+### E2SAR Network Blocks
+
+```python
+from gnuradio import gr, analog, blocks
+from gnuradio import ejfat
+
+# Transmitter flowgraph
+class transmitter_fg(gr.top_block):
+    def __init__(self):
+        gr.top_block.__init__(self)
+
+        src = analog.sig_source_c(32000, analog.GR_COS_WAVE, 1000, 1, 0)
+        throttle = blocks.throttle(gr.sizeof_gr_complex, 32000)
+        e2sar_sink = ejfat.e2sar_segmenter_sink(
+            uri='ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522',
+            data_id=1,
+            event_src_id=1,
+            vector_size=1024,  # Send in vectors of 1024 samples
+            use_cp=False,
+            mtu=9000,
+            rate_gbps=1.0
+        )
+
+        self.connect(src, throttle, e2sar_sink)
+
+# Receiver flowgraph (run in separate process or machine)
+class receiver_fg(gr.top_block):
+    def __init__(self):
+        gr.top_block.__init__(self)
+
+        e2sar_source = ejfat.e2sar_reassembler_source(
+            uri='ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1',
+            data_ip='127.0.0.1',
+            starting_port=19522,
+            vector_size=1024,  # Receive vectors of 1024 samples
+            num_recv_threads=1,
+            use_cp=False,
+            with_lb_header=True
+        )
+        sink = blocks.null_sink(gr.sizeof_gr_complex * 1024)
+
+        self.connect(e2sar_source, sink)
+
+# Start transmitter first, then receiver
+# Requires E2SAR infrastructure (load balancer, etc.) to be running
 ```
 
 ## License

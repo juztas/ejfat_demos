@@ -45,6 +45,30 @@ blocks:
     coordinate: [264, 16.0]
     rotation: 0
     state: enabled
+- name: channel_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: samp_rate/5
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 88.0]
+    rotation: 0
+    state: enabled
+- name: fm_freq
+  id: variable
+  parameters:
+    comment: ''
+    value: '88.5'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [640, 16.0]
+    rotation: 0
+    state: enabled
 - name: samp_rate
   id: variable
   parameters:
@@ -102,21 +126,24 @@ blocks:
     coordinate: [520, 12.0]
     rotation: 0
     state: enabled
-- name: analog_wfm_rcv_0
-  id: analog_wfm_rcv
+- name: analog_wfm_rcv_pll_0
+  id: analog_wfm_rcv_pll
   parameters:
     affinity: ''
     alias: ''
     audio_decimation: '10'
-    comment: ''
+    comment: 'Stereo FM Demodulator with PLL
+
+      Outputs: 0=Left, 1=Right'
+    deemph_tau: 75e-6
     maxoutbuf: '0'
     minoutbuf: '0'
-    quad_rate: samp_rate/5
+    quad_rate: channel_rate
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [784, 184.0]
+    coordinate: [808, 172.0]
     rotation: 0
     state: enabled
 - name: audio_sink_0
@@ -124,16 +151,16 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    comment: ''
+    comment: Stereo Audio Output
     device_name: ''
-    num_inputs: '1'
+    num_inputs: '2'
     ok_to_block: 'True'
     samp_rate: audio_rate
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1328, 188.0]
+    coordinate: [1328, 172.0]
     rotation: 0
     state: enabled
 - name: blocks_multiply_const_vxx_0
@@ -141,7 +168,7 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    comment: ''
+    comment: Left Channel Volume
     const: volume
     maxoutbuf: '0'
     minoutbuf: '0'
@@ -151,7 +178,25 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1152, 188.0]
+    coordinate: [1152, 164.0]
+    rotation: 0
+    state: enabled
+- name: blocks_multiply_const_vxx_1
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Right Channel Volume
+    const: volume
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 212.0]
     rotation: 0
     state: enabled
 - name: blocks_vector_to_stream_0
@@ -352,36 +397,74 @@ blocks:
     coordinate: [616, 176.0]
     rotation: 0
     state: enabled
-- name: rational_resampler_xxx_1
-  id: rational_resampler_xxx
+- name: rds_decoder_0
+  id: rds_decoder
   parameters:
     affinity: ''
     alias: ''
-    comment: ''
-    decim: '1'
-    fbw: '0'
-    interp: '1'
+    comment: 'RDS Decoder
+
+      Note: Requires proper RDS signal conditioning
+
+      (57kHz subcarrier extraction, filtering, demodulation)'
+    debug: 'False'
+    log: 'False'
     maxoutbuf: '0'
     minoutbuf: '0'
-    taps: '[]'
-    type: fff
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [968, 176.0]
+    coordinate: [920, 440.0]
     rotation: 0
-    state: enabled
+    state: disabled
+- name: rds_panel_0
+  id: rds_panel
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: RDS Information Display
+    freq: fm_freq
+    gui_hint: ''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1296, 444.0]
+    rotation: 0
+    state: disabled
+- name: rds_parser_0
+  id: rds_parser
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: RDS Parser
+    debug: 'False'
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pty_locale: '1'
+    reset: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1080, 436.0]
+    rotation: 0
+    state: disabled
 
 connections:
-- [analog_wfm_rcv_0, '0', rational_resampler_xxx_1, '0']
+- [analog_wfm_rcv_pll_0, '0', blocks_multiply_const_vxx_0, '0']
+- [analog_wfm_rcv_pll_0, '1', blocks_multiply_const_vxx_1, '0']
 - [blocks_multiply_const_vxx_0, '0', audio_sink_0, '0']
+- [blocks_multiply_const_vxx_1, '0', audio_sink_0, '1']
 - [blocks_vector_to_stream_0, '0', qtgui_freq_sink_x_0, '0']
 - [blocks_vector_to_stream_0, '0', qtgui_waterfall_sink_x_0, '0']
 - [blocks_vector_to_stream_0, '0', rational_resampler_xxx_0, '0']
 - [ejfat_ejfat_shm_source, '0', blocks_vector_to_stream_0, '0']
-- [rational_resampler_xxx_0, '0', analog_wfm_rcv_0, '0']
-- [rational_resampler_xxx_1, '0', blocks_multiply_const_vxx_0, '0']
+- [rational_resampler_xxx_0, '0', analog_wfm_rcv_pll_0, '0']
+- [rds_decoder_0, out, rds_parser_0, in]
+- [rds_parser_0, out, rds_panel_0, in]
 
 metadata:
   file_format: 1

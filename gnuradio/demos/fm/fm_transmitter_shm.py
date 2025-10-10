@@ -182,9 +182,9 @@ class fm_transmitter_shm(gr.top_block, Qt.QWidget):
             firdes.low_pass(
                 1,
                 samp_rate,
-                75e3,
-                25e3,
-                window.WIN_HAMMING,
+                90e3,
+                10e3,
+                window.WIN_BLACKMAN,
                 6.76))
         self.ejfat_ejfat_shm_sink = ejfat.ejfat_shm_sink(shm_name=shm_name, capacity=1024, entry_size=65552, vlen=vlen)
         self.blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, vlen)
@@ -225,7 +225,7 @@ class fm_transmitter_shm(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 75e3, 25e3, window.WIN_HAMMING, 6.76))
+        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 90e3, 10e3, window.WIN_BLACKMAN, 6.76))
         self.osmosdr_source_0.set_sample_rate(self.samp_rate)
         self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
         self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)

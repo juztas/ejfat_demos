@@ -132,7 +132,7 @@ blocks:
     alias: ''
     beta: '6.76'
     comment: ''
-    cutoff_freq: 75e3
+    cutoff_freq: 90e3
     decim: '1'
     gain: '1'
     interp: '1'
@@ -140,8 +140,8 @@ blocks:
     minoutbuf: '0'
     samp_rate: samp_rate
     type: fir_filter_ccf
-    width: 25e3
-    win: window.WIN_HAMMING
+    width: 10e3
+    win: window.WIN_BLACKMAN
   states:
     bus_sink: false
     bus_source: false

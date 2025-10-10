@@ -11,7 +11,7 @@ options:
     gen_linking: dynamic
     generate_options: qt_gui
     hier_block_src_path: .:.
-    id: fm_receiver
+    id: fm_receiver_stereo
     max_nouts: '0'
     output_language: python
     placement: (0,0)
@@ -22,7 +22,7 @@ options:
     run_options: prompt
     sizing_mode: fixed
     thread_safe_setters: ''
-    title: FM Receiver
+    title: FM Receiver (Stereo)
     window_size: (1000,1000)
   states:
     bus_sink: false
@@ -43,6 +43,18 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [264, 16.0]
+    rotation: 0
+    state: enabled
+- name: channel_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: samp_rate/5
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [344, 88.0]
     rotation: 0
     state: enabled
 - name: channel_width
@@ -111,21 +123,24 @@ blocks:
     coordinate: [608, 12.0]
     rotation: 0
     state: enabled
-- name: analog_wfm_rcv_0
-  id: analog_wfm_rcv
+- name: analog_wfm_rcv_pll_0
+  id: analog_wfm_rcv_pll
   parameters:
     affinity: ''
     alias: ''
     audio_decimation: '10'
-    comment: ''
+    comment: 'Stereo FM Demodulator with PLL
+
+      Outputs: 0=Left, 1=Right'
+    deemph_tau: 75e-6
+    quad_rate: channel_rate
     maxoutbuf: '0'
     minoutbuf: '0'
-    quad_rate: samp_rate/5
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 176.0]
+    coordinate: [640, 156.0]
     rotation: 0
     state: enabled
 - name: audio_sink_0
@@ -133,16 +148,16 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    comment: ''
+    comment: Stereo Audio Output
     device_name: ''
-    num_inputs: '1'
+    num_inputs: '2'
     ok_to_block: 'True'
     samp_rate: audio_rate
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1184, 180.0]
+    coordinate: [1184, 164.0]
     rotation: 0
     state: enabled
 - name: blocks_multiply_const_vxx_0
@@ -150,7 +165,7 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    comment: ''
+    comment: Left Channel Volume
     const: volume
     maxoutbuf: '0'
     minoutbuf: '0'
@@ -160,7 +175,25 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1008, 180.0]
+    coordinate: [1008, 156.0]
+    rotation: 0
+    state: enabled
+- name: blocks_multiply_const_vxx_1
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Right Channel Volume
+    const: volume
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1008, 204.0]
     rotation: 0
     state: enabled
 - name: low_pass_filter_0
@@ -169,7 +202,7 @@ blocks:
     affinity: ''
     alias: ''
     beta: '6.76'
-    comment: ''
+    comment: Channel Filter
     cutoff_freq: 75e3
     decim: '1'
     gain: '1'
@@ -706,36 +739,17 @@ blocks:
     coordinate: [456, 168.0]
     rotation: 0
     state: enabled
-- name: rational_resampler_xxx_1
-  id: rational_resampler_xxx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    decim: '1'
-    fbw: '0'
-    interp: '1'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    taps: '[]'
-    type: fff
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [824, 168.0]
-    rotation: 0
-    state: enabled
 
 connections:
-- [analog_wfm_rcv_0, '0', rational_resampler_xxx_1, '0']
+- [analog_wfm_rcv_pll_0, '0', blocks_multiply_const_vxx_0, '0']
+- [analog_wfm_rcv_pll_0, '1', blocks_multiply_const_vxx_1, '0']
 - [blocks_multiply_const_vxx_0, '0', audio_sink_0, '0']
+- [blocks_multiply_const_vxx_1, '0', audio_sink_0, '1']
 - [low_pass_filter_0, '0', rational_resampler_xxx_0, '0']
 - [osmosdr_source_0, '0', low_pass_filter_0, '0']
 - [osmosdr_source_0, '0', qtgui_freq_sink_x_0, '0']
 - [osmosdr_source_0, '0', qtgui_waterfall_sink_x_0, '0']
-- [rational_resampler_xxx_0, '0', analog_wfm_rcv_0, '0']
-- [rational_resampler_xxx_1, '0', blocks_multiply_const_vxx_0, '0']
+- [rational_resampler_xxx_0, '0', analog_wfm_rcv_pll_0, '0']
 
 metadata:
   file_format: 1
