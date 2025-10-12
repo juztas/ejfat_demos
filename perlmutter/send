@@ -1,5 +1,34 @@
 #!/bin/bash
 
+# Parse optional --node parameter
+REMOTE_NODE=""
+if [[ "$1" == "--node" ]] || [[ "$1" == "-n" ]]; then
+    REMOTE_NODE="$2"
+fi
+
+# If remote node specified, SSH and re-execute this script there
+if [[ -n "$REMOTE_NODE" ]]; then
+    ssh "$REMOTE_NODE" "source ~/.bashrc && conda activate e2sar && \
+        IP_VERSION='$IP_VERSION' \
+        TX_RATE='$TX_RATE' \
+        TX_LENGTH='$TX_LENGTH' \
+        NFRAMES='$NFRAMES' \
+        SEND_SOCKETS='$SEND_SOCKETS' \
+        DATA_ID='$DATA_ID' \
+        ~/ejfat_demos/perlmutter/send"
+    exit $?
+fi
+
+# Auto-detect MY_IP if not already set
+if [ -z "$MY_IP" ]; then
+    if [ "$IP_VERSION" = "-4" ]; then
+        LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+    else
+        LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+    fi
+    MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
+fi
+
 echo "Sender IP is : $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "TX_RATE: $TX_RATE"
@@ -8,4 +37,4 @@ echo "NFRAMES: $NFRAMES"
 echo "SEND_SOCKETS: $SEND_SOCKETS"
 echo "DATA_ID: $DATA_ID"
 
-e2sar_perf --send --withcp --ini /ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
+e2sar_perf --send --withcp --ini ~/ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH

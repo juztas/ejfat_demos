@@ -1,10 +1,40 @@
 #!/bin/bash
 
+# Parse optional --node parameter
+REMOTE_NODE=""
+if [[ "$1" == "--node" ]] || [[ "$1" == "-n" ]]; then
+    REMOTE_NODE="$2"
+fi
+
+# If remote node specified, SSH and re-execute this script there
+if [[ -n "$REMOTE_NODE" ]]; then
+    ssh "$REMOTE_NODE" "source ~/.bashrc && conda activate e2sar && \
+        IP_VERSION='$IP_VERSION' \
+        FT_EXTENSION='$FT_EXTENSION' \
+        FT_PREFIX='$FT_PREFIX' \
+        FT_TIMEOUT='$FT_TIMEOUT' \
+        FT_THREADS='$FT_THREADS' \
+        DATA_PATH='$DATA_PATH' \
+        ~/ejfat_demos/perlmutter/receive_file"
+    exit $?
+fi
+
+# Auto-detect MY_IP if not already set
+if [ -z "$MY_IP" ]; then
+    if [ "$IP_VERSION" = "-4" ]; then
+        LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+    else
+        LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+    fi
+    MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
+fi
+
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "FT_EXTENSION: $FT_EXTENSION"
 echo "FT_PREFIX: $FT_PREFIX"
 echo "FT_TIMEOUT: $FT_TIMEOUT"
 echo "FT_THREADS: $FT_THREADS"
+echo "DATA_PATH: ${DATA_PATH:-/data}"
 
-e2sar_ft -r --ip $MY_IP --path /data --extension $FT_EXTENSION --prefix $FT_PREFIX --timeout $FT_TIMEOUT --withcp --threads $FT_THREADS
+e2sar_ft -r --ip $MY_IP --path ${DATA_PATH:-/data} --extension $FT_EXTENSION --prefix $FT_PREFIX --timeout $FT_TIMEOUT --withcp --threads $FT_THREADS

@@ -1,5 +1,37 @@
 #!/bin/bash
 
+# Parse optional --node parameter
+REMOTE_NODE=""
+if [[ "$1" == "--node" ]] || [[ "$1" == "-n" ]]; then
+    REMOTE_NODE="$2"
+fi
+
+# If remote node specified, SSH and re-execute this script there
+if [[ -n "$REMOTE_NODE" ]]; then
+    ssh -t "$REMOTE_NODE" "source ~/.bashrc && conda activate e2sar && \
+        IP_VERSION='$IP_VERSION' \
+        LOG_DIR='$LOG_DIR' \
+        RX_DURATION='$RX_DURATION' \
+        RX_BUFSIZE='$RX_BUFSIZE' \
+        RX_TIMEOUT='$RX_TIMEOUT' \
+        RX_CORES='$RX_CORES' \
+        RX_DEQ='$RX_DEQ' \
+        MONITOR_PORTS='$MONITOR_PORTS' \
+        MONITOR_INTERVAL='$MONITOR_INTERVAL' \
+        ~/ejfat_demos/perlmutter/receive"
+    exit $?
+fi
+
+# Auto-detect MY_IP if not already set
+if [ -z "$MY_IP" ]; then
+    if [ "$IP_VERSION" = "-4" ]; then
+        LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+    else
+        LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+    fi
+    MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
+fi
+
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "Writing logs to $LOG_DIR"
@@ -13,7 +45,7 @@ echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
 
 # tc -s qdisc show dev $MY_INTERFACE
 
-udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o /ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o ~/ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
 e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
 
 # tc -s qdisc show dev $MY_INTERFACE

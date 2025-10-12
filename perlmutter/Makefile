@@ -45,8 +45,9 @@
 #   FT_THREADS        - Number of threads for file transfer
 #   FT_NUMFILES       - Number of test files to generate
 #   FT_FILESIZE       - Size of test files in MB
-#   DATA_DIR          - Data directory path
-#   DATA_RX_DIR       - Receive data directory path
+#   DATA_DIR          - Data directory path (for local containerized execution)
+#   DATA_RX_DIR       - Receive data directory path (for local containerized execution)
+#   DATA_PATH         - Data directory path on remote node (default: /data)
 #
 # Monitoring Configuration:
 #   MONITOR_PORTS     - Port range to monitor (format: start-end)
@@ -58,6 +59,11 @@
 #
 # Logging Configuration:
 #   LOG_DIR           - Directory for log files
+#
+# Remote Execution Configuration:
+#   NODE              - Optional remote node name for SSH execution (e.g., nid001234)
+#                       When set, scripts execute on remote node via SSH with conda activation
+#                       When empty, scripts execute locally in podman-hpc container
 #------------------------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------------------------
@@ -125,6 +131,12 @@ LB_NAME ?= yk_testing
 LOG_DIR ?= ./
 
 #------------------------------------------------------------------------------------------------
+# REMOTE EXECUTION CONFIGURATION
+#------------------------------------------------------------------------------------------------
+NODE ?=
+DATA_PATH ?= /data
+
+#------------------------------------------------------------------------------------------------
 # MAKEFILE TARGETS
 #------------------------------------------------------------------------------------------------
 
@@ -157,13 +169,13 @@ reserve :
 		e2sar_dev /ejfat_demos/perlmutter/reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
 
 receive :
+ifeq ($(NODE),)
 	podman-hpc run \
 		--cap-add SYS_NICE \
 		-v ./:/ejfat_demos/perlmutter \
 		--env LOG_DIR=$(LOG_DIR) \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
-		--env MY_IP=$(MY_IP) \
 		--env MY_INTERFACE=$(MY_INTERFACE) \
 		--env RX_DURATION=$(RX_DURATION) \
 		--env RX_THREADS=$(RX_THREADS) \
@@ -175,13 +187,25 @@ receive :
 		--env MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/receive
+else
+	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
+	RX_DURATION=$(RX_DURATION) \
+	RX_BUFSIZE=$(RX_BUFSIZE) \
+	RX_TIMEOUT=$(RX_TIMEOUT) \
+	RX_CORES=$(RX_CORES) \
+	RX_DEQ=$(RX_DEQ) \
+	MONITOR_PORTS=$(MONITOR_PORTS) \
+	MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
+	./receive --node $(NODE)
+endif
 
 send :
+ifeq ($(NODE),)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
-		--env MY_IP=$(MY_IP) \
 		--env SEND_SOCKETS=$(SEND_SOCKETS) \
 		--env NFRAMES=$(NFRAMES) \
 		--env TX_RATE=$(TX_RATE) \
@@ -189,6 +213,15 @@ send :
 		--env DATA_ID=$(DATA_ID) \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/send
+else
+	IP_VERSION=$(IP_VERSION) \
+	TX_RATE=$(TX_RATE) \
+	TX_LENGTH=$(TX_LENGTH) \
+	NFRAMES=$(NFRAMES) \
+	SEND_SOCKETS=$(SEND_SOCKETS) \
+	DATA_ID=$(DATA_ID) \
+	./send --node $(NODE)
+endif
 
 gen_test_files :
 	podman-hpc run \
@@ -201,13 +234,13 @@ gen_test_files :
 		e2sar_dev generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d /data -n $(FT_NUMFILES)
 
 receive_file :
+ifeq ($(NODE),)
 	-rm -r $(DATA_RX_DIR)
 	mkdir -p $(DATA_RX_DIR)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
-		--env MY_IP=$(MY_IP) \
 		--env FT_EXTENSION=$(FT_EXTENSION) \
 		--env FT_PREFIX=$(FT_PREFIX) \
 		--env FT_TIMEOUT=$(FT_TIMEOUT) \
@@ -215,13 +248,22 @@ receive_file :
 		-v $(DATA_RX_DIR):/data \
 		--network host --rm -it  --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/receive_file
+else
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_PREFIX=$(FT_PREFIX) \
+	FT_TIMEOUT=$(FT_TIMEOUT) \
+	FT_THREADS=$(FT_THREADS) \
+	DATA_PATH=$(DATA_PATH) \
+	./receive_file --node $(NODE)
+endif
 
 send_file :
+ifeq ($(NODE),)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
-		--env MY_IP=$(MY_IP) \
 		--env NFRAMES=$(NFRAMES) \
 		--env SEND_SOCKETS=$(FT_SOCKETS) \
 		--env FT_EXTENSION=$(FT_EXTENSION) \
@@ -229,6 +271,14 @@ send_file :
 		-v $(DATA_DIR):/data \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/send_file
+else
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_RATE=$(FT_RATE) \
+	SEND_SOCKETS=$(FT_SOCKETS) \
+	DATA_PATH=$(DATA_PATH) \
+	./send_file --node $(NODE)
+endif
 
 monitor :
 	podman-hpc run \
