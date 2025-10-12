@@ -7,24 +7,90 @@
 #SBATCH --mail-type=ALL
 #SBATCH -t 00:02:00
 
-#OpenMP settings:
+# OpenMP settings:
 export OMP_NUM_THREADS=4
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
-export RX_DURATION=600
+#------------------------------------------------------------------------------------------------
+# EJFAT FILE TRANSFER TEST CONFIGURATION
+#------------------------------------------------------------------------------------------------
+# These variables override the Makefile defaults and are passed to make commands
+# For all available variables, see the Makefile or README.md
 
-#run the application:
+# Network Configuration
+export IP_VERSION=-6                 # IP version (-4 or -6)
+
+# File Transfer Configuration
+export FT_EXTENSION=root             # File extension for file transfer
+export FT_PREFIX=test                # File prefix for file transfer
+export FT_RATE=1                     # File transfer rate in Gbps
+export FT_SOCKETS=4                  # Number of sockets for file transfer
+export FT_TIMEOUT=7000               # File transfer timeout in milliseconds
+export FT_THREADS=4                  # Number of threads for file transfer
+export FT_NUMFILES=25                # Number of test files
+export FT_FILESIZE=300               # Size of test files in MB
+export NFRAMES=10000                 # Number of frames to send
+
+# Data Directories
+export DATA_DIR=$SCRATCH/storage/ejfat_ft/data
+export DATA_RX_DIR=$SCRATCH/storage/ejfat_ft/data_rx
+
+# -------------------------------------------
+# Setup log directory to hold run artifacts
+# -------------------------------------------
+
 mkdir -p slurm_output/$SLURM_JOB_ID
+export LOG_DIR=slurm_output/$SLURM_JOB_ID
 
-srun -n 1 -c 4 --cpu_bind=cores make receive_file > slurm_output/$SLURM_JOB_ID/rx_1.out &
-srun -n 1 -c 4 --cpu_bind=cores make receive_file > slurm_output/$SLURM_JOB_ID/rx_2.out &
+cp ejfat_file_test $LOG_DIR/ejfat_file_test.copy
+cp Makefile $LOG_DIR
+
+source INSTANCE_URI
+echo $EJFAT_URI | sed -n 's/.*data=\([0-9.]*[0-9]\)[^0-9].*/\1/p' > $LOG_DIR/dp_ipv4
+echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
+
+# -------------------------------------------
+# Run the application
+# -------------------------------------------
+
+date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
+
+srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
+    IP_VERSION=$IP_VERSION \
+    FT_EXTENSION=$FT_EXTENSION \
+    FT_PREFIX=$FT_PREFIX \
+    FT_TIMEOUT=$FT_TIMEOUT \
+    FT_THREADS=$FT_THREADS \
+    DATA_RX_DIR=$DATA_RX_DIR \
+    > slurm_output/$SLURM_JOB_ID/rx_1.out &
+
+srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
+    IP_VERSION=$IP_VERSION \
+    FT_EXTENSION=$FT_EXTENSION \
+    FT_PREFIX=$FT_PREFIX \
+    FT_TIMEOUT=$FT_TIMEOUT \
+    FT_THREADS=$FT_THREADS \
+    DATA_RX_DIR=$DATA_RX_DIR \
+    > slurm_output/$SLURM_JOB_ID/rx_2.out &
 
 sleep 10
 
-srun -n 1 -c 10 --cpu_bind=cores make send_file > slurm_output/$SLURM_JOB_ID/tx_1.out &
+srun -n 1 -c $FT_SOCKETS --cpu_bind=cores make send_file \
+    IP_VERSION=$IP_VERSION \
+    FT_EXTENSION=$FT_EXTENSION \
+    FT_RATE=$FT_RATE \
+    FT_SOCKETS=$FT_SOCKETS \
+    NFRAMES=$NFRAMES \
+    DATA_DIR=$DATA_DIR \
+    > slurm_output/$SLURM_JOB_ID/tx_1.out &
 
-sleep 90    # watchdog timeout
+wait
+
+date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/end_time
+
+scontrol show job $SLURM_JOB_ID >> slurm-$SLURM_JOB_ID.out
+mv slurm-$SLURM_JOB_ID.out $LOG_DIR
 
 
 

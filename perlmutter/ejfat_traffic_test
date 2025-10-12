@@ -13,13 +13,36 @@ export OMP_NUM_THREADS=10
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
-export RX_DURATION=120
-export RX_THREADS=4
-export TX_RATE=2
-export SEND_SOCKETS=4       # number of parallel threads / flows  e2sar_perf should invoke
+#------------------------------------------------------------------------------------------------
+# EJFAT TRAFFIC TEST CONFIGURATION
+#------------------------------------------------------------------------------------------------
+# These variables override the Makefile defaults and are passed to make commands
+# For all available variables, see the Makefile or README.md
+
+# Network Configuration
+export IP_VERSION=-6                 # IP version (-4 or -6)
+
+# Performance Configuration - Receiver
+export RX_DURATION=120               # Receiver duration in seconds
+export RX_THREADS=4                  # Number of receiver threads
+export RX_BUFSIZE=400000000          # Receiver buffer size in bytes
+export RX_TIMEOUT=7000               # Receiver timeout in milliseconds
+export RX_CORES=1                    # Number of cores for receiver
+export RX_DEQ=16                     # Dequeue depth for receiver
+
+# Performance Configuration - Sender
+export TX_RATE=2                     # Transmit rate in Gbps
+export TX_LENGTH=2097152             # Transmit data length in bytes (2 MB)
+export SEND_SOCKETS=4                # Number of sending sockets/threads
+export NFRAMES=10000                 # Number of frames to send
+export DATA_ID=$((RANDOM % 1000 + 1)) # Random data ID
+
+# Monitoring Configuration
+export MONITOR_PORTS=10000-10015     # Port range to monitor
+export MONITOR_INTERVAL=0.1          # Monitoring sample interval in seconds
 
 # -------------------------------------------
-# setup a log directory to hold run artifacts
+# Setup log directory to hold run artifacts
 # -------------------------------------------
 
 mkdir -p slurm_output/$SLURM_JOB_ID
@@ -33,18 +56,40 @@ echo $EJFAT_URI | sed -n 's/.*data=\([0-9.]*[0-9]\)[^0-9].*/\1/p' > $LOG_DIR/dp_
 echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
 
 # -------------------------------------------
-# run the application:
+# Run the application
 # -------------------------------------------
 
 date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
 
-srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_0.out &
-# srun -v -n 1 -c $RX_THREADS --cpu_bind=cores  make receive > $LOG_DIR/rx_1.out &
+srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make receive \
+    IP_VERSION=$IP_VERSION \
+    RX_DURATION=$RX_DURATION \
+    RX_THREADS=$RX_THREADS \
+    RX_BUFSIZE=$RX_BUFSIZE \
+    RX_TIMEOUT=$RX_TIMEOUT \
+    RX_CORES=$RX_CORES \
+    RX_DEQ=$RX_DEQ \
+    MONITOR_PORTS=$MONITOR_PORTS \
+    MONITOR_INTERVAL=$MONITOR_INTERVAL \
+    LOG_DIR=$LOG_DIR \
+    > $LOG_DIR/rx_0.out &
+# srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make receive \
+#     IP_VERSION=$IP_VERSION RX_DURATION=$RX_DURATION RX_THREADS=$RX_THREADS \
+#     LOG_DIR=$LOG_DIR > $LOG_DIR/rx_1.out &
 
 sleep 5
 
-srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_0.out &
-# srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make  send > $LOG_DIR/tx_1.out  &
+srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make send \
+    IP_VERSION=$IP_VERSION \
+    TX_RATE=$TX_RATE \
+    TX_LENGTH=$TX_LENGTH \
+    SEND_SOCKETS=$SEND_SOCKETS \
+    NFRAMES=$NFRAMES \
+    DATA_ID=$DATA_ID \
+    > $LOG_DIR/tx_0.out &
+# srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make send \
+#     IP_VERSION=$IP_VERSION TX_RATE=$TX_RATE SEND_SOCKETS=$SEND_SOCKETS \
+#     NFRAMES=$NFRAMES DATA_ID=$DATA_ID > $LOG_DIR/tx_1.out &
 
 wait
 
