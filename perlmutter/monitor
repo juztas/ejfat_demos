@@ -1,3 +1,4 @@
 #!/bin/bash
 
-lbadm -4 --status
+echo "IP VERSION IS $IP_VERSION"
+lbadm $IP_VERSION --status

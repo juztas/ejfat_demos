@@ -3,12 +3,18 @@
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "Writing logs to $LOG_DIR"
+echo "RX_DURATION: $RX_DURATION"
+echo "RX_BUFSIZE: $RX_BUFSIZE"
+echo "RX_TIMEOUT: $RX_TIMEOUT"
+echo "RX_CORES: $RX_CORES"
+echo "RX_DEQ: $RX_DEQ"
+echo "MONITOR_PORTS: $MONITOR_PORTS"
+echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
 
 # tc -s qdisc show dev $MY_INTERFACE
 
-udp-socket-monitor.sh -p 10000-10015 -t 0.1 -o /ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
-# e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --threads $RX_THREADS  --bufsize 536870912  --timeout 7000 
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize 400000000  --timeout 7000 --cores 1 --deq 16
+udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o /ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
 
 # tc -s qdisc show dev $MY_INTERFACE
 

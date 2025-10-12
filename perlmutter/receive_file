@@ -1,9 +1,10 @@
 #!/bin/bash
 
-export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
-echo "LB IP is $LB_IP"
-export  MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
-echo $MY_IP
+echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
+echo "FT_EXTENSION: $FT_EXTENSION"
+echo "FT_PREFIX: $FT_PREFIX"
+echo "FT_TIMEOUT: $FT_TIMEOUT"
+echo "FT_THREADS: $FT_THREADS"
 
-e2sar_ft -r --ip $MY_IP --path /data --extension root --prefix test --timeout 7000 --withcp --threads 4
+e2sar_ft -r --ip $MY_IP --path /data --extension $FT_EXTENSION --prefix $FT_PREFIX --timeout $FT_TIMEOUT --withcp --threads $FT_THREADS

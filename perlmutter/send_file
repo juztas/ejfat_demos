@@ -1,6 +1,9 @@
 #!/bin/bash
 
-export LB_IP=`dig +short ejfat-lb.es.net | tail -1`
-export MY_IP=`ip route get $LB_IP | awk '{ print $7 }'`
+echo "Sender IP is: $MY_IP"
+echo "IP VERSION IS $IP_VERSION"
+echo "FT_EXTENSION: $FT_EXTENSION"
+echo "FT_RATE: $FT_RATE"
+echo "SEND_SOCKETS: $SEND_SOCKETS"
 
-e2sar_ft -s --ip $MY_IP  --extension root  --sockets 4 --rate 1 --smooth --withcp --path /data/
+e2sar_ft -s --ip $MY_IP --extension $FT_EXTENSION --sockets $SEND_SOCKETS --rate $FT_RATE --smooth --withcp --path /data/
