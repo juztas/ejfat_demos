@@ -32,6 +32,15 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
+# Determine base path based on execution environment
+# When in container: /ejfat_demos/perlmutter
+# When on remote node: ~/ejfat_demos/perlmutter
+if [ -d "/ejfat_demos/perlmutter" ]; then
+    BASE_PATH="/ejfat_demos/perlmutter"
+else
+    BASE_PATH="~/ejfat_demos/perlmutter"
+fi
+
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "Writing logs to $LOG_DIR"
@@ -45,7 +54,7 @@ echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
 
 # tc -s qdisc show dev $MY_INTERFACE
 
-udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o ~/ejfat_demos/perlmutter/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $BASE_PATH/$LOG_DIR/$(hostname)_rx_csvfile.csv &
 e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
 
 # tc -s qdisc show dev $MY_INTERFACE

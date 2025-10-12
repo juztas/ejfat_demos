@@ -29,6 +29,15 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
+# Determine config file path based on execution environment
+# When in container: /ejfat_demos/perlmutter
+# When on remote node: ~/ejfat_demos/perlmutter
+if [ -f "/ejfat_demos/perlmutter/segmenter_config.ini" ]; then
+    CONFIG_PATH="/ejfat_demos/perlmutter/segmenter_config.ini"
+else
+    CONFIG_PATH="~/ejfat_demos/perlmutter/segmenter_config.ini"
+fi
+
 echo "Sender IP is : $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
 echo "TX_RATE: $TX_RATE"
@@ -37,4 +46,4 @@ echo "NFRAMES: $NFRAMES"
 echo "SEND_SOCKETS: $SEND_SOCKETS"
 echo "DATA_ID: $DATA_ID"
 
-e2sar_perf --send --withcp --ini ~/ejfat_demos/perlmutter/segmenter_config.ini $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
+e2sar_perf --send --withcp --ini $CONFIG_PATH $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
