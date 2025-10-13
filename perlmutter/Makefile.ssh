@@ -43,6 +43,7 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh receive NODE=<nodename>"
 	@exit 1
 endif
+	EJFAT_URI=$(INSTANCE_URI) \
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	RX_DURATION=$(RX_DURATION) \
@@ -60,6 +61,7 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh send NODE=<nodename>"
 	@exit 1
 endif
+	EJFAT_URI=$(INSTANCE_URI) \
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	TX_RATE=$(TX_RATE) \
@@ -75,6 +77,7 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh receive_file NODE=<nodename>"
 	@exit 1
 endif
+	EJFAT_URI=$(INSTANCE_URI) \
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
@@ -90,6 +93,7 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh send_file NODE=<nodename>"
 	@exit 1
 endif
+	EJFAT_URI=$(INSTANCE_URI) \
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
