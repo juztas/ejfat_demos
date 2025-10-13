@@ -43,20 +43,9 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh receive NODE=<nodename>"
 	@exit 1
 endif
-	ssh -t $(NODE) "bash -i -c '\
-		conda activate e2sar && \
-		cd ~/ejfat_demos/perlmutter && \
-		make -f Makefile.local receive \
-		EJFAT_URI=\"$(INSTANCE_URI)\" \
-		IP_VERSION=\"$(IP_VERSION)\" \
-		LOG_DIR=\"$(LOG_DIR)\" \
-		RX_DURATION=\"$(RX_DURATION)\" \
-		RX_BUFSIZE=\"$(RX_BUFSIZE)\" \
-		RX_TIMEOUT=\"$(RX_TIMEOUT)\" \
-		RX_CORES=\"$(RX_CORES)\" \
-		RX_DEQ=\"$(RX_DEQ)\" \
-		MONITOR_PORTS=\"$(MONITOR_PORTS)\" \
-		MONITOR_INTERVAL=\"$(MONITOR_INTERVAL)\"'"
+	@echo "Copying INSTANCE_URI to $(NODE)..."
+	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f Makefile.local receive IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" RX_DURATION="$(RX_DURATION)" RX_BUFSIZE="$(RX_BUFSIZE)" RX_TIMEOUT="$(RX_TIMEOUT)" RX_CORES="$(RX_CORES)" RX_DEQ="$(RX_DEQ)" MONITOR_PORTS="$(MONITOR_PORTS)" MONITOR_INTERVAL="$(MONITOR_INTERVAL)"'\'''
 
 send :
 ifndef NODE
@@ -64,18 +53,9 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh send NODE=<nodename>"
 	@exit 1
 endif
-	ssh -t $(NODE) "bash -i -c '\
-		conda activate e2sar && \
-		cd ~/ejfat_demos/perlmutter && \
-		make -f Makefile.local send \
-		EJFAT_URI=\"$(INSTANCE_URI)\" \
-		IP_VERSION=\"$(IP_VERSION)\" \
-		LOG_DIR=\"$(LOG_DIR)\" \
-		TX_RATE=\"$(TX_RATE)\" \
-		TX_LENGTH=\"$(TX_LENGTH)\" \
-		NFRAMES=\"$(NFRAMES)\" \
-		SEND_SOCKETS=\"$(SEND_SOCKETS)\" \
-		DATA_ID=\"$(DATA_ID)\"'"
+	@echo "Copying INSTANCE_URI to $(NODE)..."
+	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f Makefile.local send IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" TX_RATE="$(TX_RATE)" TX_LENGTH="$(TX_LENGTH)" NFRAMES="$(NFRAMES)" SEND_SOCKETS="$(SEND_SOCKETS)" DATA_ID="$(DATA_ID)"'\'''
 
 receive_file :
 ifndef NODE
@@ -83,18 +63,9 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh receive_file NODE=<nodename>"
 	@exit 1
 endif
-	ssh -t $(NODE) "bash -i -c '\
-		conda activate e2sar && \
-		cd ~/ejfat_demos/perlmutter && \
-		make -f Makefile.local receive_file \
-		EJFAT_URI=\"$(INSTANCE_URI)\" \
-		IP_VERSION=\"$(IP_VERSION)\" \
-		LOG_DIR=\"$(LOG_DIR)\" \
-		FT_EXTENSION=\"$(FT_EXTENSION)\" \
-		FT_PREFIX=\"$(FT_PREFIX)\" \
-		FT_TIMEOUT=\"$(FT_TIMEOUT)\" \
-		FT_THREADS=\"$(FT_THREADS)\" \
-		DATA_PATH=\"$(DATA_PATH)\"'"
+	@echo "Copying INSTANCE_URI to $(NODE)..."
+	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f Makefile.local receive_file IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" FT_EXTENSION="$(FT_EXTENSION)" FT_PREFIX="$(FT_PREFIX)" FT_TIMEOUT="$(FT_TIMEOUT)" FT_THREADS="$(FT_THREADS)" DATA_PATH="$(DATA_PATH)"'\'''
 
 send_file :
 ifndef NODE
@@ -102,14 +73,6 @@ ifndef NODE
 	@echo "Usage: make -f Makefile.ssh send_file NODE=<nodename>"
 	@exit 1
 endif
-	ssh -t $(NODE) "bash -i -c '\
-		conda activate e2sar && \
-		cd ~/ejfat_demos/perlmutter && \
-		make -f Makefile.local send_file \
-		EJFAT_URI=\"$(INSTANCE_URI)\" \
-		IP_VERSION=\"$(IP_VERSION)\" \
-		LOG_DIR=\"$(LOG_DIR)\" \
-		FT_EXTENSION=\"$(FT_EXTENSION)\" \
-		FT_RATE=\"$(FT_RATE)\" \
-		SEND_SOCKETS=\"$(FT_SOCKETS)\" \
-		DATA_PATH=\"$(DATA_PATH)\"'"
+	@echo "Copying INSTANCE_URI to $(NODE)..."
+	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f Makefile.local send_file IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" FT_EXTENSION="$(FT_EXTENSION)" FT_RATE="$(FT_RATE)" SEND_SOCKETS="$(FT_SOCKETS)" DATA_PATH="$(DATA_PATH)"'\'''
