@@ -8,13 +8,16 @@ fi
 
 # If remote node specified, SSH and re-execute this script there
 if [[ -n "$REMOTE_NODE" ]]; then
-    ssh "$REMOTE_NODE" "source ~/.bashrc && conda activate e2sar && \
+    LOG_FILE="${LOG_DIR}/${REMOTE_NODE}_send_file.log"
+    ssh -t "$REMOTE_NODE" "bash -i -c '\
+        conda activate e2sar && \
+        EJFAT_URI='$EJFAT_URI' \
         IP_VERSION='$IP_VERSION' \
         FT_EXTENSION='$FT_EXTENSION' \
         FT_RATE='$FT_RATE' \
         SEND_SOCKETS='$SEND_SOCKETS' \
         DATA_PATH='$DATA_PATH' \
-        ~/ejfat_demos/perlmutter/send_file"
+        ~/ejfat_demos/perlmutter/send_file'" > "$LOG_FILE" 2>&1
     exit $?
 fi
 

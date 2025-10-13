@@ -80,7 +80,7 @@ else
 endif
 
 MY_INTERFACE ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*dev//' | awk '{ print $$1 }')
-INSTANCE_URI := $(shell cat INSTANCE_URI 2>/dev/null | sed 's/^[^=]*=//' - )
+INSTANCE_URI := $(shell cat INSTANCE_URI 2>/dev/null | sed 's/^[^=]*=//')
 
 #------------------------------------------------------------------------------------------------
 # PERFORMANCE CONFIGURATION
@@ -148,11 +148,78 @@ test :
 	@echo "IP_VERSION: $(IP_VERSION)"
 
 help :
+	@echo "================================================================================================"
+	@echo "EJFAT Perlmutter Makefile - Load Balancer and Data Transfer Demo"
+	@echo "================================================================================================"
+	@echo ""
+	@echo "USAGE:"
+	@echo "  make <target> [VAR=value ...]"
+	@echo ""
+	@echo "MAIN TARGETS:"
+	@echo "  help              Display this help message"
+	@echo "  build             Build the e2sar_dev container image"
+	@echo "  reserve           Reserve a load balancer instance (saves to INSTANCE_URI file)"
+	@echo "  free              Free the current load balancer reservation"
+	@echo "  test              Display current network and configuration variables"
+	@echo ""
+	@echo "DATA TRANSFER TARGETS:"
+	@echo "  send              Send test data through the load balancer"
+	@echo "  receive           Receive data from the load balancer"
+	@echo "  send_file         Send files through the load balancer"
+	@echo "  receive_file      Receive files from the load balancer"
+	@echo "  gen_test_files    Generate test files for file transfer"
+	@echo "  monitor           Monitor load balancer statistics"
+	@echo ""
+	@echo "COMMON USAGE EXAMPLES:"
+	@echo "  # Build container and reserve load balancer"
+	@echo "  make build"
+	@echo "  make reserve EJFAT_URI_BETA=<your-uri>"
+	@echo ""
+	@echo "  # Send/receive data (in separate terminals)"
+	@echo "  make receive RX_DURATION=60"
+	@echo "  make send TX_RATE=1.0 NFRAMES=5000"
+	@echo ""
+	@echo "  # Remote execution on compute node"
+	@echo "  make receive NODE=nid001234"
+	@echo "  make send NODE=nid001234"
+	@echo ""
+	@echo "  # File transfer workflow"
+	@echo "  make gen_test_files FT_NUMFILES=10 FT_FILESIZE=100"
+	@echo "  make receive_file"
+	@echo "  make send_file FT_RATE=2.0"
+	@echo ""
+	@echo "  # Use IPv4 instead of IPv6"
+	@echo "  make send IP_VERSION=-4"
+	@echo ""
+	@echo "  # Free reservation when done"
+	@echo "  make free"
+	@echo ""
+	@echo "KEY CONFIGURATION VARIABLES:"
+	@echo "  IP_VERSION        IP version (-4 or -6, default: -6)"
+	@echo "  NODE              Remote node for SSH execution (default: local containerized)"
+	@echo "  RX_DURATION       Receiver duration in seconds (default: 120)"
+	@echo "  TX_RATE           Transmit rate in Gbps (default: 0.1)"
+	@echo "  NFRAMES           Number of frames to send (default: 10000)"
+	@echo "  FT_RATE           File transfer rate (default: 1)"
+	@echo "  FT_NUMFILES       Number of test files (default: 25)"
+	@echo "  FT_FILESIZE       Test file size in MB (default: 300)"
+	@echo "  LOG_DIR           Directory for log files (default: ./)"
+	@echo ""
+	@echo "For complete variable documentation, see lines 13-67 in the Makefile."
+	@echo ""
+	@echo "EXECUTION MODES:"
+	@echo "  1. Local containerized: Default mode, runs in podman-hpc container"
+	@echo "     Example: make receive"
+	@echo ""
+	@echo "  2. Remote SSH: Set NODE variable to execute on compute node via SSH"
+	@echo "     Example: make receive NODE=nid001234"
+	@echo ""
+	@echo "For detailed command help, run:"
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/help
-	@echo " Good Luck "
+	@echo "================================================================================================"
 
 build :
 	cd .. ; podman-hpc build -t e2sar_dev:latest -f Containerfile.perlmutter
@@ -215,6 +282,7 @@ ifeq ($(NODE),)
 		e2sar_dev /ejfat_demos/perlmutter/send
 else
 	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
 	TX_RATE=$(TX_RATE) \
 	TX_LENGTH=$(TX_LENGTH) \
 	NFRAMES=$(NFRAMES) \
@@ -250,6 +318,7 @@ ifeq ($(NODE),)
 		e2sar_dev /ejfat_demos/perlmutter/receive_file
 else
 	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
 	FT_PREFIX=$(FT_PREFIX) \
 	FT_TIMEOUT=$(FT_TIMEOUT) \
@@ -273,6 +342,7 @@ ifeq ($(NODE),)
 		e2sar_dev /ejfat_demos/perlmutter/send_file
 else
 	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
 	FT_RATE=$(FT_RATE) \
 	SEND_SOCKETS=$(FT_SOCKETS) \
