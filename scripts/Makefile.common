@@ -31,7 +31,7 @@ MY_INTERFACE ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*dev//' | awk
 #                     Default: INSTANCE_URI in the run directory
 #                     Override with: make <target> INSTANCE_URI_FILE=/path/to/file
 INSTANCE_URI_FILE ?= INSTANCE_URI
-INSTANCE_URI ?= $(shell cat $(INSTANCE_URI_FILE) 2>/dev/null | sed "s/^[^=]*=//; s/^'//; s/'[[:space:]]*$$//")
+INSTANCE_URI := $(shell cat $(INSTANCE_URI_FILE) 2>/dev/null | sed "s/^[^=]*=//; s/^'//; s/'[[:space:]]*$$//")
 
 #------------------------------------------------------------------------------------------------
 # PERFORMANCE CONFIGURATION
