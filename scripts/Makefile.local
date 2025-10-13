@@ -11,10 +11,6 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 include $(MAKEFILE_DIR)Makefile.common
 
-# Enable exporting all variables to shell commands
-.ONESHELL:
-export
-
 .PHONY: help reserve free receive send monitor send_file receive_file gen_test_files
 
 #------------------------------------------------------------------------------------------------
@@ -46,64 +42,25 @@ help :
 	@echo "========================================================================"
 
 reserve :
-	export EJFAT_URI_BETA=$(EJFAT_URI_BETA)
-	export IP_VERSION=$(IP_VERSION)
-	export LB_RESERVE_DURATION=$(LB_RESERVE_DURATION)
-	export LB_NAME=$(LB_NAME)
-	./reserve | grep "EJFAT_URI" >  $(INSTANCE_URI_FILE)
+	@bash -c 'export EJFAT_URI_BETA="$(EJFAT_URI_BETA)"; export IP_VERSION="$(IP_VERSION)"; export LB_RESERVE_DURATION="$(LB_RESERVE_DURATION)"; export LB_NAME="$(LB_NAME)"; ./reserve | grep "EJFAT_URI" > $(INSTANCE_URI_FILE)'
 
 receive :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	export LOG_DIR=$(LOG_DIR)
-	export MY_INTERFACE=$(MY_INTERFACE)
-	export RX_DURATION=$(RX_DURATION)
-	export RX_BUFSIZE=$(RX_BUFSIZE)
-	export RX_TIMEOUT=$(RX_TIMEOUT)
-	export RX_CORES=$(RX_CORES)
-	export RX_DEQ=$(RX_DEQ)
-	export MONITOR_PORTS=$(MONITOR_PORTS)
-	export MONITOR_INTERVAL=$(MONITOR_INTERVAL)
-	./receive
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; export LOG_DIR="$(LOG_DIR)"; export MY_INTERFACE="$(MY_INTERFACE)"; export RX_DURATION="$(RX_DURATION)"; export RX_BUFSIZE="$(RX_BUFSIZE)"; export RX_TIMEOUT="$(RX_TIMEOUT)"; export RX_CORES="$(RX_CORES)"; export RX_DEQ="$(RX_DEQ)"; export MONITOR_PORTS="$(MONITOR_PORTS)"; export MONITOR_INTERVAL="$(MONITOR_INTERVAL)"; ./receive'
 
 send :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	export TX_RATE=$(TX_RATE)
-	export TX_LENGTH=$(TX_LENGTH)
-	export NFRAMES=$(NFRAMES)
-	export SEND_SOCKETS=$(SEND_SOCKETS)
-	export DATA_ID=$(DATA_ID)
-	./send
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; export TX_RATE="$(TX_RATE)"; export TX_LENGTH="$(TX_LENGTH)"; export NFRAMES="$(NFRAMES)"; export SEND_SOCKETS="$(SEND_SOCKETS)"; export DATA_ID="$(DATA_ID)"; ./send'
 
 gen_test_files :
 	generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d $(DATA_PATH) -n $(FT_NUMFILES)
 
 receive_file :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	export FT_EXTENSION=$(FT_EXTENSION)
-	export FT_PREFIX=$(FT_PREFIX)
-	export FT_TIMEOUT=$(FT_TIMEOUT)
-	export FT_THREADS=$(FT_THREADS)
-	export DATA_PATH=$(DATA_PATH)
-	./receive_file
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; export FT_EXTENSION="$(FT_EXTENSION)"; export FT_PREFIX="$(FT_PREFIX)"; export FT_TIMEOUT="$(FT_TIMEOUT)"; export FT_THREADS="$(FT_THREADS)"; export DATA_PATH="$(DATA_PATH)"; ./receive_file'
 
 send_file :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	export FT_EXTENSION=$(FT_EXTENSION)
-	export FT_RATE=$(FT_RATE)
-	export SEND_SOCKETS=$(FT_SOCKETS)
-	export DATA_PATH=$(DATA_PATH)
-	./send_file
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; export FT_EXTENSION="$(FT_EXTENSION)"; export FT_RATE="$(FT_RATE)"; export SEND_SOCKETS="$(FT_SOCKETS)"; export DATA_PATH="$(DATA_PATH)"; ./send_file'
 
 monitor :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	./monitor
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; ./monitor'
 
 free :
-	export EJFAT_URI=$(INSTANCE_URI)
-	export IP_VERSION=$(IP_VERSION)
-	./free
+	@bash -c 'export EJFAT_URI="$(INSTANCE_URI)"; export IP_VERSION="$(IP_VERSION)"; ./free'
