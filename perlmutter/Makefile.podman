@@ -1,0 +1,133 @@
+
+#
+#  Makefile.podman - EJFAT Perlmutter containerized execution with podman-hpc
+#
+#  Yatish Kumar
+#  July 2024
+#------------------------------------------------------------------------------------------------
+
+include Makefile.common
+
+.PHONY: help build reserve free receive send monitor send_file receive_file gen_test_files
+
+#------------------------------------------------------------------------------------------------
+# MAKEFILE TARGETS
+#------------------------------------------------------------------------------------------------
+
+help :
+	@echo "========================================================================"
+	@echo "EJFAT Perlmutter Makefile - Podman-HPC Containerized Execution"
+	@echo "========================================================================"
+	@echo ""
+	@echo "TARGETS:"
+	@echo "  help              Display this help message"
+	@echo "  build             Build the e2sar_dev container image"
+	@echo "  reserve           Reserve a load balancer instance"
+	@echo "  free              Free the current load balancer reservation"
+	@echo "  send              Send test data through the load balancer"
+	@echo "  receive           Receive data from the load balancer"
+	@echo "  send_file         Send files through the load balancer"
+	@echo "  receive_file      Receive files from the load balancer"
+	@echo "  gen_test_files    Generate test files for file transfer"
+	@echo "  monitor           Monitor load balancer statistics"
+	@echo "========================================================================"
+
+build :
+	cd .. ; podman-hpc build -t e2sar_dev:latest -f Containerfile.perlmutter
+	podman-hpc migrate e2sar_dev:latest
+
+reserve :
+	podman-hpc run --cap-add=NET_RAW --cap-add=NET_ADMIN \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI_BETA=$(EJFAT_URI_BETA) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--env LB_RESERVE_DURATION=$(LB_RESERVE_DURATION) \
+		--env LB_NAME=$(LB_NAME) \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
+
+receive :
+	podman-hpc run \
+		--cap-add SYS_NICE \
+		-v ./:/ejfat_demos/perlmutter \
+		--env LOG_DIR=$(LOG_DIR) \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--env MY_INTERFACE=$(MY_INTERFACE) \
+		--env RX_DURATION=$(RX_DURATION) \
+		--env RX_THREADS=$(RX_THREADS) \
+		--env RX_BUFSIZE=$(RX_BUFSIZE) \
+		--env RX_TIMEOUT=$(RX_TIMEOUT) \
+		--env RX_CORES=$(RX_CORES) \
+		--env RX_DEQ=$(RX_DEQ) \
+		--env MONITOR_PORTS=$(MONITOR_PORTS) \
+		--env MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/receive
+
+send :
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--env SEND_SOCKETS=$(SEND_SOCKETS) \
+		--env NFRAMES=$(NFRAMES) \
+		--env TX_RATE=$(TX_RATE) \
+		--env TX_LENGTH=$(TX_LENGTH) \
+		--env DATA_ID=$(DATA_ID) \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/send
+
+gen_test_files :
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env FT_FILESIZE=$(FT_FILESIZE) \
+		--env FT_PREFIX=$(FT_PREFIX) \
+		--env FT_EXTENSION=$(FT_EXTENSION) \
+		--env FT_NUMFILES=$(FT_NUMFILES) \
+		--rm --network host -v $(DATA_DIR):/data \
+		e2sar_dev generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d /data -n $(FT_NUMFILES)
+
+receive_file :
+	-rm -r $(DATA_RX_DIR)
+	mkdir -p $(DATA_RX_DIR)
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--env FT_EXTENSION=$(FT_EXTENSION) \
+		--env FT_PREFIX=$(FT_PREFIX) \
+		--env FT_TIMEOUT=$(FT_TIMEOUT) \
+		--env FT_THREADS=$(FT_THREADS) \
+		-v $(DATA_RX_DIR):/data \
+		--network host --rm -it  --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/receive_file
+
+send_file :
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--env NFRAMES=$(NFRAMES) \
+		--env SEND_SOCKETS=$(FT_SOCKETS) \
+		--env FT_EXTENSION=$(FT_EXTENSION) \
+		--env FT_RATE=$(FT_RATE) \
+		-v $(DATA_DIR):/data \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/send_file
+
+monitor :
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/monitor
+
+free :
+	podman-hpc run \
+		-v ./:/ejfat_demos/perlmutter \
+		--env EJFAT_URI=$(INSTANCE_URI) \
+		--env IP_VERSION=$(IP_VERSION) \
+		--network host --rm -it --entrypoint= \
+		e2sar_dev /ejfat_demos/perlmutter/free

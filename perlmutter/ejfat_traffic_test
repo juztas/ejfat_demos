@@ -49,7 +49,8 @@ mkdir -p slurm_output/$SLURM_JOB_ID
 export LOG_DIR=slurm_output/$SLURM_JOB_ID
 
 cp ejfat_traffic_test $LOG_DIR/ejfat_traffic_test.copy
-cp Makefile $LOG_DIR
+cp Makefile.podman $LOG_DIR
+cp Makefile.common $LOG_DIR
 
 source INSTANCE_URI
 echo $EJFAT_URI | sed -n 's/.*data=\([0-9.]*[0-9]\)[^0-9].*/\1/p' > $LOG_DIR/dp_ipv4
@@ -61,7 +62,7 @@ echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
 
 date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
 
-srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make receive \
+srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make -f Makefile.podman receive \
     IP_VERSION=$IP_VERSION \
     RX_DURATION=$RX_DURATION \
     RX_THREADS=$RX_THREADS \
@@ -73,13 +74,13 @@ srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make receive \
     MONITOR_INTERVAL=$MONITOR_INTERVAL \
     LOG_DIR=$LOG_DIR \
     > $LOG_DIR/rx_0.out &
-# srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make receive \
+# srun -v -n 1 -c $RX_THREADS --cpu_bind=cores make -f Makefile.podman receive \
 #     IP_VERSION=$IP_VERSION RX_DURATION=$RX_DURATION RX_THREADS=$RX_THREADS \
 #     LOG_DIR=$LOG_DIR > $LOG_DIR/rx_1.out &
 
 sleep 5
 
-srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make send \
+srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make -f Makefile.podman send \
     IP_VERSION=$IP_VERSION \
     TX_RATE=$TX_RATE \
     TX_LENGTH=$TX_LENGTH \
@@ -87,7 +88,7 @@ srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make send \
     NFRAMES=$NFRAMES \
     DATA_ID=$DATA_ID \
     > $LOG_DIR/tx_0.out &
-# srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make send \
+# srun -v -n 1 -c $SEND_SOCKETS --cpu_bind=cores make -f Makefile.podman send \
 #     IP_VERSION=$IP_VERSION TX_RATE=$TX_RATE SEND_SOCKETS=$SEND_SOCKETS \
 #     NFRAMES=$NFRAMES DATA_ID=$DATA_ID > $LOG_DIR/tx_1.out &
 

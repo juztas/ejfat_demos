@@ -1,0 +1,102 @@
+
+#
+#  Makefile.local - EJFAT Perlmutter local native execution
+#
+#  Yatish Kumar
+#  July 2024
+#------------------------------------------------------------------------------------------------
+
+include Makefile.common
+
+.PHONY: help reserve free receive send monitor send_file receive_file gen_test_files
+
+#------------------------------------------------------------------------------------------------
+# MAKEFILE TARGETS
+#------------------------------------------------------------------------------------------------
+
+help :
+	@echo "========================================================================"
+	@echo "EJFAT Perlmutter Makefile - Local Native Execution"
+	@echo "========================================================================"
+	@echo ""
+	@echo "TARGETS:"
+	@echo "  help              Display this help message"
+	@echo "  reserve           Reserve a load balancer instance"
+	@echo "  free              Free the current load balancer reservation"
+	@echo "  send              Send test data through the load balancer"
+	@echo "  receive           Receive data from the load balancer"
+	@echo "  send_file         Send files through the load balancer"
+	@echo "  receive_file      Receive files from the load balancer"
+	@echo "  gen_test_files    Generate test files for file transfer"
+	@echo "  monitor           Monitor load balancer statistics"
+	@echo ""
+	@echo "USAGE:"
+	@echo "  make -f Makefile.local <target> [VAR=value ...]"
+	@echo ""
+	@echo "EXAMPLES:"
+	@echo "  make -f Makefile.local receive RX_DURATION=60"
+	@echo "  make -f Makefile.local send TX_RATE=1.0"
+	@echo "========================================================================"
+
+reserve :
+	EJFAT_URI_BETA=$(EJFAT_URI_BETA) \
+	IP_VERSION=$(IP_VERSION) \
+	LB_RESERVE_DURATION=$(LB_RESERVE_DURATION) \
+	LB_NAME=$(LB_NAME) \
+	./reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
+
+receive :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
+	MY_INTERFACE=$(MY_INTERFACE) \
+	RX_DURATION=$(RX_DURATION) \
+	RX_BUFSIZE=$(RX_BUFSIZE) \
+	RX_TIMEOUT=$(RX_TIMEOUT) \
+	RX_CORES=$(RX_CORES) \
+	RX_DEQ=$(RX_DEQ) \
+	MONITOR_PORTS=$(MONITOR_PORTS) \
+	MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
+	./receive
+
+send :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	TX_RATE=$(TX_RATE) \
+	TX_LENGTH=$(TX_LENGTH) \
+	NFRAMES=$(NFRAMES) \
+	SEND_SOCKETS=$(SEND_SOCKETS) \
+	DATA_ID=$(DATA_ID) \
+	./send
+
+gen_test_files :
+	generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d $(DATA_PATH) -n $(FT_NUMFILES)
+
+receive_file :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_PREFIX=$(FT_PREFIX) \
+	FT_TIMEOUT=$(FT_TIMEOUT) \
+	FT_THREADS=$(FT_THREADS) \
+	DATA_PATH=$(DATA_PATH) \
+	./receive_file
+
+send_file :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_RATE=$(FT_RATE) \
+	SEND_SOCKETS=$(FT_SOCKETS) \
+	DATA_PATH=$(DATA_PATH) \
+	./send_file
+
+monitor :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	./monitor
+
+free :
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	./free

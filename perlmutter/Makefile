@@ -137,6 +137,12 @@ NODE ?=
 DATA_PATH ?= /data
 
 #------------------------------------------------------------------------------------------------
+# PODMAN-HPC DETECTION
+#------------------------------------------------------------------------------------------------
+HAS_PODMAN_HPC := $(shell command -v podman-hpc 2>/dev/null)
+USE_PODMAN := $(if $(HAS_PODMAN_HPC),yes,no)
+
+#------------------------------------------------------------------------------------------------
 # MAKEFILE TARGETS
 #------------------------------------------------------------------------------------------------
 
@@ -222,10 +228,16 @@ help :
 	@echo "================================================================================================"
 
 build :
+ifeq ($(USE_PODMAN),yes)
 	cd .. ; podman-hpc build -t e2sar_dev:latest -f Containerfile.perlmutter
 	podman-hpc migrate e2sar_dev:latest
+else
+	@echo "Error: podman-hpc is required for build target"
+	@exit 1
+endif
 
 reserve :
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run --cap-add=NET_RAW --cap-add=NET_ADMIN \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI_BETA=$(EJFAT_URI_BETA) \
@@ -234,9 +246,17 @@ reserve :
 		--env LB_NAME=$(LB_NAME) \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
+else
+	EJFAT_URI_BETA=$(EJFAT_URI_BETA) \
+	IP_VERSION=$(IP_VERSION) \
+	LB_RESERVE_DURATION=$(LB_RESERVE_DURATION) \
+	LB_NAME=$(LB_NAME) \
+	./reserve | grep "EJFAT_URI" >  ./INSTANCE_URI
+endif
 
 receive :
 ifeq ($(NODE),)
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		--cap-add SYS_NICE \
 		-v ./:/ejfat_demos/perlmutter \
@@ -255,6 +275,20 @@ ifeq ($(NODE),)
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/receive
 else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	LOG_DIR=$(LOG_DIR) \
+	MY_INTERFACE=$(MY_INTERFACE) \
+	RX_DURATION=$(RX_DURATION) \
+	RX_BUFSIZE=$(RX_BUFSIZE) \
+	RX_TIMEOUT=$(RX_TIMEOUT) \
+	RX_CORES=$(RX_CORES) \
+	RX_DEQ=$(RX_DEQ) \
+	MONITOR_PORTS=$(MONITOR_PORTS) \
+	MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
+	./receive
+endif
+else
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	RX_DURATION=$(RX_DURATION) \
@@ -269,6 +303,7 @@ endif
 
 send :
 ifeq ($(NODE),)
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
@@ -281,6 +316,16 @@ ifeq ($(NODE),)
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/send
 else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	TX_RATE=$(TX_RATE) \
+	TX_LENGTH=$(TX_LENGTH) \
+	NFRAMES=$(NFRAMES) \
+	SEND_SOCKETS=$(SEND_SOCKETS) \
+	DATA_ID=$(DATA_ID) \
+	./send
+endif
+else
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	TX_RATE=$(TX_RATE) \
@@ -292,6 +337,7 @@ else
 endif
 
 gen_test_files :
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env FT_FILESIZE=$(FT_FILESIZE) \
@@ -300,9 +346,13 @@ gen_test_files :
 		--env FT_NUMFILES=$(FT_NUMFILES) \
 		--rm --network host -v $(DATA_DIR):/data \
 		e2sar_dev generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d /data -n $(FT_NUMFILES)
+else
+	generate-random-files.sh -s $(FT_FILESIZE) -p $(FT_PREFIX) -e $(FT_EXTENSION) -d $(DATA_PATH) -n $(FT_NUMFILES)
+endif
 
 receive_file :
 ifeq ($(NODE),)
+ifeq ($(USE_PODMAN),yes)
 	-rm -r $(DATA_RX_DIR)
 	mkdir -p $(DATA_RX_DIR)
 	podman-hpc run \
@@ -317,6 +367,16 @@ ifeq ($(NODE),)
 		--network host --rm -it  --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/receive_file
 else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_PREFIX=$(FT_PREFIX) \
+	FT_TIMEOUT=$(FT_TIMEOUT) \
+	FT_THREADS=$(FT_THREADS) \
+	DATA_PATH=$(DATA_PATH) \
+	./receive_file
+endif
+else
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
@@ -329,6 +389,7 @@ endif
 
 send_file :
 ifeq ($(NODE),)
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
@@ -341,6 +402,15 @@ ifeq ($(NODE),)
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/send_file
 else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	FT_EXTENSION=$(FT_EXTENSION) \
+	FT_RATE=$(FT_RATE) \
+	SEND_SOCKETS=$(FT_SOCKETS) \
+	DATA_PATH=$(DATA_PATH) \
+	./send_file
+endif
+else
 	IP_VERSION=$(IP_VERSION) \
 	LOG_DIR=$(LOG_DIR) \
 	FT_EXTENSION=$(FT_EXTENSION) \
@@ -351,17 +421,29 @@ else
 endif
 
 monitor :
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/monitor
+else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	./monitor
+endif
 
 free :
+ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		-v ./:/ejfat_demos/perlmutter \
 		--env EJFAT_URI=$(INSTANCE_URI) \
 		--env IP_VERSION=$(IP_VERSION) \
 		--network host --rm -it --entrypoint= \
 		e2sar_dev /ejfat_demos/perlmutter/free
+else
+	EJFAT_URI=$(INSTANCE_URI) \
+	IP_VERSION=$(IP_VERSION) \
+	./free
+endif

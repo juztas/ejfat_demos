@@ -1,0 +1,80 @@
+
+#
+#  Makefile.common - Shared configuration variables for EJFAT Perlmutter Makefiles
+#
+#  This file is included by Makefile.podman, Makefile.ssh, and Makefile.local
+#  to maintain consistent configuration across all execution modes.
+#
+#  Yatish Kumar
+#  July 2024
+#------------------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------------------------
+# NETWORK CONFIGURATION
+#------------------------------------------------------------------------------------------------
+IP_VERSION ?= -6
+
+ifeq ($(IP_VERSION),-4)
+  LB_IP ?= $(shell dig +short ejfat-lb.es.net A | tail -1 )
+  MY_IP ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*src//' | awk '{ print $$1 }')
+else
+  LB_IP ?= $(shell dig +short ejfat-lb.es.net AAAA | tail -1 )
+  MY_IP ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*src//' | awk '{ print $$1 }')
+endif
+
+MY_INTERFACE ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*dev//' | awk '{ print $$1 }')
+INSTANCE_URI := $(shell cat INSTANCE_URI 2>/dev/null | sed 's/^[^=]*=//')
+
+#------------------------------------------------------------------------------------------------
+# PERFORMANCE CONFIGURATION
+#------------------------------------------------------------------------------------------------
+RX_DURATION ?= 120
+RX_THREADS ?= 16
+RX_BUFSIZE ?= 400000000
+RX_TIMEOUT ?= 7000
+RX_CORES ?= 1
+RX_DEQ ?= 16
+
+TX_RATE ?= 0.1
+TX_LENGTH ?= 2097152
+SEND_SOCKETS ?= 8
+NFRAMES ?= 10000
+DATA_ID ?= $(shell bash -c 'echo $$(( $$RANDOM % 1000 + 1 ))')
+
+#------------------------------------------------------------------------------------------------
+# FILE TRANSFER CONFIGURATION
+#------------------------------------------------------------------------------------------------
+FT_EXTENSION ?= root
+FT_PREFIX ?= test
+FT_RATE ?= 1
+FT_SOCKETS ?= 4
+FT_TIMEOUT ?= 7000
+FT_THREADS ?= 4
+FT_NUMFILES ?= 25
+FT_FILESIZE ?= 300
+
+DATA_DIR ?= $(SCRATCH)/storage/ejfat_ft/data
+DATA_RX_DIR ?= $(SCRATCH)/storage/ejfat_ft/data_rx
+DATA_PATH ?= /data
+
+#------------------------------------------------------------------------------------------------
+# MONITORING CONFIGURATION
+#------------------------------------------------------------------------------------------------
+MONITOR_PORTS ?= 10000-10015
+MONITOR_INTERVAL ?= 0.1
+
+#------------------------------------------------------------------------------------------------
+# LOAD BALANCER CONFIGURATION
+#------------------------------------------------------------------------------------------------
+LB_RESERVE_DURATION ?= 5
+LB_NAME ?= yk_testing
+
+#------------------------------------------------------------------------------------------------
+# LOGGING CONFIGURATION
+#------------------------------------------------------------------------------------------------
+LOG_DIR ?= ./
+
+#------------------------------------------------------------------------------------------------
+# REMOTE EXECUTION CONFIGURATION
+#------------------------------------------------------------------------------------------------
+NODE ?=
