@@ -44,7 +44,8 @@ mkdir -p slurm_output/$SLURM_JOB_ID
 export LOG_DIR=slurm_output/$SLURM_JOB_ID
 
 cp ejfat_file_test $LOG_DIR/ejfat_file_test.copy
-cp Makefile $LOG_DIR
+cp ../scripts/Makefile.podman $LOG_DIR/Makefile
+cp ../scripts/Makefile.common $LOG_DIR
 
 source INSTANCE_URI
 echo $EJFAT_URI | sed -n 's/.*data=\([0-9.]*[0-9]\)[^0-9].*/\1/p' > $LOG_DIR/dp_ipv4
@@ -56,7 +57,7 @@ echo $EJFAT_URI | sed -n 's/.*data=\[\([^]]*\)\].*/\1/p' > $LOG_DIR/dp_ipv6
 
 date -u +"%Y-%m-%dT%H:%M:%S" > $LOG_DIR/start_time
 
-srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
+srun -n 1 -c $FT_THREADS --cpu_bind=cores make -f ../scripts/Makefile.podman receive_file \
     IP_VERSION=$IP_VERSION \
     FT_EXTENSION=$FT_EXTENSION \
     FT_PREFIX=$FT_PREFIX \
@@ -65,7 +66,7 @@ srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
     DATA_RX_DIR=$DATA_RX_DIR \
     > slurm_output/$SLURM_JOB_ID/rx_1.out &
 
-srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
+srun -n 1 -c $FT_THREADS --cpu_bind=cores make -f ../scripts/Makefile.podman receive_file \
     IP_VERSION=$IP_VERSION \
     FT_EXTENSION=$FT_EXTENSION \
     FT_PREFIX=$FT_PREFIX \
@@ -76,7 +77,7 @@ srun -n 1 -c $FT_THREADS --cpu_bind=cores make receive_file \
 
 sleep 10
 
-srun -n 1 -c $FT_SOCKETS --cpu_bind=cores make send_file \
+srun -n 1 -c $FT_SOCKETS --cpu_bind=cores make -f ../scripts/Makefile.podman send_file \
     IP_VERSION=$IP_VERSION \
     FT_EXTENSION=$FT_EXTENSION \
     FT_RATE=$FT_RATE \
