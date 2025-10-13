@@ -6,7 +6,10 @@
 #  July 2024
 #------------------------------------------------------------------------------------------------
 
-include Makefile.common
+# Determine the directory where this Makefile is located
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+include $(MAKEFILE_DIR)Makefile.common
 
 .PHONY: help receive send send_file receive_file
 
