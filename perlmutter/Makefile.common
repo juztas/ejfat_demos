@@ -23,7 +23,7 @@ else
 endif
 
 MY_INTERFACE ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*dev//' | awk '{ print $$1 }')
-INSTANCE_URI := $(shell cat INSTANCE_URI 2>/dev/null | sed 's/^[^=]*=//')
+INSTANCE_URI ?= $(shell cat INSTANCE_URI 2>/dev/null | sed 's/^[^=]*=//')
 
 #------------------------------------------------------------------------------------------------
 # PERFORMANCE CONFIGURATION

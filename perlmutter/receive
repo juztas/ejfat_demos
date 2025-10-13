@@ -1,30 +1,5 @@
 #!/bin/bash
 
-# Parse optional --node parameter
-REMOTE_NODE=""
-if [[ "$1" == "--node" ]] || [[ "$1" == "-n" ]]; then
-    REMOTE_NODE="$2"
-fi
-
-# If remote node specified, SSH and re-execute this script there
-if [[ -n "$REMOTE_NODE" ]]; then
-    LOG_FILE="${LOG_DIR}/${REMOTE_NODE}_receive.log"
-    ssh -t "$REMOTE_NODE" "bash -i -c '\
-        conda activate e2sar && \
-        EJFAT_URI='$EJFAT_URI' \
-        IP_VERSION='$IP_VERSION' \
-        LOG_DIR='$LOG_DIR' \
-        RX_DURATION='$RX_DURATION' \
-        RX_BUFSIZE='$RX_BUFSIZE' \
-        RX_TIMEOUT='$RX_TIMEOUT' \
-        RX_CORES='$RX_CORES' \
-        RX_DEQ='$RX_DEQ' \
-        MONITOR_PORTS='$MONITOR_PORTS' \
-        MONITOR_INTERVAL='$MONITOR_INTERVAL' \
-        ~/ejfat_demos/perlmutter/receive'" > "$LOG_FILE" 2>&1
-    exit $?
-fi
-
 # Auto-detect MY_IP if not already set
 if [ -z "$MY_IP" ]; then
     if [ "$IP_VERSION" = "-4" ]; then
