@@ -1,0 +1,513 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Receives FM signal from E2SAR reassembler and demodulates
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: .:.
+    id: fm_receiver_e2sar
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: FM Receiver (E2SAR Reassembler)
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: audio_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '48000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 16.0]
+    rotation: 0
+    state: enabled
+- name: channel_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: samp_rate/5
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 88.0]
+    rotation: 0
+    state: enabled
+- name: data_ip
+  id: variable
+  parameters:
+    comment: 'Local IP for receiving data packets'
+    value: '"127.0.0.1"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [752, 16.0]
+    rotation: 0
+    state: enabled
+- name: ejfat_uri
+  id: variable
+  parameters:
+    comment: 'EJFAT URI for E2SAR connection'
+    value: '"ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 16.0]
+    rotation: 0
+    state: enabled
+- name: fm_freq
+  id: variable
+  parameters:
+    comment: ''
+    value: '88.5'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [856, 16.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '2400000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 16.0]
+    rotation: 0
+    state: enabled
+- name: starting_port
+  id: variable
+  parameters:
+    comment: 'Starting port for receiving E2SAR packets'
+    value: '19522'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [856, 88.0]
+    rotation: 0
+    state: enabled
+- name: vlen
+  id: variable
+  parameters:
+    comment: 'Vector length - must match transmitter'
+    value: '8192'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [440, 16.0]
+    rotation: 0
+    state: enabled
+- name: volume
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: Volume
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0'
+    step: '0.1'
+    stop: '10'
+    value: '1'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [360, 88.0]
+    rotation: 0
+    state: enabled
+- name: analog_wfm_rcv_pll_0
+  id: analog_wfm_rcv_pll
+  parameters:
+    affinity: ''
+    alias: ''
+    audio_decimation: '10'
+    comment: 'Stereo FM Demodulator with PLL
+
+      Outputs: 0=Left, 1=Right'
+    deemph_tau: 75e-6
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quad_rate: channel_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 172.0]
+    rotation: 0
+    state: enabled
+- name: audio_sink_0
+  id: audio_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Stereo Audio Output
+    device_name: ''
+    num_inputs: '2'
+    ok_to_block: 'True'
+    samp_rate: audio_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1328, 172.0]
+    rotation: 0
+    state: enabled
+- name: blocks_multiply_const_vxx_0
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Left Channel Volume
+    const: volume
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 164.0]
+    rotation: 0
+    state: enabled
+- name: blocks_multiply_const_vxx_1
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Right Channel Volume
+    const: volume
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 212.0]
+    rotation: 0
+    state: enabled
+- name: blocks_vector_to_stream_0
+  id: blocks_vector_to_stream
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'Convert vectors from E2SAR to stream'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vlen
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [400, 188.0]
+    rotation: 0
+    state: enabled
+- name: ejfat_e2sar_reassembler_source_0
+  id: ejfat_e2sar_reassembler_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'E2SAR Reassembler - receives and reassembles EJFAT packets'
+    data_ip: data_ip
+    epoch_ms: '1000'
+    event_timeout_ms: '5000'
+    kd: '0.0'
+    ki: '0.0'
+    kp: '0.0'
+    max_factor: '2.0'
+    maxoutbuf: '0'
+    min_factor: '0.5'
+    minoutbuf: '0'
+    num_recv_threads: '1'
+    period_ms: '100'
+    port_range: '-1'
+    rcv_socket_buf_size: '3145728'
+    set_point: '0.0'
+    starting_port: starting_port
+    uri: ejfat_uri
+    use_cp: 'False'
+    use_host_address: 'False'
+    validate_cert: 'True'
+    vector_size: vlen
+    weight: '1.0'
+    with_lb_header: 'True'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 140.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_freq_sink_x_0
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label: Relative Gain
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    norm_window: 'False'
+    showports: 'True'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: complex
+    units: dB
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-140'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [616, 276.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_waterfall_sink_x_0
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: ''
+    int_max: '10'
+    int_min: '-140'
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    showports: 'True'
+    type: complex
+    update_time: '0.10'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [616, 404.0]
+    rotation: 0
+    state: enabled
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '5'
+    fbw: '0'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '[]'
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [616, 176.0]
+    rotation: 0
+    state: enabled
+- name: rds_decoder_0
+  id: rds_decoder
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'RDS Decoder
+
+      Note: Requires proper RDS signal conditioning
+
+      (57kHz subcarrier extraction, filtering, demodulation)'
+    debug: 'False'
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [920, 440.0]
+    rotation: 0
+    state: disabled
+- name: rds_panel_0
+  id: rds_panel
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: RDS Information Display
+    freq: fm_freq
+    gui_hint: ''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1296, 444.0]
+    rotation: 0
+    state: disabled
+- name: rds_parser_0
+  id: rds_parser
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: RDS Parser
+    debug: 'False'
+    log: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pty_locale: '1'
+    reset: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1080, 436.0]
+    rotation: 0
+    state: disabled
+
+connections:
+- [analog_wfm_rcv_pll_0, '0', blocks_multiply_const_vxx_0, '0']
+- [analog_wfm_rcv_pll_0, '1', blocks_multiply_const_vxx_1, '0']
+- [blocks_multiply_const_vxx_0, '0', audio_sink_0, '0']
+- [blocks_multiply_const_vxx_1, '0', audio_sink_0, '1']
+- [blocks_vector_to_stream_0, '0', qtgui_freq_sink_x_0, '0']
+- [blocks_vector_to_stream_0, '0', qtgui_waterfall_sink_x_0, '0']
+- [blocks_vector_to_stream_0, '0', rational_resampler_xxx_0, '0']
+- [ejfat_e2sar_reassembler_source_0, '0', blocks_vector_to_stream_0, '0']
+- [rational_resampler_xxx_0, '0', analog_wfm_rcv_pll_0, '0']
+- [rds_decoder_0, out, rds_parser_0, in]
+- [rds_parser_0, out, rds_panel_0, in]
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0

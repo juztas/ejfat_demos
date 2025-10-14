@@ -169,7 +169,24 @@ class test_ejfat_blocks(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.ejfat_ejfat_source = ejfat.ejfat_source(filename=test_file, repeat=True)
+        self.ejfat_ejfat_source = ejfat.ejfat_source(
+            filename=test_file,
+            repeat=True,
+            use_ejfat=False,
+            ejfat_uri='',
+            data_id=0,
+            event_src_id=0,
+            cpu_cores='',
+            dpv6=False,
+            connected_socket=True,
+            use_cp=True,
+            sync_period_ms=1000,
+            sync_periods=2,
+            mtu=1500,
+            num_send_sockets=4,
+            snd_socket_buf_size=3145728,
+            rate_gbps=-1.0
+        )
         self.ejfat_ejfat_sink = ejfat.ejfat_sink(filename=test_file)
         self.blocks_throttle2_0_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
@@ -207,9 +224,9 @@ class test_ejfat_blocks(gr.top_block, Qt.QWidget):
         self.samp_rate = samp_rate
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.blocks_throttle2_0.set_sample_rate(self.samp_rate)
+        self.blocks_throttle2_0_0.set_sample_rate(self.samp_rate)
         self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_x_0.set_samp_rate(self.samp_rate)
-        self.blocks_throttle2_0_0.set_sample_rate(self.samp_rate)
 
     def get_freq(self):
         return self.freq

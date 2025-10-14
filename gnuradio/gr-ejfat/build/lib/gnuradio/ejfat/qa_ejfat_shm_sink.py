@@ -39,7 +39,7 @@ class qa_ejfat_shm_sink(gr_unittest.TestCase):
 
         # Build flowgraph
         src = blocks.vector_source_c(src_data, vlen=1)
-        sink = ejfat_shm_sink(shm_name=self.shm_name, capacity=1024, entry_size=4096)
+        sink = ejfat_shm_sink(shm_name=self.shm_name, capacity=1024, entry_size=4096, vlen=1)
 
         self.tb.connect(src, sink)
 
@@ -51,14 +51,18 @@ class qa_ejfat_shm_sink(gr_unittest.TestCase):
         try:
             reader = ShmFIFO(name=self.shm_name, create=False)
 
-            # Read event
-            result = reader.read_event(timeout=1.0)
-            self.assertIsNotNone(result, "Should have received data")
+            # Read all events (with vlen=1, each sample becomes one event)
+            read_samples = []
+            for i in range(len(src_data)):
+                result = reader.read_event(timeout=1.0)
+                self.assertIsNotNone(result, f"Should have received event {i}")
 
-            event_number, data = result
-            read_samples = np.frombuffer(data, dtype=np.complex64)
+                event_number, data = result
+                samples = np.frombuffer(data, dtype=np.complex64)
+                read_samples.extend(samples)
 
             # Verify data matches
+            read_samples = np.array(read_samples, dtype=np.complex64)
             np.testing.assert_array_almost_equal(src_data, read_samples)
 
             reader.close()
@@ -73,7 +77,7 @@ class qa_ejfat_shm_sink(gr_unittest.TestCase):
 
         # Build flowgraph
         src = blocks.vector_source_c(src_data, vlen=1)
-        sink = ejfat_shm_sink(shm_name=self.shm_name, capacity=10, entry_size=1024)
+        sink = ejfat_shm_sink(shm_name=self.shm_name, capacity=10, entry_size=1024, vlen=1)
 
         self.tb.connect(src, sink)
 
