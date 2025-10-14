@@ -1,0 +1,55 @@
+# FM Radio E2SAR Demo Dashboard Configuration
+
+# Default URIs
+default_admin_uri: "ejfat://admin@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345"
+default_instance_uri: ""
+
+# SSH settings for remote lbadm execution
+ssh:
+  enabled: true                      # Set to false to use simulated LB
+  hostname: "wash-dtn1-mgt.es.net"   # Remote node running lbadm
+  username: ""                        # SSH username (empty = use current user)
+  key_file: ""                        # SSH key file (empty = use default)
+  port: 22                            # SSH port
+  timeout: 10                         # SSH connection timeout (seconds)
+  lbadm_path: "lbadm"                 # Path to lbadm command on remote host
+
+# Load balancer settings
+load_balancer:
+  name: "fm_demo_lb"                  # Load balancer name for reserve
+  duration: "02:00:00"                # Reservation duration [hh:mm:ss]
+  worker_address: ""                  # Worker IP (empty = auto-detect)
+  use_export_format: true             # Use -e flag to get clean URI output
+
+# Flowgraph paths (relative to fm_bluesky directory)
+transmitter_script: "../fm/fm_transmitter_e2sar.py"
+receiver_script: "../fm/fm_receiver_e2sar.py"
+
+# Startup delays (seconds)
+transmitter_startup_delay: 5
+receiver_startup_delay: 3
+
+# XML-RPC configuration (for remote control)
+xmlrpc_host: "localhost"
+xmlrpc_port: 8080
+
+# Demo workflow steps
+steps:
+  1: "Reserve Load Balancer"
+  2: "Start Transmitter"
+  3: "Start Receiver"
+  4: "Demo Running"
+  5: "Monitor Status"
+  6: "Cleanup"
+  7: "Summary"
+
+# Styling (CSS overrides)
+primary_color: "#6B7D4F"    # Olive/sage green
+background_color: "#FAFAFA"
+card_background: "#FFFFFF"
+text_primary: "#1A1A1A"
+text_secondary: "#9CA3AF"
+
+# Logging
+log_level: "INFO"
+max_log_lines: 100
