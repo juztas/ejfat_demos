@@ -141,7 +141,7 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
             1024, #size
             samp_rate, #samp_rate
             "E2SAR Test - Time Domain", #name
-            1, #number of inputs
+            2, #number of inputs
             None # parent
         )
         self.qtgui_time_sink_e2sar.set_update_time(0.10)
@@ -172,7 +172,7 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
             -1, -1, -1, -1, -1]
 
 
-        for i in range(2):
+        for i in range(4):
             if len(labels[i]) == 0:
                 if (i % 2 == 0):
                     self.qtgui_time_sink_e2sar.set_line_label(i, "Re{{Data {0}}}".format(i/2))
@@ -236,7 +236,7 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
             0, #fc
             samp_rate, #bw
             "E2SAR Test - Frequency", #name
-            1,
+            2,
             None # parent
         )
         self.qtgui_freq_sink_e2sar.set_update_time(0.10)
@@ -261,7 +261,7 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
             1.0, 1.0, 1.0, 1.0, 1.0]
 
-        for i in range(1):
+        for i in range(2):
             if len(labels[i]) == 0:
                 self.qtgui_freq_sink_e2sar.set_line_label(i, "Data {0}".format(i))
             else:
@@ -275,7 +275,29 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
         self.ejfat_ejfat_shm_source_0 = ejfat.ejfat_shm_source(shm_name='ejfat_test_fifo', timeout=1.0, vlen=vlen)
         self.ejfat_ejfat_shm_sink_0 = ejfat.ejfat_shm_sink(shm_name='ejfat_test_fifo', capacity=shm_capacity, entry_size=shm_entry_size, vlen=vlen)
         self.ejfat_e2sar_segmenter_sink_0 = ejfat.e2sar_segmenter_sink(uri='ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522', data_id=1, event_src_id=1, vector_size=vlen, use_cp=False, mtu=9000, rate_gbps=1.0)
-        self.ejfat_e2sar_reassembler_source_0 = ejfat.e2sar_reassembler_source(uri='ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1', data_ip='127.0.0.1', starting_port=19522, vector_size=vlen, num_recv_threads=1, use_cp=False, with_lb_header=True, event_timeout_ms=5000)
+        self.ejfat_e2sar_reassembler_source_0 = ejfat.e2sar_reassembler_source(
+            uri='ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1',
+            data_ip='127.0.0.1',
+            starting_port=19522,
+            vector_size=vlen,
+            num_recv_threads=1,
+            use_cp=False,
+            use_host_address=False,
+            period_ms=100,
+            validate_cert=True,
+            with_lb_header=True,
+            event_timeout_ms=5000,
+            rcv_socket_buf_size=3145728,
+            port_range=(-1),
+            epoch_ms=1000,
+            ki=0.0,
+            kp=0.0,
+            kd=0.0,
+            set_point=0.0,
+            weight=1.0,
+            min_factor=0.5,
+            max_factor=2.0
+        )
         self.blocks_vector_to_stream_1 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vlen)
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vlen)
         self.blocks_throttle_1 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
@@ -295,6 +317,8 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_stream_to_vector_1, 0), (self.ejfat_e2sar_segmenter_sink_0, 0))
         self.connect((self.blocks_throttle_0, 0), (self.blocks_stream_to_vector_0, 0))
         self.connect((self.blocks_throttle_1, 0), (self.blocks_stream_to_vector_1, 0))
+        self.connect((self.blocks_throttle_1, 0), (self.qtgui_freq_sink_e2sar, 1))
+        self.connect((self.blocks_throttle_1, 0), (self.qtgui_time_sink_e2sar, 1))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_freq_sink_shm, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_time_sink_shm, 0))
         self.connect((self.blocks_vector_to_stream_1, 0), (self.qtgui_freq_sink_e2sar, 0))
@@ -336,11 +360,11 @@ class ejfat_blocks_test(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.blocks_throttle_0.set_sample_rate(self.samp_rate)
-        self.qtgui_freq_sink_shm.set_frequency_range(0, self.samp_rate)
-        self.qtgui_time_sink_shm.set_samp_rate(self.samp_rate)
         self.blocks_throttle_1.set_sample_rate(self.samp_rate)
         self.qtgui_freq_sink_e2sar.set_frequency_range(0, self.samp_rate)
+        self.qtgui_freq_sink_shm.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_e2sar.set_samp_rate(self.samp_rate)
+        self.qtgui_time_sink_shm.set_samp_rate(self.samp_rate)
 
 
 

@@ -15,6 +15,7 @@ from datetime import datetime
 import logging
 import time
 import threading
+import base64
 
 # Import lbadm manager
 from lbadm_manager import LBAdminManager
@@ -150,6 +151,24 @@ st.markdown(f"""
     }}
     .stTextInput > label {{
         margin-bottom: 0.25rem !important;
+    }}
+    /* Sidebar logo styling - prevent clipping and ensure proper sizing */
+    [data-testid="stSidebar"] img {{
+        max-width: 100% !important;
+        height: auto !important;
+        object-fit: contain !important;
+    }}
+    /* Ensure sidebar images aren't clipped */
+    [data-testid="stSidebar"] [data-testid="stImage"] {{
+        overflow: visible !important;
+    }}
+    /* Logo container alignment */
+    .logo-container {{
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -448,6 +467,56 @@ def stop_receiver():
             st.error(f"Error stopping receiver: {e}")
             log_message(f"❌ Error stopping receiver: {e}")
 
+def open_transmitter_flowgraph():
+    """Open transmitter flowgraph in GNU Radio Companion."""
+    fm_dir = Path(__file__).parent
+    tx_grc = fm_dir / config.get('transmitter_grc', '../fm/fm_transmitter_e2sar.grc')
+
+    try:
+        # Activate conda environment and launch gnuradio-companion
+        cmd = f"source /opt/anaconda3/bin/activate gnuradio && gnuradio-companion {tx_grc}"
+
+        subprocess.Popen(
+            cmd,
+            shell=True,
+            cwd=str(fm_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            executable='/bin/bash'
+        )
+
+        log_message(f"✅ Opened transmitter flowgraph: {tx_grc.name}")
+        st.success("Transmitter flowgraph opened in GNU Radio Companion!")
+
+    except Exception as e:
+        st.error(f"Failed to open flowgraph: {e}")
+        log_message(f"❌ Failed to open TX flowgraph: {e}")
+
+def open_receiver_flowgraph():
+    """Open receiver flowgraph in GNU Radio Companion."""
+    fm_dir = Path(__file__).parent
+    rx_grc = fm_dir / config.get('receiver_grc', '../fm/fm_receiver_e2sar.grc')
+
+    try:
+        # Activate conda environment and launch gnuradio-companion
+        cmd = f"source /opt/anaconda3/bin/activate gnuradio && gnuradio-companion {rx_grc}"
+
+        subprocess.Popen(
+            cmd,
+            shell=True,
+            cwd=str(fm_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            executable='/bin/bash'
+        )
+
+        log_message(f"✅ Opened receiver flowgraph: {rx_grc.name}")
+        st.success("Receiver flowgraph opened in GNU Radio Companion!")
+
+    except Exception as e:
+        st.error(f"Failed to open flowgraph: {e}")
+        log_message(f"❌ Failed to open RX flowgraph: {e}")
+
 def monitor_load_balancers():
     """Monitor load balancers and update overview (runs on main thread)."""
     try:
@@ -624,37 +693,42 @@ Expand the logs panel to see:
 """,
 }
 
+# Header Component Function
+def render_header():
+    """Render the System Status header at the top of the page."""
+    st.title("🎙️ FM Radio E2SAR Demo Dashboard")
+
+    # System Status Panel (at top for horizontal space)
+    st.header("📊 System Status")
+
+    col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
+
+    with col_stat1:
+        st.metric("LB Status", "Reserved ✅" if st.session_state.get('lb_reserved') else "Free ⚪")
+
+    with col_stat2:
+        st.metric("TX Process", "Running" if st.session_state.get('tx_running') else "Stopped")
+
+    with col_stat3:
+        st.metric("RX Process", "Running" if st.session_state.get('rx_running') else "Stopped")
+
+    with col_stat4:
+        total_steps = len(SLIDES)
+        st.metric("Demo Step", f"{st.session_state.get('current_step', 1)}/{total_steps}")
+
+    with col_stat5:
+        # Log viewer
+        with st.expander("📜 Logs", expanded=False):
+            logs = st.session_state.get('logs', [])
+            if logs:
+                st.text_area("System Logs", value="\n".join(logs[-20:]), height=200, disabled=True, label_visibility="collapsed")
+            else:
+                st.info("No logs yet")
+
+    st.divider()
+
 # Main App Layout
-st.title("🎙️ FM Radio E2SAR Demo Dashboard")
-
-# System Status Panel (at top for horizontal space)
-st.header("📊 System Status")
-
-col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
-
-with col_stat1:
-    st.metric("LB Status", "Reserved ✅" if st.session_state.get('lb_reserved') else "Free ⚪")
-
-with col_stat2:
-    st.metric("TX Process", "Running" if st.session_state.get('tx_running') else "Stopped")
-
-with col_stat3:
-    st.metric("RX Process", "Running" if st.session_state.get('rx_running') else "Stopped")
-
-with col_stat4:
-    total_steps = len(SLIDES)
-    st.metric("Demo Step", f"{st.session_state.get('current_step', 1)}/{total_steps}")
-
-with col_stat5:
-    # Log viewer
-    with st.expander("📜 Logs", expanded=False):
-        logs = st.session_state.get('logs', [])
-        if logs:
-            st.text_area("System Logs", value="\n".join(logs[-20:]), height=200, disabled=True, label_visibility="collapsed")
-        else:
-            st.info("No logs yet")
-
-st.divider()
+render_header()
 
 # Sidebar with slide navigation
 with st.sidebar:
@@ -687,323 +761,369 @@ with st.sidebar:
     # Display current slide
     st.markdown(SLIDES.get(current_step, "No content available"))
 
-# Main content area - stacked vertically
+# Main content area - Tabbed interface
+tab1, tab2, tab3, tab4 = st.tabs(["🌐 Load Balancer Configuration", "📡 Gnuradio Control", "☁️ Bluesky Control", "📊 Load Balancer Monitor"])
 
-# Load Balancer Control Panel
-st.header("🌐 Load Balancer Configuration")
+# TAB 1: Load Balancer Configuration
+with tab1:
+    st.header("🌐 Load Balancer Configuration")
 
-# Admin Hostname input with Test SSH button inline
-col_host, col_test = st.columns([3, 1])
+    # Admin Hostname input with Test SSH button inline
+    col_host, col_test = st.columns([3, 1])
 
-# Get current SSH hostname for status display
-ssh_hostname = st.session_state.get('ssh_hostname', config.get('ssh', {}).get('hostname', 'wash-dtn1-mgt.es.net'))
+    # Get current SSH hostname for status display
+    ssh_hostname = st.session_state.get('ssh_hostname', config.get('ssh', {}).get('hostname', 'wash-dtn1-mgt.es.net'))
 
-# Prepare status text
-if config.get('ssh', {}).get('enabled', True):
-    ssh_status = st.session_state.get('ssh_connected', None)
-
-    if ssh_status is None:
-        status_text = f"🔘 Not tested"
-    elif ssh_status:
-        status_text = f"✅ Connected"
-    else:
-        status_text = f"❌ Connection failed"
-else:
-    status_text = "🔘 SSH disabled"
-
-# Row 1: Labels/Status
-with col_host:
-    st.markdown("**Admin Hostname**")
-
-with col_test:
-    st.markdown(f"**{status_text}**")
-
-# Row 2: Input field and button
-with col_host:
-    ssh_hostname = st.text_input(
-        "Admin Hostname",
-        value=ssh_hostname,
-        help="Remote host for SSH connection (e.g., wash-dtn1-mgt.es.net)",
-        key="ssh_hostname_input",
-        label_visibility="collapsed"
-    )
-    # Update session state and config dynamically
-    st.session_state.ssh_hostname = ssh_hostname
-    config['ssh']['hostname'] = ssh_hostname
-
-with col_test:
+    # Prepare status text
     if config.get('ssh', {}).get('enabled', True):
-        if st.button("🔍 Test SSH", key="test_ssh_btn", use_container_width=True):
-            test_ssh_connection()
+        ssh_status = st.session_state.get('ssh_connected', None)
 
-# Admin URI input with obfuscation toggle
-# Add label row above both elements
-st.markdown("**EJFAT Admin URI**")
+        if ssh_status is None:
+            status_text = f"🔘 Not tested"
+        elif ssh_status:
+            status_text = f"✅ Connected"
+        else:
+            status_text = f"❌ Connection failed"
+    else:
+        status_text = "🔘 SSH disabled"
 
-col_uri, col_toggle = st.columns([10, 1])
+    # Row 1: Labels/Status
+    with col_host:
+        st.markdown("**Admin Hostname**")
 
-with col_uri:
+    with col_test:
+        st.markdown(f"**{status_text}**")
+
+    # Row 2: Input field and button
+    with col_host:
+        ssh_hostname = st.text_input(
+            "Admin Hostname",
+            value=ssh_hostname,
+            help="Remote host for SSH connection (e.g., wash-dtn1-mgt.es.net)",
+            key="ssh_hostname_input",
+            label_visibility="collapsed"
+        )
+        # Update session state and config dynamically
+        st.session_state.ssh_hostname = ssh_hostname
+        config['ssh']['hostname'] = ssh_hostname
+
+    with col_test:
+        if config.get('ssh', {}).get('enabled', True):
+            if st.button("🔍 Test SSH", key="test_ssh_btn", use_container_width=True):
+                test_ssh_connection()
+
+    # Admin URI input with obfuscation toggle
+    # Add label row above both elements
+    st.markdown("**EJFAT Admin URI**")
+
+    col_uri, col_toggle = st.columns([10, 1])
+
+    with col_uri:
+        # Single source of truth: store only the full URI
+        if 'admin_uri_full' not in st.session_state:
+            st.session_state.admin_uri_full = st.session_state.get('admin_uri', config['default_admin_uri'])
+
+        # Derived value: calculate display URI from source of truth + toggle state
+        is_obfuscated = st.session_state.get('obfuscate_uri', True)
+        display_uri = obfuscate_uri_token(st.session_state.admin_uri_full) if is_obfuscated else st.session_state.admin_uri_full
+
+        # Dynamic key changes when obfuscation toggles, forcing widget recreation
+        admin_uri = st.text_input(
+            "EJFAT Admin URI",
+            value=display_uri,
+            help="URI for E2SAR admin/control plane (from EJFAT_URI_BETA or EJFAT_URI env var)",
+            key=f"admin_uri_input_{is_obfuscated}",
+            disabled=is_obfuscated,  # Only allow editing when not obfuscated
+            label_visibility="collapsed"
+        )
+
+        # Update source of truth when user edits (only when obfuscation is off)
+        if not is_obfuscated and admin_uri != st.session_state.admin_uri_full:
+            st.session_state.admin_uri_full = admin_uri
+
+        # Convenience: keep admin_uri in sync for backward compatibility
+        st.session_state.admin_uri = st.session_state.admin_uri_full
+
+    with col_toggle:
+        # Toggle button for obfuscation
+        toggle_icon = "🔒" if st.session_state.get('obfuscate_uri', True) else "👁️"
+        if st.button(toggle_icon, key="toggle_obfuscate", help="Toggle URI obfuscation", use_container_width=True):
+            # Simply flip the toggle - widgets will recreate with new keys
+            st.session_state.obfuscate_uri = not st.session_state.get('obfuscate_uri', True)
+            st.rerun()
+
+    # Instance URI input (full width, below admin URI)
     # Single source of truth: store only the full URI
-    if 'admin_uri_full' not in st.session_state:
-        st.session_state.admin_uri_full = st.session_state.get('admin_uri', config['default_admin_uri'])
+    if 'instance_uri_full' not in st.session_state:
+        st.session_state.instance_uri_full = st.session_state.get('instance_uri', '')
 
     # Derived value: calculate display URI from source of truth + toggle state
     is_obfuscated = st.session_state.get('obfuscate_uri', True)
-    display_uri = obfuscate_uri_token(st.session_state.admin_uri_full) if is_obfuscated else st.session_state.admin_uri_full
+    display_instance_uri = obfuscate_uri_token(st.session_state.instance_uri_full) if is_obfuscated else st.session_state.instance_uri_full
 
-    # Dynamic key changes when obfuscation toggles, forcing widget recreation
-    admin_uri = st.text_input(
-        "EJFAT Admin URI",
-        value=display_uri,
-        help="URI for E2SAR admin/control plane (from EJFAT_URI_BETA or EJFAT_URI env var)",
-        key=f"admin_uri_input_{is_obfuscated}",
-        disabled=is_obfuscated,  # Only allow editing when not obfuscated
-        label_visibility="collapsed"
+    # Dynamic key changes when obfuscation toggles OR when instance URI changes, forcing widget recreation
+    # Include a hash of the full URI in the key to ensure widget recreates when value changes
+    instance_uri_hash = hash(st.session_state.instance_uri_full) if st.session_state.instance_uri_full else 0
+    instance_uri = st.text_input(
+        "Instance URI",
+        value=display_instance_uri,
+        disabled=True,  # Instance URI is always read-only (set by reserve operation)
+        help="URI assigned after reserving load balancer",
+        key=f"instance_uri_input_{is_obfuscated}_{instance_uri_hash}"
     )
 
-    # Update source of truth when user edits (only when obfuscation is off)
-    if not is_obfuscated and admin_uri != st.session_state.admin_uri_full:
-        st.session_state.admin_uri_full = admin_uri
+    # Convenience: keep instance_uri in sync for backward compatibility
+    st.session_state.instance_uri = st.session_state.instance_uri_full
 
-    # Convenience: keep admin_uri in sync for backward compatibility
-    st.session_state.admin_uri = st.session_state.admin_uri_full
+    # Reserve LB section with duration input
+    # Add label row above both elements
+    col_label_dur, col_label_res, col_label_spacer = st.columns([0.7, 1.5, 2.8])
+    with col_label_dur:
+        st.markdown("**Duration (HH:MM:SS)**")
 
-with col_toggle:
-    # Toggle button for obfuscation
-    toggle_icon = "🔒" if st.session_state.get('obfuscate_uri', True) else "👁️"
-    if st.button(toggle_icon, key="toggle_obfuscate", help="Toggle URI obfuscation", use_container_width=True):
-        # Simply flip the toggle - widgets will recreate with new keys
-        st.session_state.obfuscate_uri = not st.session_state.get('obfuscate_uri', True)
-        st.rerun()
+    col_duration, col_reserve, col_spacer = st.columns([0.7, 1.5, 2.8])
 
-# Instance URI input (full width, below admin URI)
-# Single source of truth: store only the full URI
-if 'instance_uri_full' not in st.session_state:
-    st.session_state.instance_uri_full = st.session_state.get('instance_uri', '')
+    with col_duration:
+        duration_input = st.text_input(
+            "Duration (HH:MM:SS)",
+            value=st.session_state.get('lb_duration', '1:00:00'),
+            help="Load balancer reservation duration in HH:MM:SS format (e.g., 1:00:00 for 1 hour)",
+            key="duration_input",
+            disabled=st.session_state.get('lb_reserved', False),
+            max_chars=8,
+            label_visibility="collapsed"
+        )
+        # Update session state with duration
+        st.session_state.lb_duration = duration_input
 
-# Derived value: calculate display URI from source of truth + toggle state
-is_obfuscated = st.session_state.get('obfuscate_uri', True)
-display_instance_uri = obfuscate_uri_token(st.session_state.instance_uri_full) if is_obfuscated else st.session_state.instance_uri_full
+        # Validate and show feedback
+        is_valid, formatted_duration, error_msg = validate_duration_format(duration_input)
+        if not is_valid and duration_input:
+            st.error(error_msg)
 
-# Dynamic key changes when obfuscation toggles, forcing widget recreation
-instance_uri = st.text_input(
-    "Instance URI",
-    value=display_instance_uri,
-    disabled=True,  # Instance URI is always read-only (set by reserve operation)
-    help="URI assigned after reserving load balancer",
-    key=f"instance_uri_input_{is_obfuscated}"
-)
+    with col_reserve:
+        if st.button("🔒 Reserve LB", disabled=st.session_state.get('lb_reserved', False), use_container_width=True):
+            reserve_load_balancer()
 
-# Convenience: keep instance_uri in sync for backward compatibility
-st.session_state.instance_uri = st.session_state.instance_uri_full
+    with col_spacer:
+        pass  # Empty column for spacing
 
-# Reserve LB section with duration input
-# Add label row above both elements
-col_label_dur, col_label_res, col_label_spacer = st.columns([0.7, 1.5, 2.8])
-with col_label_dur:
-    st.markdown("**Duration (HH:MM:SS)**")
+    # Display reserve command directly
+    st.caption("💻 SSH Command:")
+    reserve_cmd = lbadm_manager.get_reserve_command(st.session_state.admin_uri_full, st.session_state.get('lb_duration', '1:00:00'))
+    # Obfuscate URI in command display if enabled
+    display_reserve_cmd = reserve_cmd
+    if st.session_state.get('obfuscate_uri', True):
+        full_uri = st.session_state.get('admin_uri_full', '')
+        if full_uri:
+            obfuscated = obfuscate_uri_token(full_uri)
+            display_reserve_cmd = reserve_cmd.replace(full_uri, obfuscated)
+    st.code(display_reserve_cmd, language="bash")
 
-col_duration, col_reserve, col_spacer = st.columns([0.7, 1.5, 2.8])
+    st.divider()
 
-with col_duration:
-    duration_input = st.text_input(
-        "Duration (HH:MM:SS)",
-        value=st.session_state.get('lb_duration', '1:00:00'),
-        help="Load balancer reservation duration in HH:MM:SS format (e.g., 1:00:00 for 1 hour)",
-        key="duration_input",
-        disabled=st.session_state.get('lb_reserved', False),
-        max_chars=8,
-        label_visibility="collapsed"
-    )
-    # Update session state with duration
-    st.session_state.lb_duration = duration_input
+    # Free LB button and command
+    if st.button("🔓 Free LB", disabled=not st.session_state.get('lb_reserved', False), use_container_width=True):
+        free_load_balancer()
 
-    # Validate and show feedback
-    is_valid, formatted_duration, error_msg = validate_duration_format(duration_input)
-    if not is_valid and duration_input:
-        st.error(error_msg)
+    # Display free command directly
+    st.caption("💻 SSH Command:")
+    free_cmd = lbadm_manager.get_free_command(st.session_state.get('instance_uri_full', ''))
+    # Obfuscate URI in command display if enabled
+    display_free_cmd = free_cmd
+    if st.session_state.get('obfuscate_uri', True):
+        instance_uri = st.session_state.get('instance_uri_full', '')
+        if instance_uri:
+            obfuscated = obfuscate_uri_token(instance_uri)
+            display_free_cmd = free_cmd.replace(instance_uri, obfuscated)
+    st.code(display_free_cmd, language="bash")
 
-with col_reserve:
-    if st.button("🔒 Reserve LB", disabled=st.session_state.get('lb_reserved', False), use_container_width=True):
-        reserve_load_balancer()
+# TAB 2: Gnuradio Control
+with tab2:
+    st.header("📡 Gnuradio Control")
 
-with col_spacer:
-    pass  # Empty column for spacing
+    col1, col2 = st.columns(2)
 
-# Display reserve command directly
-st.caption("💻 SSH Command:")
-reserve_cmd = lbadm_manager.get_reserve_command(st.session_state.admin_uri_full, st.session_state.get('lb_duration', '1:00:00'))
-# Obfuscate URI in command display if enabled
-display_reserve_cmd = reserve_cmd
-if st.session_state.get('obfuscate_uri', True):
-    full_uri = st.session_state.get('admin_uri_full', '')
-    if full_uri:
-        obfuscated = obfuscate_uri_token(full_uri)
-        display_reserve_cmd = reserve_cmd.replace(full_uri, obfuscated)
-st.code(display_reserve_cmd, language="bash")
+    with col1:
+        st.subheader("Transmitter")
+        tx_status = st.session_state.get('tx_running', False)
+        st.metric("Status", "Running ✅" if tx_status else "Stopped ⏸️")
 
-st.divider()
+        col_tx1, col_tx2 = st.columns(2)
+        with col_tx1:
+            if st.button("▶️ Start TX", disabled=tx_status):
+                start_transmitter()
+        with col_tx2:
+            if st.button("⏹️ Stop TX", disabled=not tx_status):
+                stop_transmitter()
 
-# Free LB button and command
-if st.button("🔓 Free LB", disabled=not st.session_state.get('lb_reserved', False), use_container_width=True):
-    free_load_balancer()
+        # Show Flowgraph button
+        if st.button("📊 Show TX Flowgraph", use_container_width=True):
+            open_transmitter_flowgraph()
 
-# Display free command directly
-st.caption("💻 SSH Command:")
-free_cmd = lbadm_manager.get_free_command(st.session_state.get('instance_uri_full', ''))
-# Obfuscate URI in command display if enabled
-display_free_cmd = free_cmd
-if st.session_state.get('obfuscate_uri', True):
-    instance_uri = st.session_state.get('instance_uri_full', '')
-    if instance_uri:
-        obfuscated = obfuscate_uri_token(instance_uri)
-        display_free_cmd = free_cmd.replace(instance_uri, obfuscated)
-st.code(display_free_cmd, language="bash")
+    with col2:
+        st.subheader("Receiver")
+        rx_status = st.session_state.get('rx_running', False)
+        st.metric("Status", "Running ✅" if rx_status else "Stopped ⏸️")
 
-st.divider()
+        col_rx1, col_rx2 = st.columns(2)
+        with col_rx1:
+            if st.button("▶️ Start RX", disabled=rx_status):
+                start_receiver()
+        with col_rx2:
+            if st.button("⏹️ Stop RX", disabled=not rx_status):
+                stop_receiver()
 
-# Flowgraph Control Panel
-st.header("📡 Flowgraph Control")
+        # Show Flowgraph button
+        if st.button("📊 Show RX Flowgraph", use_container_width=True):
+            open_receiver_flowgraph()
 
-col1, col2 = st.columns(2)
+# TAB 3: Bluesky Control
+with tab3:
+    st.header("☁️ Bluesky Control")
 
-with col1:
-    st.subheader("Transmitter")
-    tx_status = st.session_state.get('tx_running', False)
-    st.metric("Status", "Running ✅" if tx_status else "Stopped ⏸️")
+    st.info("Coming soon")
 
-    col_tx1, col_tx2 = st.columns(2)
-    with col_tx1:
-        if st.button("▶️ Start TX", disabled=tx_status):
-            start_transmitter()
-    with col_tx2:
-        if st.button("⏹️ Stop TX", disabled=not tx_status):
-            stop_transmitter()
+# TAB 4: Load Balancer Monitor
+with tab4:
+    st.header("📊 Load Balancer Monitor")
 
-with col2:
-    st.subheader("Receiver")
-    rx_status = st.session_state.get('rx_running', False)
-    st.metric("Status", "Running ✅" if rx_status else "Stopped ⏸️")
+    # Monitor control buttons
+    monitoring_active = st.session_state.get('monitoring_active', False)
 
-    col_rx1, col_rx2 = st.columns(2)
-    with col_rx1:
-        if st.button("▶️ Start RX", disabled=rx_status):
-            start_receiver()
-    with col_rx2:
-        if st.button("⏹️ Stop RX", disabled=not rx_status):
-            stop_receiver()
+    col_monitor1, col_monitor2 = st.columns(2)
 
-st.divider()
+    with col_monitor1:
+        if st.button("▶️ Start Monitoring", disabled=monitoring_active, use_container_width=True):
+            start_monitoring()
+            st.rerun()
 
-# Load Balancer Monitor Panel
-st.header("📊 Load Balancer Monitor")
+    with col_monitor2:
+        if st.button("⏹️ Stop Monitoring", disabled=not monitoring_active, use_container_width=True):
+            stop_monitoring()
+            st.rerun()
 
-# Monitor control buttons
-monitoring_active = st.session_state.get('monitoring_active', False)
+    # Show monitoring status
+    if monitoring_active:
+        st.success("✅ Load balancer data fetched")
+    else:
+        st.info("⏸️ No data fetched yet")
 
-col_monitor1, col_monitor2 = st.columns(2)
+    # Display monitor command
+    st.caption("💻 SSH Command:")
+    monitor_cmd = lbadm_manager.get_overview_command(st.session_state.admin_uri_full)
+    # Obfuscate URI in command display if enabled
+    display_monitor_cmd = monitor_cmd
+    if st.session_state.get('obfuscate_uri', True):
+        full_uri = st.session_state.get('admin_uri_full', '')
+        if full_uri:
+            obfuscated = obfuscate_uri_token(full_uri)
+            display_monitor_cmd = monitor_cmd.replace(full_uri, obfuscated)
+    st.code(display_monitor_cmd, language="bash")
 
-with col_monitor1:
-    if st.button("▶️ Start Monitoring", disabled=monitoring_active, use_container_width=True):
-        start_monitoring()
-        st.rerun()
+    st.divider()
 
-with col_monitor2:
-    if st.button("⏹️ Stop Monitoring", disabled=not monitoring_active, use_container_width=True):
-        stop_monitoring()
-        st.rerun()
+    # Display load balancer overview
+    lb_overview = st.session_state.get('lb_overview', [])
+    last_update = st.session_state.get('last_monitor_update', 0)
 
-# Show monitoring status
-if monitoring_active:
-    st.success("✅ Load balancer data fetched")
-else:
-    st.info("⏸️ No data fetched yet")
+    if last_update > 0:
+        # Show last update time
+        update_time = datetime.fromtimestamp(last_update).strftime("%H:%M:%S")
+        st.caption(f"Last updated: {update_time}")
 
-# Display monitor command
-st.caption("💻 SSH Command:")
-monitor_cmd = lbadm_manager.get_overview_command(st.session_state.admin_uri_full)
-# Obfuscate URI in command display if enabled
-display_monitor_cmd = monitor_cmd
-if st.session_state.get('obfuscate_uri', True):
-    full_uri = st.session_state.get('admin_uri_full', '')
-    if full_uri:
-        obfuscated = obfuscate_uri_token(full_uri)
-        display_monitor_cmd = monitor_cmd.replace(full_uri, obfuscated)
-st.code(display_monitor_cmd, language="bash")
+    if lb_overview:
+        # Create a panel for each load balancer
+        st.subheader(f"Active Load Balancers ({len(lb_overview)})")
 
-st.divider()
+        for lb in lb_overview:
+            with st.container():
+                col_name, col_id, col_senders, col_workers, col_expiry, col_remaining, col_delete = st.columns([2, 1, 2, 2, 2, 1.5, 0.5])
 
-# Display load balancer overview
-lb_overview = st.session_state.get('lb_overview', [])
-last_update = st.session_state.get('last_monitor_update', 0)
+                with col_name:
+                    st.markdown(f"**{lb['name']}**")
 
-if last_update > 0:
-    # Show last update time
-    update_time = datetime.fromtimestamp(last_update).strftime("%H:%M:%S")
-    st.caption(f"Last updated: {update_time}")
+                with col_id:
+                    st.markdown(f"ID: {lb['id']}")
 
-if lb_overview:
-    # Create a panel for each load balancer
-    st.subheader(f"Active Load Balancers ({len(lb_overview)})")
+                with col_senders:
+                    senders = lb.get('senders', [])
+                    if senders:
+                        st.markdown(f"**Senders:** {', '.join(senders)}")
+                    else:
+                        st.markdown("**Senders:** None")
 
-    for lb in lb_overview:
-        with st.container():
-            col_name, col_id, col_senders, col_workers, col_expiry, col_delete = st.columns([2, 1, 2, 2, 2, 0.5])
+                with col_workers:
+                    workers = lb.get('workers', [])
+                    if workers:
+                        st.markdown(f"**Workers:** {', '.join(workers)}")
+                    else:
+                        st.markdown("**Workers:** None")
 
-            with col_name:
-                st.markdown(f"**{lb['name']}**")
+                with col_expiry:
+                    expiry = lb.get('expiry', '')
+                    if expiry:
+                        st.markdown(f"**Expires:** {expiry}")
+                    else:
+                        st.markdown("**Expires:** N/A")
 
-            with col_id:
-                st.markdown(f"ID: {lb['id']}")
+                with col_remaining:
+                    expiry = lb.get('expiry', '')
+                    if expiry:
+                        try:
+                            # Try parsing ISO 8601 format with Z (e.g., "2025-10-14T12:30:45Z")
+                            if 'T' in expiry:
+                                expiry_time = datetime.strptime(expiry, "%Y-%m-%dT%H:%M:%SZ")
+                            else:
+                                # Fallback to space-separated format (e.g., "2025-10-14 12:30:45")
+                                expiry_time = datetime.strptime(expiry, "%Y-%m-%d %H:%M:%S")
 
-            with col_senders:
-                senders = lb.get('senders', [])
-                if senders:
-                    st.markdown(f"**Senders:** {', '.join(senders)}")
-                else:
-                    st.markdown("**Senders:** None")
+                            current_time = datetime.now()
+                            remaining = expiry_time - current_time
 
-            with col_workers:
-                workers = lb.get('workers', [])
-                if workers:
-                    st.markdown(f"**Workers:** {', '.join(workers)}")
-                else:
-                    st.markdown("**Workers:** None")
+                            # Format remaining time
+                            if remaining.total_seconds() > 0:
+                                # Calculate hours, minutes, seconds
+                                total_seconds = int(remaining.total_seconds())
+                                hours = total_seconds // 3600
+                                minutes = (total_seconds % 3600) // 60
+                                seconds = total_seconds % 60
+                                st.markdown(f"**Remaining:** {hours}h {minutes}m {seconds}s")
+                            else:
+                                st.markdown("**Remaining:** ⚠️ Expired")
+                        except Exception as e:
+                            # If parsing fails, show the error for debugging
+                            st.markdown(f"**Remaining:** N/A (format: {expiry[:20]}...)")
+                    else:
+                        st.markdown("**Remaining:** N/A")
 
-            with col_expiry:
-                expiry = lb.get('expiry', '')
-                if expiry:
-                    st.markdown(f"**Expires:** {expiry}")
-                else:
-                    st.markdown("**Expires:** N/A")
-
-            with col_delete:
-                # Trash icon to force free this LB
-                if st.button("🗑️", key=f"delete_{lb['id']}", help=f"Force free {lb['name']}"):
-                    st.session_state.confirm_delete_lbid = lb['id']
-                    st.rerun()
-
-            # Show confirmation dialog if this LB is pending deletion
-            if st.session_state.get('confirm_delete_lbid') == lb['id']:
-                st.warning(f"⚠️ Are you sure you want to force free **{lb['name']}** (ID: {lb['id']})?")
-                col_confirm, col_cancel = st.columns(2)
-
-                with col_confirm:
-                    if st.button("✅ Confirm", key=f"confirm_{lb['id']}", use_container_width=True):
-                        force_free_load_balancer(lb['id'], lb['name'])
-
-                with col_cancel:
-                    if st.button("❌ Cancel", key=f"cancel_{lb['id']}", use_container_width=True):
-                        st.session_state.confirm_delete_lbid = None
+                with col_delete:
+                    # Trash icon to force free this LB
+                    if st.button("🗑️", key=f"delete_{lb['id']}", help=f"Force free {lb['name']}"):
+                        st.session_state.confirm_delete_lbid = lb['id']
                         st.rerun()
 
-            st.divider()
-elif last_update > 0:
-    # Monitoring has run but no LBs found
-    st.warning("⚠️ No active load balancers found")
-else:
-    # Not yet monitored
-    st.info("Click 'Start Monitoring' to view active load balancers")
+                # Show confirmation dialog if this LB is pending deletion
+                if st.session_state.get('confirm_delete_lbid') == lb['id']:
+                    st.warning(f"⚠️ Are you sure you want to force free **{lb['name']}** (ID: {lb['id']})?")
+                    col_confirm, col_cancel = st.columns(2)
+
+                    with col_confirm:
+                        if st.button("✅ Confirm", key=f"confirm_{lb['id']}", use_container_width=True):
+                            force_free_load_balancer(lb['id'], lb['name'])
+
+                    with col_cancel:
+                        if st.button("❌ Cancel", key=f"cancel_{lb['id']}", use_container_width=True):
+                            st.session_state.confirm_delete_lbid = None
+                            st.rerun()
+
+                st.divider()
+    elif last_update > 0:
+        # Monitoring has run but no LBs found
+        st.warning("⚠️ No active load balancers found")
+    else:
+        # Not yet monitored
+        st.info("Click 'Start Monitoring' to view active load balancers")
 
 # Footer
 st.divider()

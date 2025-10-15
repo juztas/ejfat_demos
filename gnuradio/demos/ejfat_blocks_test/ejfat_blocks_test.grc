@@ -33,7 +33,6 @@ options:
     state: enabled
 
 blocks:
-# Variables
 - name: samp_rate
   id: variable
   parameters:
@@ -46,24 +45,10 @@ blocks:
     coordinate: [200, 12]
     rotation: 0
     state: enabled
-
-- name: vlen
-  id: variable
-  parameters:
-    comment: 'Vector length for testing'
-    value: '1024'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [296, 12]
-    rotation: 0
-    state: enabled
-
 - name: shm_capacity
   id: variable
   parameters:
-    comment: 'Shared memory FIFO capacity'
+    comment: Shared memory FIFO capacity
     value: '1024'
   states:
     bus_sink: false
@@ -72,11 +57,10 @@ blocks:
     coordinate: [376, 12]
     rotation: 0
     state: enabled
-
 - name: shm_entry_size
   id: variable
   parameters:
-    comment: 'Bytes per entry (8 bytes/sample * vlen + metadata)'
+    comment: Bytes per entry (8 bytes/sample * vlen + metadata)
     value: int(vlen * 8 + 64)
   states:
     bus_sink: false
@@ -85,12 +69,274 @@ blocks:
     coordinate: [504, 12]
     rotation: 0
     state: enabled
-
-# =============================================================================
-# Test 1: Shared Memory Blocks
-# Random Source -> Stream to Vector -> SHM Sink -> SHM Source -> Vector to Stream -> Display
-# =============================================================================
-
+- name: vlen
+  id: variable
+  parameters:
+    comment: Vector length for testing
+    value: '1024'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 12]
+    rotation: 0
+    state: enabled
+- name: analog_noise_source_x_0
+  id: analog_noise_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    amp: '1'
+    comment: Random complex samples for SHM test
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    noise_type: analog.GR_GAUSSIAN
+    seed: '0'
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 164]
+    rotation: 0
+    state: true
+- name: analog_noise_source_x_1
+  id: analog_noise_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    amp: '1'
+    comment: Random complex samples for E2SAR test
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    noise_type: analog.GR_GAUSSIAN
+    seed: '42'
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 452.0]
+    rotation: 0
+    state: true
+- name: blocks_stream_to_vector_0
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Convert to vectors for SHM sink
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vlen
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [432, 188]
+    rotation: 0
+    state: true
+- name: blocks_stream_to_vector_1
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Convert to vectors for E2SAR segmenter
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vlen
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [432, 348.0]
+    rotation: 0
+    state: true
+- name: blocks_throttle_0
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [240, 180]
+    rotation: 0
+    state: true
+- name: blocks_throttle_1
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [240, 456.0]
+    rotation: 0
+    state: true
+- name: blocks_vector_to_stream_0
+  id: blocks_vector_to_stream
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Convert back to stream for display
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vlen
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1096, 188]
+    rotation: 0
+    state: true
+- name: blocks_vector_to_stream_1
+  id: blocks_vector_to_stream
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Convert back to stream for display
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vlen
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 348.0]
+    rotation: 0
+    state: true
+- name: ejfat_e2sar_reassembler_source_0
+  id: ejfat_e2sar_reassembler_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Reassemble EJFAT packets back to vectors
+    data_ip: 127.0.0.1
+    epoch_ms: '1000'
+    event_timeout_ms: '5000'
+    kd: '0.0'
+    ki: '0.0'
+    kp: '0.0'
+    max_factor: '2.0'
+    maxoutbuf: '0'
+    min_factor: '0.5'
+    minoutbuf: '0'
+    num_recv_threads: '1'
+    period_ms: '100'
+    port_range: '-1'
+    rcv_socket_buf_size: '3145728'
+    set_point: '0.0'
+    starting_port: '19522'
+    uri: ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1
+    use_cp: 'False'
+    use_host_address: 'False'
+    validate_cert: 'True'
+    vector_size: vlen
+    weight: '1.0'
+    with_lb_header: 'True'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [864, 284.0]
+    rotation: 0
+    state: true
+- name: ejfat_e2sar_segmenter_sink_0
+  id: ejfat_e2sar_segmenter_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Segment data into EJFAT packets
+    data_id: '1'
+    event_src_id: '1'
+    mtu: '9000'
+    rate_gbps: '1.0'
+    uri: ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522
+    use_cp: 'False'
+    vector_size: vlen
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [640, 320.0]
+    rotation: 0
+    state: true
+- name: ejfat_ejfat_shm_sink_0
+  id: ejfat_ejfat_shm_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    capacity: shm_capacity
+    comment: Write vectors to shared memory
+    entry_size: shm_entry_size
+    shm_name: ejfat_test_fifo
+    vlen: vlen
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [640, 164]
+    rotation: 0
+    state: true
+- name: ejfat_ejfat_shm_source_0
+  id: ejfat_ejfat_shm_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Read vectors from shared memory
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    shm_name: ejfat_test_fifo
+    timeout: '1.0'
+    vlen: vlen
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [872, 172]
+    rotation: 0
+    state: true
+- name: note_e2sar_test
+  id: note
+  parameters:
+    alias: ''
+    comment: ''
+    note: 'TEST 2: E2SAR Segmenter/Reassembler (Loopback)'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 380]
+    rotation: 0
+    state: true
 - name: note_shm_test
   id: note
   parameters:
@@ -104,125 +350,87 @@ blocks:
     coordinate: [24, 108]
     rotation: 0
     state: true
-
-- name: analog_noise_source_x_0
-  id: analog_noise_source_x
+- name: qtgui_freq_sink_e2sar
+  id: qtgui_freq_sink_x
   parameters:
     affinity: ''
     alias: ''
-    amp: '1'
-    comment: 'Random complex samples for SHM test'
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    axislabels: 'True'
+    bw: samp_rate
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: Display E2SAR output spectrum
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'False'
+    grid: 'True'
+    gui_hint: tabs@1
+    label: Relative Gain
+    label1: E2SAR Output
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
     maxoutbuf: '0'
     minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '0'
+    name: '"E2SAR Test - Frequency"'
+    nconnections: '2'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
     type: complex
+    units: dB
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-140'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [24, 164]
+    coordinate: [1376, 384.0]
     rotation: 0
     state: true
-
-- name: blocks_throttle_0
-  id: blocks_throttle2
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    ignoretag: 'True'
-    limit: auto
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samples_per_second: samp_rate
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [240, 180]
-    rotation: 0
-    state: true
-
-- name: blocks_stream_to_vector_0
-  id: blocks_stream_to_vector
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Convert to vectors for SHM sink'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_items: vlen
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [432, 188]
-    rotation: 0
-    state: true
-
-- name: ejfat_ejfat_shm_sink_0
-  id: ejfat_ejfat_shm_sink
-  parameters:
-    affinity: ''
-    alias: ''
-    capacity: shm_capacity
-    comment: 'Write vectors to shared memory'
-    entry_size: shm_entry_size
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    shm_name: ejfat_test_fifo
-    vlen: vlen
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [640, 164]
-    rotation: 0
-    state: true
-
-- name: ejfat_ejfat_shm_source_0
-  id: ejfat_ejfat_shm_source
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Read vectors from shared memory'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    shm_name: ejfat_test_fifo
-    timeout: '1.0'
-    vlen: vlen
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [872, 172]
-    rotation: 0
-    state: true
-
-- name: blocks_vector_to_stream_0
-  id: blocks_vector_to_stream
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Convert back to stream for display'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_items: vlen
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1096, 188]
-    rotation: 0
-    state: true
-
 - name: qtgui_freq_sink_shm
   id: qtgui_freq_sink_x
   parameters:
@@ -252,13 +460,13 @@ blocks:
     color7: '"yellow"'
     color8: '"dark red"'
     color9: '"dark green"'
-    comment: 'Display SHM output spectrum'
+    comment: Display SHM output spectrum
     ctrlpanel: 'False'
     fc: '0'
     fftsize: '1024'
     freqhalf: 'False'
     grid: 'True'
-    gui_hint: 'tabs@0'
+    gui_hint: tabs@0
     label: Relative Gain
     label1: SHM Output
     label10: ''
@@ -304,7 +512,103 @@ blocks:
     coordinate: [1304, 132]
     rotation: 0
     state: true
-
+- name: qtgui_time_sink_e2sar
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'True'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: Display E2SAR output time domain
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'True'
+    gui_hint: tabs@1
+    label1: Real
+    label10: Signal 10
+    label2: Imag
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '"E2SAR Test - Time Domain"'
+    nconnections: '2'
+    size: '1024'
+    srate: samp_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '2'
+    ymin: '-2'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1376, 492.0]
+    rotation: 0
+    state: true
 - name: qtgui_time_sink_shm
   id: qtgui_time_sink_x
   parameters:
@@ -332,11 +636,11 @@ blocks:
     color7: yellow
     color8: dark red
     color9: dark green
-    comment: 'Display SHM output time domain'
+    comment: Display SHM output time domain
     ctrlpanel: 'False'
     entags: 'True'
     grid: 'True'
-    gui_hint: 'tabs@0'
+    gui_hint: tabs@0
     label1: Real
     label10: Signal 10
     label2: Imag
@@ -377,6 +681,7 @@ blocks:
     tr_delay: '0'
     tr_level: '0.0'
     tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
     tr_tag: '""'
     type: complex
     update_time: '0.10'
@@ -401,350 +706,11 @@ blocks:
     coordinate: [1304, 244]
     rotation: 0
     state: true
-
-# =============================================================================
-# Test 2: E2SAR Segmenter/Reassembler (Loopback Mode)
-# Random Source -> Stream to Vector -> Segmenter -> Reassembler -> Vector to Stream -> Display
-# =============================================================================
-
-- name: note_e2sar_test
-  id: note
-  parameters:
-    alias: ''
-    comment: ''
-    note: 'TEST 2: E2SAR Segmenter/Reassembler (Loopback)'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [24, 380]
-    rotation: 0
-    state: true
-
-- name: analog_noise_source_x_1
-  id: analog_noise_source_x
-  parameters:
-    affinity: ''
-    alias: ''
-    amp: '1'
-    comment: 'Random complex samples for E2SAR test'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '42'
-    type: complex
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [24, 436]
-    rotation: 0
-    state: true
-
-- name: blocks_throttle_1
-  id: blocks_throttle2
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    ignoretag: 'True'
-    limit: auto
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samples_per_second: samp_rate
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [240, 452]
-    rotation: 0
-    state: true
-
-- name: blocks_stream_to_vector_1
-  id: blocks_stream_to_vector
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Convert to vectors for E2SAR segmenter'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_items: vlen
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [432, 460]
-    rotation: 0
-    state: true
-
-- name: ejfat_e2sar_segmenter_sink_0
-  id: ejfat_e2sar_segmenter_sink
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Segment data into EJFAT packets'
-    data_id: '1'
-    event_src_id: '1'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    mtu: '9000'
-    rate_gbps: '1.0'
-    uri: ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1:19522
-    use_cp: 'False'
-    vector_size: vlen
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [640, 420]
-    rotation: 0
-    state: true
-
-- name: ejfat_e2sar_reassembler_source_0
-  id: ejfat_e2sar_reassembler_source
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Reassemble EJFAT packets back to vectors'
-    data_ip: 127.0.0.1
-    epoch_ms: '1000'
-    event_timeout_ms: '5000'
-    kd: '0.0'
-    ki: '0.0'
-    kp: '0.0'
-    max_factor: '2.0'
-    maxoutbuf: '0'
-    min_factor: '0.5'
-    minoutbuf: '0'
-    num_recv_threads: '1'
-    period_ms: '100'
-    port_range: '-1'
-    rcv_socket_buf_size: '3145728'
-    set_point: '0.0'
-    starting_port: '19522'
-    uri: ejfat://useless@192.168.100.1:9876/lb/1?sync=192.168.0.1:12345&data=127.0.0.1
-    use_cp: 'False'
-    use_host_address: 'False'
-    validate_cert: 'True'
-    vector_size: vlen
-    weight: '1.0'
-    with_lb_header: 'True'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [904, 348]
-    rotation: 0
-    state: true
-
-- name: blocks_vector_to_stream_1
-  id: blocks_vector_to_stream
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: 'Convert back to stream for display'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_items: vlen
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1176, 460]
-    rotation: 0
-    state: true
-
-- name: qtgui_freq_sink_e2sar
-  id: qtgui_freq_sink_x
-  parameters:
-    affinity: ''
-    alias: ''
-    alpha1: '1.0'
-    alpha10: '1.0'
-    alpha2: '1.0'
-    alpha3: '1.0'
-    alpha4: '1.0'
-    alpha5: '1.0'
-    alpha6: '1.0'
-    alpha7: '1.0'
-    alpha8: '1.0'
-    alpha9: '1.0'
-    autoscale: 'False'
-    average: '1.0'
-    axislabels: 'True'
-    bw: samp_rate
-    color1: '"blue"'
-    color10: '"dark blue"'
-    color2: '"red"'
-    color3: '"green"'
-    color4: '"black"'
-    color5: '"cyan"'
-    color6: '"magenta"'
-    color7: '"yellow"'
-    color8: '"dark red"'
-    color9: '"dark green"'
-    comment: 'Display E2SAR output spectrum'
-    ctrlpanel: 'False'
-    fc: '0'
-    fftsize: '1024'
-    freqhalf: 'False'
-    grid: 'True'
-    gui_hint: 'tabs@1'
-    label: Relative Gain
-    label1: E2SAR Output
-    label10: ''
-    label2: ''
-    label3: ''
-    label4: ''
-    label5: ''
-    label6: ''
-    label7: ''
-    label8: ''
-    label9: ''
-    legend: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    name: '"E2SAR Test - Frequency"'
-    nconnections: '1'
-    norm_window: 'False'
-    showports: 'False'
-    tr_chan: '0'
-    tr_level: '0.0'
-    tr_mode: qtgui.TRIG_MODE_FREE
-    tr_tag: '""'
-    type: complex
-    units: dB
-    update_time: '0.10'
-    width1: '1'
-    width10: '1'
-    width2: '1'
-    width3: '1'
-    width4: '1'
-    width5: '1'
-    width6: '1'
-    width7: '1'
-    width8: '1'
-    width9: '1'
-    wintype: window.WIN_BLACKMAN_hARRIS
-    ymax: '10'
-    ymin: '-140'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1384, 404]
-    rotation: 0
-    state: true
-
-- name: qtgui_time_sink_e2sar
-  id: qtgui_time_sink_x
-  parameters:
-    affinity: ''
-    alias: ''
-    alpha1: '1.0'
-    alpha10: '1.0'
-    alpha2: '1.0'
-    alpha3: '1.0'
-    alpha4: '1.0'
-    alpha5: '1.0'
-    alpha6: '1.0'
-    alpha7: '1.0'
-    alpha8: '1.0'
-    alpha9: '1.0'
-    autoscale: 'True'
-    axislabels: 'True'
-    color1: blue
-    color10: dark blue
-    color2: red
-    color3: green
-    color4: black
-    color5: cyan
-    color6: magenta
-    color7: yellow
-    color8: dark red
-    color9: dark green
-    comment: 'Display E2SAR output time domain'
-    ctrlpanel: 'False'
-    entags: 'True'
-    grid: 'True'
-    gui_hint: 'tabs@1'
-    label1: Real
-    label10: Signal 10
-    label2: Imag
-    label3: Signal 3
-    label4: Signal 4
-    label5: Signal 5
-    label6: Signal 6
-    label7: Signal 7
-    label8: Signal 8
-    label9: Signal 9
-    legend: 'True'
-    marker1: '-1'
-    marker10: '-1'
-    marker2: '-1'
-    marker3: '-1'
-    marker4: '-1'
-    marker5: '-1'
-    marker6: '-1'
-    marker7: '-1'
-    marker8: '-1'
-    marker9: '-1'
-    name: '"E2SAR Test - Time Domain"'
-    nconnections: '1'
-    size: '1024'
-    srate: samp_rate
-    stemplot: 'False'
-    style1: '1'
-    style10: '1'
-    style2: '1'
-    style3: '1'
-    style4: '1'
-    style5: '1'
-    style6: '1'
-    style7: '1'
-    style8: '1'
-    style9: '1'
-    tr_chan: '0'
-    tr_delay: '0'
-    tr_level: '0.0'
-    tr_mode: qtgui.TRIG_MODE_FREE
-    tr_tag: '""'
-    type: complex
-    update_time: '0.10'
-    width1: '1'
-    width10: '1'
-    width2: '1'
-    width3: '1'
-    width4: '1'
-    width5: '1'
-    width6: '1'
-    width7: '1'
-    width8: '1'
-    width9: '1'
-    ylabel: Amplitude
-    ymax: '2'
-    ymin: '-2'
-    yunit: '""'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1384, 516]
-    rotation: 0
-    state: true
-
-# Tab widget for organizing displays
 - name: tabs
   id: qtgui_tab_widget
   parameters:
     alias: ''
-    comment: 'Organize test results in tabs'
+    comment: Organize test results in tabs
     gui_hint: ''
     label0: SHM Test
     label1: E2SAR Test
@@ -771,27 +737,26 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [680, 12]
+    coordinate: [736, 8.0]
     rotation: 0
     state: true
 
 connections:
-# SHM Test connections
 - [analog_noise_source_x_0, '0', blocks_throttle_0, '0']
-- [blocks_throttle_0, '0', blocks_stream_to_vector_0, '0']
+- [analog_noise_source_x_1, '0', blocks_throttle_1, '0']
 - [blocks_stream_to_vector_0, '0', ejfat_ejfat_shm_sink_0, '0']
-- [ejfat_ejfat_shm_source_0, '0', blocks_vector_to_stream_0, '0']
+- [blocks_stream_to_vector_1, '0', ejfat_e2sar_segmenter_sink_0, '0']
+- [blocks_throttle_0, '0', blocks_stream_to_vector_0, '0']
+- [blocks_throttle_1, '0', blocks_stream_to_vector_1, '0']
+- [blocks_throttle_1, '0', qtgui_freq_sink_e2sar, '1']
+- [blocks_throttle_1, '0', qtgui_time_sink_e2sar, '1']
 - [blocks_vector_to_stream_0, '0', qtgui_freq_sink_shm, '0']
 - [blocks_vector_to_stream_0, '0', qtgui_time_sink_shm, '0']
-
-# E2SAR Test connections
-- [analog_noise_source_x_1, '0', blocks_throttle_1, '0']
-- [blocks_throttle_1, '0', blocks_stream_to_vector_1, '0']
-- [blocks_stream_to_vector_1, '0', ejfat_e2sar_segmenter_sink_0, '0']
-- [ejfat_e2sar_reassembler_source_0, '0', blocks_vector_to_stream_1, '0']
 - [blocks_vector_to_stream_1, '0', qtgui_freq_sink_e2sar, '0']
 - [blocks_vector_to_stream_1, '0', qtgui_time_sink_e2sar, '0']
+- [ejfat_e2sar_reassembler_source_0, '0', blocks_vector_to_stream_1, '0']
+- [ejfat_ejfat_shm_source_0, '0', blocks_vector_to_stream_0, '0']
 
 metadata:
   file_format: 1
-  grc_version: 3.10.5.1
+  grc_version: 3.10.12.0

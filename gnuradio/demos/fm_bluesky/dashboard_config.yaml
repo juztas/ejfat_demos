@@ -24,6 +24,8 @@ load_balancer:
 # Flowgraph paths (relative to fm_bluesky directory)
 transmitter_script: "../fm/fm_transmitter_e2sar.py"
 receiver_script: "../fm/fm_receiver_e2sar.py"
+transmitter_grc: "../fm/fm_transmitter_e2sar.grc"
+receiver_grc: "../fm/fm_receiver_e2sar.grc"
 
 # Startup delays (seconds)
 transmitter_startup_delay: 5

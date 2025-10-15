@@ -91,7 +91,7 @@ def start_transmitter():
     print("Starting FM Transmitter...")
     print("="*70)
 
-    fm_dir = Path(__file__).parent / "fm"
+    fm_dir = Path(__file__).parent.parent / "fm"
     tx_script = fm_dir / "fm_transmitter_shm.py"
 
     if not tx_script.exists():
@@ -131,7 +131,7 @@ def start_receiver():
     print("Starting FM Receiver...")
     print("="*70)
 
-    fm_dir = Path(__file__).parent / "fm"
+    fm_dir = Path(__file__).parent.parent / "fm"
     rx_script = fm_dir / "fm_receiver_shm.py"
 
     if not rx_script.exists():

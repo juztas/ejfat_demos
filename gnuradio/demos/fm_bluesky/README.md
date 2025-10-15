@@ -275,9 +275,49 @@ ls -l ../fm/fm_transmitter_shm.py
 - **Widget Demos**: `../widget/` - Bluesky widget control
 - **Full System**: `../full_system/` - Complete Bluesky integration
 
+## Dashboard
+
+### Interactive Demo Dashboard
+
+This directory also includes an **interactive Streamlit dashboard** for orchestrating E2SAR demos:
+
+```bash
+# Run the dashboard
+streamlit run dashboard.py
+```
+
+The dashboard opens at `http://localhost:8501` and provides:
+- **Load Balancer Management**: Reserve/free EJFAT load balancers
+- **Process Control**: Start/stop transmitter and receiver flowgraphs
+- **Real-time Status**: Monitor system status and logs
+- **Interactive Guide**: Step-by-step narration with integrated slides
+- **Modern UI**: Clean, professional web interface
+
+**Dashboard Files:**
+- `dashboard.py` - Main Streamlit application
+- `dashboard_config.yaml` - Configuration file
+- `ejfat_logo.svg` - EJFAT logo (local, SVG format)
+- `slides/demo_slides.md` - Presentation slides
+- `DASHBOARD_PLAN.md` - Dashboard implementation plan
+
+**Dashboard Usage:**
+1. Click "🔒 Reserve LB" to allocate a load balancer
+2. Click "▶️ Start TX" to launch the transmitter
+3. Click "▶️ Start RX" to launch the receiver
+4. Monitor status in the right panel
+5. Follow along with the slides in the sidebar
+6. Use "⏹️ Stop" buttons and "🔓 Free LB" when done
+
+The dashboard is ideal for:
+- Live demonstrations
+- Interactive tutorials
+- Classroom teaching
+- System testing and validation
+
 ## See Also
 
 - Detailed documentation: `FM_BLUESKY_README.md`
+- Dashboard plan: `DASHBOARD_PLAN.md`
 - FM demos: `../fm/README.md`
 - Bluesky integration: `../full_system/README.md`
 - GNU Radio: https://www.gnuradio.org/
