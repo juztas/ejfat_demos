@@ -740,7 +740,7 @@ Expand the logs panel to see:
 # Header Component Function
 def render_header():
     """Render the System Status header at the top of the page."""
-    st.title("🎙️ FM Radio E2SAR Demo Dashboard")
+    st.title("🎙️ FM Radio EJFAT / E2SAR Demo Dashboard")
 
     # System Status Panel (at top for horizontal space)
     st.header("📊 System Status")
@@ -921,8 +921,8 @@ with tab1:
     # Convenience: keep instance_uri in sync for backward compatibility
     st.session_state.instance_uri = st.session_state.instance_uri_full
 
-    # Reserve LB section with duration input
-    col_label, col_duration, col_reserve, col_spacer = st.columns([0.5, 0.7, 1.5, 2.3])
+    # Reserve LB section with duration input and Free LB button
+    col_label, col_duration, col_reserve, col_free, col_spacer = st.columns([0.5, 0.7, 1.5, 1.5, 0.8])
 
     with col_label:
         st.markdown('<div class="duration-label">Duration</div>', unsafe_allow_html=True)
@@ -949,11 +949,14 @@ with tab1:
         if st.button("🔒 Reserve LB", disabled=st.session_state.get('lb_reserved', False), use_container_width=True):
             reserve_load_balancer()
 
+    with col_free:
+        if st.button("🔓 Free LB", disabled=not st.session_state.get('lb_reserved', False), use_container_width=True):
+            free_load_balancer()
+
     with col_spacer:
         pass  # Empty column for spacing
 
     # Display reserve command directly
-    st.caption("💻 SSH Command:")
     reserve_cmd = lbadm_manager.get_reserve_command(st.session_state.admin_uri_full, st.session_state.get('lb_duration', '1:00:00'))
     # Obfuscate URI in command display if enabled
     display_reserve_cmd = reserve_cmd
@@ -964,14 +967,7 @@ with tab1:
             display_reserve_cmd = reserve_cmd.replace(full_uri, obfuscated)
     st.code(display_reserve_cmd, language="bash")
 
-    st.divider()
-
-    # Free LB button and command
-    if st.button("🔓 Free LB", disabled=not st.session_state.get('lb_reserved', False), use_container_width=True):
-        free_load_balancer()
-
     # Display free command directly
-    st.caption("💻 SSH Command:")
     free_cmd = lbadm_manager.get_free_command(st.session_state.get('instance_uri_full', ''))
     # Obfuscate URI in command display if enabled
     display_free_cmd = free_cmd
