@@ -11,7 +11,6 @@
 
 from PyQt5 import Qt
 from gnuradio import qtgui
-from PyQt5 import QtCore
 from gnuradio import blocks
 from gnuradio import ejfat
 from gnuradio import filter
@@ -70,7 +69,7 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         ##################################################
         self.vlen = vlen = 8192
         self.samp_rate = samp_rate = 2400000
-        self.freq = freq = 98.5e6
+        self.freq = freq = 106.1e6
         self.event_src_id = event_src_id = 1
         self.ejfat_uri = ejfat_uri = "ejfat://127.0.0.1:19522/lb/1?data=127.0.0.1:19522"
         self.data_id = data_id = 1
@@ -79,9 +78,6 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._freq_range = qtgui.Range(88e6, 108e6, 100e3, 98.5e6, 200)
-        self._freq_win = qtgui.RangeWidget(self._freq_range, self.set_freq, "Frequency", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._freq_win)
         self.xmlrpc_server_0 = SimpleXMLRPCServer(('localhost', 8080), allow_none=True)
         self.xmlrpc_server_0.register_instance(self)
         self.xmlrpc_server_0_thread = threading.Thread(target=self.xmlrpc_server_0.serve_forever)
@@ -90,7 +86,7 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
-            freq, #fc
+            0, #fc
             samp_rate, #bw
             "", #name
             1, #number of inputs
@@ -125,7 +121,7 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
-            freq, #fc
+            0, #fc
             samp_rate, #bw
             "", #name
             1,
@@ -167,7 +163,7 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         self.osmosdr_source_0 = osmosdr.source(
             args="numchan=" + str(1) + " " + ''
         )
-        self.osmosdr_source_0.set_time_unknown_pps(osmosdr.time_spec_t())
+        self.osmosdr_source_0.set_time_now(osmosdr.time_spec_t(time.time()), osmosdr.ALL_MBOARDS)
         self.osmosdr_source_0.set_sample_rate(samp_rate)
         self.osmosdr_source_0.set_center_freq(freq, 0)
         self.osmosdr_source_0.set_freq_corr(0, 0)
@@ -223,8 +219,8 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
         self.samp_rate = samp_rate
         self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 90e3, 10e3, window.WIN_BLACKMAN, 6.76))
         self.osmosdr_source_0.set_sample_rate(self.samp_rate)
-        self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
+        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.samp_rate)
 
     def get_freq(self):
         return self.freq
@@ -232,8 +228,6 @@ class fm_transmitter_e2sar(gr.top_block, Qt.QWidget):
     def set_freq(self, freq):
         self.freq = freq
         self.osmosdr_source_0.set_center_freq(self.freq, 0)
-        self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
 
     def get_event_src_id(self):
         return self.event_src_id

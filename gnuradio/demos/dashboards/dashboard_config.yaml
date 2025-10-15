@@ -21,7 +21,7 @@ load_balancer:
   worker_address: ""                  # Worker IP (empty = auto-detect)
   use_export_format: true             # Use -e flag to get clean URI output
 
-# Flowgraph paths (relative to fm_bluesky directory)
+# Flowgraph paths (relative to dashboards directory)
 transmitter_script: "../fm/fm_transmitter_e2sar.py"
 receiver_script: "../fm/fm_receiver_e2sar.py"
 transmitter_grc: "../fm/fm_transmitter_e2sar.grc"

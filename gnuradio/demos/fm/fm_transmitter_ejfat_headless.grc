@@ -6,12 +6,12 @@ options:
     cmake_opt: ''
     comment: ''
     copyright: ''
-    description: Captures FM signal from SDR and streams to E2SAR segmenter
+    description: Captures FM signal from SDR and streams to EJFAT sink (Headless - no GUI)
     gen_cmake: 'On'
     gen_linking: dynamic
-    generate_options: qt_gui
+    generate_options: no_gui
     hier_block_src_path: .:.
-    id: fm_transmitter_e2sar
+    id: fm_transmitter_ejfat_headless
     max_nouts: '0'
     output_language: python
     placement: (0,0)
@@ -22,63 +22,39 @@ options:
     run_options: prompt
     sizing_mode: fixed
     thread_safe_setters: ''
-    title: FM Transmitter (SDR to E2SAR)
+    title: FM Transmitter (SDR to EJFAT) - Headless
     window_size: (1000,1000)
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [8, 16.0]
+    coordinate: [8, 8]
     rotation: 0
     state: enabled
 
 blocks:
-- name: data_id
+- name: ejfat_file
   id: variable
   parameters:
-    comment: E2SAR data ID
-    value: '1'
+    comment: ''
+    value: '"/tmp/fm_stream.bin"'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [704, 24.0]
-    rotation: 0
-    state: enabled
-- name: ejfat_uri
-  id: variable
-  parameters:
-    comment: EJFAT URI for E2SAR connection (direct connection, no LB)
-    value: '"ejfat://127.0.0.1:19522/lb/1?data=127.0.0.1:19522"'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [856, 24.0]
-    rotation: 0
-    state: enabled
-- name: event_src_id
-  id: variable
-  parameters:
-    comment: E2SAR event source ID
-    value: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [768, 24.0]
+    coordinate: [264, 16.0]
     rotation: 0
     state: enabled
 - name: freq
   id: variable
   parameters:
     comment: ''
-    value: 106.1e6
+    value: 98.5e6
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [464, 24.0]
+    coordinate: [400, 12.0]
     rotation: 0
     state: enabled
 - name: samp_rate
@@ -90,57 +66,21 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [184, 24.0]
+    coordinate: [184, 16.0]
     rotation: 0
     state: enabled
-- name: vlen
-  id: variable
-  parameters:
-    comment: Vector length - must match receiver
-    value: '8192'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [264, 24.0]
-    rotation: 0
-    state: enabled
-- name: blocks_stream_to_vector_0
-  id: blocks_stream_to_vector
+- name: ejfat_ejfat_sink
+  id: ejfat_ejfat_sink
   parameters:
     affinity: ''
     alias: ''
-    comment: Convert stream to vectors for E2SAR segmenter
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_items: vlen
-    type: complex
-    vlen: '1'
+    comment: ''
+    filename: ejfat_file
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [720, 188.0]
-    rotation: 0
-    state: enabled
-- name: ejfat_e2sar_segmenter_sink_0
-  id: ejfat_e2sar_segmenter_sink
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: E2SAR Segmenter - segments vectors into EJFAT packets
-    data_id: data_id
-    event_src_id: event_src_id
-    mtu: '9000'
-    rate_gbps: '1.0'
-    uri: ejfat_uri
-    use_cp: 'False'
-    vector_size: vlen
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [928, 160.0]
+    coordinate: [736, 180.0]
     rotation: 0
     state: enabled
 - name: low_pass_filter_0
@@ -149,8 +89,8 @@ blocks:
     affinity: ''
     alias: ''
     beta: '6.76'
-    comment: Filter to FM bandwidth
-    cutoff_freq: 90e3
+    comment: ''
+    cutoff_freq: 75e3
     decim: '1'
     gain: '1'
     interp: '1'
@@ -158,13 +98,13 @@ blocks:
     minoutbuf: '0'
     samp_rate: samp_rate
     type: fir_filter_ccf
-    width: 10e3
-    win: window.WIN_BLACKMAN
+    width: 25e3
+    win: window.WIN_HAMMING
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [496, 164.0]
+    coordinate: [496, 156.0]
     rotation: 0
     state: enabled
 - name: osmosdr_source_0
@@ -277,7 +217,7 @@ blocks:
     clock_source5: ''
     clock_source6: ''
     clock_source7: ''
-    comment: SDR Source (RTL-SDR, HackRF, etc.)
+    comment: ''
     corr0: '0'
     corr1: '0'
     corr10: '0'
@@ -507,7 +447,7 @@ blocks:
     nchan: '1'
     num_mboards: '1'
     sample_rate: samp_rate
-    sync: pc_clock
+    sync: sync
     time_source0: ''
     time_source1: ''
     time_source2: ''
@@ -524,169 +464,10 @@ blocks:
     coordinate: [64, 232.0]
     rotation: 0
     state: enabled
-- name: qtgui_freq_sink_x_0
-  id: qtgui_freq_sink_x
-  parameters:
-    affinity: ''
-    alias: ''
-    alpha1: '1.0'
-    alpha10: '1.0'
-    alpha2: '1.0'
-    alpha3: '1.0'
-    alpha4: '1.0'
-    alpha5: '1.0'
-    alpha6: '1.0'
-    alpha7: '1.0'
-    alpha8: '1.0'
-    alpha9: '1.0'
-    autoscale: 'False'
-    average: '1.0'
-    axislabels: 'True'
-    bw: samp_rate
-    color1: '"blue"'
-    color10: '"dark blue"'
-    color2: '"red"'
-    color3: '"green"'
-    color4: '"black"'
-    color5: '"cyan"'
-    color6: '"magenta"'
-    color7: '"yellow"'
-    color8: '"dark red"'
-    color9: '"dark green"'
-    comment: ''
-    ctrlpanel: 'False'
-    fc: '0'
-    fftsize: '1024'
-    freqhalf: 'True'
-    grid: 'False'
-    gui_hint: ''
-    label: Relative Gain
-    label1: ''
-    label10: ''
-    label2: ''
-    label3: ''
-    label4: ''
-    label5: ''
-    label6: ''
-    label7: ''
-    label8: ''
-    label9: ''
-    legend: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    name: '""'
-    nconnections: '1'
-    norm_window: 'False'
-    showports: 'True'
-    tr_chan: '0'
-    tr_level: '0.0'
-    tr_mode: qtgui.TRIG_MODE_FREE
-    tr_tag: '""'
-    type: complex
-    units: dB
-    update_time: '0.10'
-    width1: '1'
-    width10: '1'
-    width2: '1'
-    width3: '1'
-    width4: '1'
-    width5: '1'
-    width6: '1'
-    width7: '1'
-    width8: '1'
-    width9: '1'
-    wintype: window.WIN_BLACKMAN_hARRIS
-    ymax: '10'
-    ymin: '-140'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [496, 276.0]
-    rotation: 0
-    state: enabled
-- name: qtgui_waterfall_sink_x_0
-  id: qtgui_waterfall_sink_x
-  parameters:
-    affinity: ''
-    alias: ''
-    alpha1: '1.0'
-    alpha10: '1.0'
-    alpha2: '1.0'
-    alpha3: '1.0'
-    alpha4: '1.0'
-    alpha5: '1.0'
-    alpha6: '1.0'
-    alpha7: '1.0'
-    alpha8: '1.0'
-    alpha9: '1.0'
-    axislabels: 'True'
-    bw: samp_rate
-    color1: '0'
-    color10: '0'
-    color2: '0'
-    color3: '0'
-    color4: '0'
-    color5: '0'
-    color6: '0'
-    color7: '0'
-    color8: '0'
-    color9: '0'
-    comment: ''
-    fc: '0'
-    fftsize: '1024'
-    freqhalf: 'True'
-    grid: 'False'
-    gui_hint: ''
-    int_max: '10'
-    int_min: '-140'
-    label1: ''
-    label10: ''
-    label2: ''
-    label3: ''
-    label4: ''
-    label5: ''
-    label6: ''
-    label7: ''
-    label8: ''
-    label9: ''
-    legend: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    name: '""'
-    nconnections: '1'
-    showports: 'True'
-    type: complex
-    update_time: '0.10'
-    wintype: window.WIN_BLACKMAN_hARRIS
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [496, 396.0]
-    rotation: 0
-    state: enabled
-- name: xmlrpc_server_0
-  id: xmlrpc_server
-  parameters:
-    addr: localhost
-    alias: ''
-    comment: ''
-    port: '8080'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [536, 24.0]
-    rotation: 0
-    state: enabled
 
 connections:
-- [blocks_stream_to_vector_0, '0', ejfat_e2sar_segmenter_sink_0, '0']
-- [low_pass_filter_0, '0', blocks_stream_to_vector_0, '0']
+- [low_pass_filter_0, '0', ejfat_ejfat_sink, '0']
 - [osmosdr_source_0, '0', low_pass_filter_0, '0']
-- [osmosdr_source_0, '0', qtgui_freq_sink_x_0, '0']
-- [osmosdr_source_0, '0', qtgui_waterfall_sink_x_0, '0']
 
 metadata:
   file_format: 1

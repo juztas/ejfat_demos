@@ -142,12 +142,13 @@ st.markdown(f"""
     }}
     /* Reduce spacing between elements */
     .element-container {{
-        margin-bottom: 0.25rem !important;
+        margin-top: 0 !important;
+        margin-bottom: 0.0625rem !important;
     }}
     /* Reduce divider spacing */
     hr {{
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
     }}
     /* Make metrics more compact */
     [data-testid="stMetricValue"] {{
@@ -200,6 +201,94 @@ st.markdown(f"""
     }}
     button[aria-selected="false"] {{
         font-weight: 400 !important;
+    }}
+    /* DTN endpoint row styling for proper alignment */
+    .dtn-row {{
+        display: flex !important;
+        align-items: center !important;
+        padding: 8px 12px !important;
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 0 !important;
+        background-color: #F9FAFB !important;
+    }}
+    .dtn-row:first-of-type {{
+        border-top-left-radius: 6px !important;
+        border-top-right-radius: 6px !important;
+    }}
+    .dtn-row:last-of-type {{
+        border-bottom-left-radius: 6px !important;
+        border-bottom-right-radius: 6px !important;
+    }}
+    .dtn-row:not(:last-of-type) {{
+        border-bottom: none !important;
+    }}
+    .dtn-row:hover {{
+        background-color: #F3F4F6 !important;
+        border-color: #D1D5DB !important;
+        z-index: 1 !important;
+        position: relative !important;
+    }}
+    /* Ensure checkboxes align properly */
+    .dtn-row [data-testid="stCheckbox"] {{
+        display: flex !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    /* Align text vertically in DTN rows */
+    .dtn-row .stMarkdown {{
+        display: flex !important;
+        align-items: center !important;
+        height: 38px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    /* Match button heights in DTN rows to global standard */
+    .dtn-row .stButton>button {{
+        height: 38px !important;
+        padding: 6px 16px !important;
+    }}
+    /* Remove vertical spacing within DTN rows */
+    .dtn-row .element-container {{
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        padding-bottom: 0 !important;
+        padding-top: 0 !important;
+    }}
+    .dtn-row [data-testid="column"] {{
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }}
+    /* Vertical centering for Speed Test page elements */
+    [data-testid="column"] {{
+        display: flex !important;
+        align-items: center !important;
+    }}
+    /* Ensure number inputs align vertically */
+    .stNumberInput {{
+        display: flex !important;
+        align-items: center !important;
+    }}
+    .stNumberInput > div {{
+        margin-bottom: 0 !important;
+    }}
+    .stNumberInput input {{
+        height: 38px !important;
+        padding: 6px 16px !important;
+    }}
+    /* Ensure checkboxes align vertically */
+    [data-testid="stCheckbox"] {{
+        display: flex !important;
+        align-items: center !important;
+        height: 38px !important;
+    }}
+    /* Ensure markdown text aligns vertically */
+    .stMarkdown {{
+        display: flex !important;
+        align-items: center !important;
+        height: 38px !important;
     }}
     /* Hide Streamlit menu and default UI elements */
     #MainMenu {{
@@ -514,7 +603,7 @@ def stop_receiver():
 def open_transmitter_flowgraph():
     """Open transmitter flowgraph in GNU Radio Companion."""
     fm_dir = Path(__file__).parent
-    tx_grc = fm_dir / config.get('transmitter_grc', '../fm/fm_transmitter_e2sar.grc')
+    tx_grc = fm_dir / config.get('transmitter_grc', '../../fm/fm_transmitter_e2sar.grc')
 
     try:
         # Activate conda environment and launch gnuradio-companion
@@ -539,7 +628,7 @@ def open_transmitter_flowgraph():
 def open_receiver_flowgraph():
     """Open receiver flowgraph in GNU Radio Companion."""
     fm_dir = Path(__file__).parent
-    rx_grc = fm_dir / config.get('receiver_grc', '../fm/fm_receiver_e2sar.grc')
+    rx_grc = fm_dir / config.get('receiver_grc', '../../fm/fm_receiver_e2sar.grc')
 
     try:
         # Activate conda environment and launch gnuradio-companion
@@ -806,7 +895,7 @@ with st.sidebar:
     st.markdown(SLIDES.get(current_step, "No content available"))
 
 # Main content area - Tabbed interface
-tab1, tab2, tab3, tab4 = st.tabs(["🌐 Load Balancer Configuration", "📡 Gnuradio Control", "☁️ Bluesky Control", "📊 Load Balancer Monitor"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌐 Load Balancer Configuration", "📡 Gnuradio Control", "☁️ Bluesky Control", "🚀 Speed Test", "📊 Load Balancer Monitor"])
 
 # TAB 1: Load Balancer Configuration
 with tab1:
@@ -1020,8 +1109,417 @@ with tab2:
 with tab3:
     st.info("Coming soon")
 
-# TAB 4: Load Balancer Monitor
+# TAB 4: Speed Test
 with tab4:
+    st.header("🚀 Network Speed Test")
+
+    # DTN endpoints list
+    dtn_endpoints = [
+        "cern773-dtn1.es.net",
+        "denv-dtn1.es.net",
+        "hous-dtn1.es.net",
+        "star-dtn1.es.net",
+        "sunn-dtn1.es.net",
+        "wash-dtn1.es.net"
+    ]
+
+    # Special endpoint with nodes multiplier
+    perlmutter_endpoint = "perlmutter.nersc.gov"
+
+    # Initialize session state for DTN endpoint selection, test status, rates, sockets, and jobs
+    if 'dtn_enabled' not in st.session_state:
+        st.session_state.dtn_enabled = {dtn: False for dtn in dtn_endpoints}
+        st.session_state.dtn_enabled[perlmutter_endpoint] = False
+    if 'dtn_test_status' not in st.session_state:
+        st.session_state.dtn_test_status = {dtn: None for dtn in dtn_endpoints}
+        st.session_state.dtn_test_status[perlmutter_endpoint] = None
+    if 'dtn_tx_rate' not in st.session_state:
+        st.session_state.dtn_tx_rate = {dtn: 1.0 for dtn in dtn_endpoints}
+        st.session_state.dtn_tx_rate[perlmutter_endpoint] = 1.0
+    if 'dtn_tx_sockets' not in st.session_state:
+        st.session_state.dtn_tx_sockets = {dtn: 4 for dtn in dtn_endpoints}
+        st.session_state.dtn_tx_sockets[perlmutter_endpoint] = 4
+    if 'dtn_rx_sockets' not in st.session_state:
+        st.session_state.dtn_rx_sockets = {dtn: 4 for dtn in dtn_endpoints}
+        st.session_state.dtn_rx_sockets[perlmutter_endpoint] = 4
+    if 'dtn_tx_jobs' not in st.session_state:
+        st.session_state.dtn_tx_jobs = {dtn: 1 for dtn in dtn_endpoints}
+        st.session_state.dtn_tx_jobs[perlmutter_endpoint] = 1
+    if 'dtn_rx_jobs' not in st.session_state:
+        st.session_state.dtn_rx_jobs = {dtn: 1 for dtn in dtn_endpoints}
+        st.session_state.dtn_rx_jobs[perlmutter_endpoint] = 1
+    if 'perlmutter_nodes' not in st.session_state:
+        st.session_state.perlmutter_nodes = 1
+
+    # Display column headers once at the top - now includes Nodes, Tx Jobs, and Rx Jobs columns
+    col_checkbox_hdr, col_host_hdr, col_nodes_hdr, col_tx_rate_hdr, col_tx_jobs_hdr, col_total_rate_hdr, col_tx_sockets_hdr, col_rx_sockets_hdr, col_rx_jobs_hdr, col_test_hdr = st.columns([0.3, 1.4, 0.5, 0.7, 0.5, 0.8, 0.7, 0.7, 0.5, 1])
+
+    with col_checkbox_hdr:
+        st.markdown("")  # Empty for alignment
+
+    with col_host_hdr:
+        st.markdown("**Endpoint**")
+
+    with col_nodes_hdr:
+        st.markdown("**Nodes**")
+
+    with col_tx_rate_hdr:
+        st.markdown("**Tx Rate (Gbps)**")
+
+    with col_tx_jobs_hdr:
+        st.markdown("**Tx Jobs**")
+
+    with col_total_rate_hdr:
+        st.markdown("**Total Rate (Gbps)**")
+
+    with col_tx_sockets_hdr:
+        st.markdown("**Tx Sockets**")
+
+    with col_rx_sockets_hdr:
+        st.markdown("**Rx Sockets**")
+
+    with col_rx_jobs_hdr:
+        st.markdown("**Rx Jobs**")
+
+    with col_test_hdr:
+        st.markdown("**Status**")
+
+    # Create rows for each DTN endpoint
+    for dtn_name in dtn_endpoints:
+        # Column layout with all columns including Nodes, Tx Jobs, and Rx Jobs
+        col_checkbox, col_host, col_nodes, col_tx_rate, col_tx_jobs, col_total_rate, col_tx_sockets, col_rx_sockets, col_rx_jobs, col_test = st.columns([0.3, 1.4, 0.5, 0.7, 0.5, 0.8, 0.7, 0.7, 0.5, 1])
+
+        # Get test status for this endpoint
+        test_status = st.session_state.dtn_test_status.get(dtn_name, None)
+
+        if test_status is None:
+            status_text = ""
+        elif test_status:
+            status_text = "✅ Passed"
+        else:
+            status_text = "❌ Failed"
+
+        # Checkbox
+        with col_checkbox:
+            enabled = st.checkbox(
+                "Enable",
+                value=st.session_state.dtn_enabled.get(dtn_name, False),
+                key=f"checkbox_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_enabled[dtn_name] = enabled
+
+        # Hostname
+        with col_host:
+            st.markdown(f"{dtn_name}")
+
+        # Nodes column (hidden for DTN endpoints - just empty space)
+        with col_nodes:
+            st.markdown("")  # Empty - nodes not applicable for DTN endpoints
+
+        # Tx Rate Input
+        with col_tx_rate:
+            tx_rate = st.number_input(
+                f"Tx Rate for {dtn_name}",
+                value=st.session_state.dtn_tx_rate.get(dtn_name, 1.0),
+                min_value=0.1,
+                max_value=20.0,  # Enforce 20 Gbps max per Tx Rate
+                step=0.1,
+                format="%.1f",
+                key=f"tx_rate_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_tx_rate[dtn_name] = tx_rate
+            # Warn if at or near limit
+            if tx_rate >= 20.0:
+                st.caption("⚠️ Max limit")
+
+        # Tx Jobs Input
+        with col_tx_jobs:
+            tx_jobs = st.number_input(
+                f"Tx Jobs for {dtn_name}",
+                value=st.session_state.dtn_tx_jobs.get(dtn_name, 1),
+                min_value=1,
+                max_value=128,
+                step=1,
+                key=f"tx_jobs_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_tx_jobs[dtn_name] = tx_jobs
+
+        # Total Rate (calculated)
+        with col_total_rate:
+            total_rate = tx_rate * tx_jobs
+            # Enforce 90 Gbps limit for DTN endpoints
+            if total_rate > 90.0:
+                st.markdown(f"⚠️ **{total_rate:.1f}** (exceeds 90 Gbps limit)")
+            else:
+                st.markdown(f"{total_rate:.1f}")
+
+        # Tx Sockets Input
+        with col_tx_sockets:
+            tx_sockets = st.number_input(
+                f"Tx Sockets for {dtn_name}",
+                value=st.session_state.dtn_tx_sockets.get(dtn_name, 4),
+                min_value=1,
+                max_value=64,
+                step=1,
+                key=f"tx_sockets_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_tx_sockets[dtn_name] = tx_sockets
+
+        # Rx Sockets Input
+        with col_rx_sockets:
+            rx_sockets = st.number_input(
+                f"Rx Sockets for {dtn_name}",
+                value=st.session_state.dtn_rx_sockets.get(dtn_name, 4),
+                min_value=1,
+                max_value=64,
+                step=1,
+                key=f"rx_sockets_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_rx_sockets[dtn_name] = rx_sockets
+
+        # Rx Jobs Input
+        with col_rx_jobs:
+            rx_jobs = st.number_input(
+                f"Rx Jobs for {dtn_name}",
+                value=st.session_state.dtn_rx_jobs.get(dtn_name, 1),
+                min_value=1,
+                max_value=128,
+                step=1,
+                key=f"rx_jobs_{dtn_name}",
+                label_visibility="collapsed"
+            )
+            st.session_state.dtn_rx_jobs[dtn_name] = rx_jobs
+
+        # Status
+        with col_test:
+            st.markdown(f"{status_text}")
+
+    # Add Perlmutter row with nodes multiplier (same column layout as DTN endpoints)
+    col_checkbox_perlm, col_host_perlm, col_nodes_perlm, col_tx_rate_perlm, col_tx_jobs_perlm, col_total_rate_perlm, col_tx_sockets_perlm, col_rx_sockets_perlm, col_rx_jobs_perlm, col_test_perlm = st.columns([0.3, 1.4, 0.5, 0.7, 0.5, 0.8, 0.7, 0.7, 0.5, 1])
+
+    # Get test status for perlmutter
+    test_status_perlm = st.session_state.dtn_test_status.get(perlmutter_endpoint, None)
+
+    if test_status_perlm is None:
+        status_text_perlm = ""
+    elif test_status_perlm:
+        status_text_perlm = "✅ Passed"
+    else:
+        status_text_perlm = "❌ Failed"
+
+    # Checkbox
+    with col_checkbox_perlm:
+        enabled_perlm = st.checkbox(
+            "Enable",
+            value=st.session_state.dtn_enabled.get(perlmutter_endpoint, False),
+            key=f"checkbox_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_enabled[perlmutter_endpoint] = enabled_perlm
+
+    # Hostname
+    with col_host_perlm:
+        st.markdown(f"{perlmutter_endpoint}")
+
+    # Nodes Input (special for Perlmutter) - visible for this row only
+    with col_nodes_perlm:
+        nodes_perlm = st.number_input(
+            f"Nodes for {perlmutter_endpoint}",
+            value=st.session_state.perlmutter_nodes,
+            min_value=1,
+            max_value=128,
+            step=1,
+            key=f"nodes_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.perlmutter_nodes = nodes_perlm
+
+    # Tx Rate Input
+    with col_tx_rate_perlm:
+        tx_rate_perlm = st.number_input(
+            f"Tx Rate for {perlmutter_endpoint}",
+            value=st.session_state.dtn_tx_rate.get(perlmutter_endpoint, 1.0),
+            min_value=0.1,
+            max_value=20.0,  # Enforce 20 Gbps max per Tx Rate
+            step=0.1,
+            format="%.1f",
+            key=f"tx_rate_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_tx_rate[perlmutter_endpoint] = tx_rate_perlm
+        # Warn if at or near limit
+        if tx_rate_perlm >= 20.0:
+            st.caption("⚠️ Max limit")
+
+    # Tx Jobs Input
+    with col_tx_jobs_perlm:
+        tx_jobs_perlm = st.number_input(
+            f"Tx Jobs for {perlmutter_endpoint}",
+            value=st.session_state.dtn_tx_jobs.get(perlmutter_endpoint, 1),
+            min_value=1,
+            max_value=128,
+            step=1,
+            key=f"tx_jobs_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_tx_jobs[perlmutter_endpoint] = tx_jobs_perlm
+
+    # Total Rate (calculated: tx_rate * tx_jobs * nodes)
+    with col_total_rate_perlm:
+        total_rate_perlm = tx_rate_perlm * tx_jobs_perlm * nodes_perlm
+        # Enforce 180 Gbps limit for Perlmutter
+        if total_rate_perlm > 180.0:
+            st.markdown(f"⚠️ **{total_rate_perlm:.1f}** (exceeds 180 Gbps limit)")
+        else:
+            st.markdown(f"{total_rate_perlm:.1f}")
+
+    # Tx Sockets Input (will be multiplied by nodes in aggregate)
+    with col_tx_sockets_perlm:
+        tx_sockets_perlm = st.number_input(
+            f"Tx Sockets for {perlmutter_endpoint}",
+            value=st.session_state.dtn_tx_sockets.get(perlmutter_endpoint, 4),
+            min_value=1,
+            max_value=64,
+            step=1,
+            key=f"tx_sockets_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_tx_sockets[perlmutter_endpoint] = tx_sockets_perlm
+
+    # Rx Sockets Input (will be multiplied by nodes in aggregate)
+    with col_rx_sockets_perlm:
+        rx_sockets_perlm = st.number_input(
+            f"Rx Sockets for {perlmutter_endpoint}",
+            value=st.session_state.dtn_rx_sockets.get(perlmutter_endpoint, 4),
+            min_value=1,
+            max_value=64,
+            step=1,
+            key=f"rx_sockets_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_rx_sockets[perlmutter_endpoint] = rx_sockets_perlm
+
+    # Rx Jobs Input
+    with col_rx_jobs_perlm:
+        rx_jobs_perlm = st.number_input(
+            f"Rx Jobs for {perlmutter_endpoint}",
+            value=st.session_state.dtn_rx_jobs.get(perlmutter_endpoint, 1),
+            min_value=1,
+            max_value=128,
+            step=1,
+            key=f"rx_jobs_{perlmutter_endpoint}",
+            label_visibility="collapsed"
+        )
+        st.session_state.dtn_rx_jobs[perlmutter_endpoint] = rx_jobs_perlm
+
+    # Status
+    with col_test_perlm:
+        st.markdown(f"{status_text_perlm}")
+
+    # Add aggregate summary row
+    st.divider()
+
+    col_checkbox_sum, col_host_sum, col_nodes_sum, col_tx_rate_sum, col_tx_jobs_sum, col_total_rate_sum, col_tx_sockets_sum, col_rx_sockets_sum, col_rx_jobs_sum, col_test_sum = st.columns([0.3, 1.4, 0.5, 0.7, 0.5, 0.8, 0.7, 0.7, 0.5, 1])
+
+    # Calculate aggregates
+    total_aggregate_rate = 0.0
+    total_aggregate_tx_sockets = 0
+    total_aggregate_rx_sockets = 0
+
+    for dtn_name in dtn_endpoints:
+        if st.session_state.dtn_enabled.get(dtn_name, False):
+            tx_rate = st.session_state.dtn_tx_rate.get(dtn_name, 1.0)
+            tx_jobs = st.session_state.dtn_tx_jobs.get(dtn_name, 1)
+            rx_jobs = st.session_state.dtn_rx_jobs.get(dtn_name, 1)
+            tx_sockets = st.session_state.dtn_tx_sockets.get(dtn_name, 4)
+            rx_sockets = st.session_state.dtn_rx_sockets.get(dtn_name, 4)
+
+            # Sum total rates (based on tx jobs)
+            total_aggregate_rate += tx_rate * tx_jobs
+
+            # Sum tx sockets × tx jobs
+            total_aggregate_tx_sockets += tx_sockets * tx_jobs
+
+            # Sum rx sockets × rx jobs
+            total_aggregate_rx_sockets += rx_sockets * rx_jobs
+
+    # Add perlmutter contribution (multiplied by nodes)
+    if st.session_state.dtn_enabled.get(perlmutter_endpoint, False):
+        tx_rate_perlm = st.session_state.dtn_tx_rate.get(perlmutter_endpoint, 1.0)
+        tx_jobs_perlm = st.session_state.dtn_tx_jobs.get(perlmutter_endpoint, 1)
+        rx_jobs_perlm = st.session_state.dtn_rx_jobs.get(perlmutter_endpoint, 1)
+        nodes_perlm = st.session_state.perlmutter_nodes
+        tx_sockets_perlm = st.session_state.dtn_tx_sockets.get(perlmutter_endpoint, 4)
+        rx_sockets_perlm = st.session_state.dtn_rx_sockets.get(perlmutter_endpoint, 4)
+
+        # Sum total rates (tx_rate × tx_jobs × nodes)
+        total_aggregate_rate += tx_rate_perlm * tx_jobs_perlm * nodes_perlm
+
+        # Sum tx sockets × tx_jobs × nodes
+        total_aggregate_tx_sockets += tx_sockets_perlm * tx_jobs_perlm * nodes_perlm
+
+        # Sum rx sockets × rx_jobs × nodes
+        total_aggregate_rx_sockets += rx_sockets_perlm * rx_jobs_perlm * nodes_perlm
+
+    with col_checkbox_sum:
+        st.markdown("")
+
+    with col_host_sum:
+        st.markdown("**Total (Enabled)**")
+
+    with col_nodes_sum:
+        st.markdown("")  # Empty - nodes column for alignment
+
+    with col_tx_rate_sum:
+        st.markdown("")
+
+    with col_tx_jobs_sum:
+        st.markdown("")
+
+    with col_total_rate_sum:
+        st.markdown(f"**{total_aggregate_rate:.1f}**")
+
+    with col_tx_sockets_sum:
+        st.markdown(f"**{total_aggregate_tx_sockets}**")
+
+    with col_rx_sockets_sum:
+        st.markdown(f"**{total_aggregate_rx_sockets}**")
+
+    with col_rx_jobs_sum:
+        st.markdown("")
+
+    with col_test_sum:
+        st.markdown("")
+
+    # Check for limit violations
+    violations = []
+
+    for dtn_name in dtn_endpoints:
+        if st.session_state.dtn_enabled.get(dtn_name, False):
+            tx_rate = st.session_state.dtn_tx_rate.get(dtn_name, 1.0)
+            tx_jobs = st.session_state.dtn_tx_jobs.get(dtn_name, 1)
+            total_rate = tx_rate * tx_jobs
+            if total_rate > 90.0:
+                violations.append(f"{dtn_name}: {total_rate:.1f} Gbps (limit: 90 Gbps)")
+
+    if st.session_state.dtn_enabled.get(perlmutter_endpoint, False):
+        tx_rate_perlm = st.session_state.dtn_tx_rate.get(perlmutter_endpoint, 1.0)
+        tx_jobs_perlm = st.session_state.dtn_tx_jobs.get(perlmutter_endpoint, 1)
+        nodes_perlm = st.session_state.perlmutter_nodes
+        total_rate_perlm = tx_rate_perlm * tx_jobs_perlm * nodes_perlm
+        if total_rate_perlm > 180.0:
+            violations.append(f"{perlmutter_endpoint}: {total_rate_perlm:.1f} Gbps (limit: 180 Gbps)")
+
+    if violations:
+        st.warning("⚠️ **Rate Limit Violations:**\n\n" + "\n\n".join([f"- {v}" for v in violations]))
+
+# TAB 5: Load Balancer Monitor
+with tab5:
     # Monitor control buttons
     monitoring_active = st.session_state.get('monitoring_active', False)
 

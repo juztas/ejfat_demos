@@ -46,19 +46,10 @@ blocks:
     rotation: 0
     state: enabled
 - name: freq
-  id: variable_qtgui_range
+  id: variable
   parameters:
     comment: ''
-    gui_hint: ''
-    label: Frequency
-    min_len: '200'
-    orient: QtCore.Qt.Horizontal
-    rangeType: float
-    start: 88e6
-    step: 100e3
-    stop: 108e6
     value: 98.5e6
-    widget: counter_slider
   states:
     bus_sink: false
     bus_source: false

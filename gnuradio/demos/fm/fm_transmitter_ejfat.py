@@ -11,7 +11,6 @@
 
 from PyQt5 import Qt
 from gnuradio import qtgui
-from PyQt5 import QtCore
 from gnuradio import ejfat
 from gnuradio import filter
 from gnuradio.filter import firdes
@@ -74,9 +73,6 @@ class fm_transmitter_ejfat(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._freq_range = qtgui.Range(88e6, 108e6, 100e3, 98.5e6, 200)
-        self._freq_win = qtgui.RangeWidget(self._freq_range, self.set_freq, "Frequency", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._freq_win)
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
