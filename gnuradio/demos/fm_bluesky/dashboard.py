@@ -105,35 +105,59 @@ st.markdown(f"""
         max-width: 100% !important;
     }}
     /* Center text in duration input */
-    input[aria-label="Duration (HH:MM:SS)"] {{
+    input[aria-label="Duration"] {{
         text-align: center !important;
         font-family: monospace !important;
     }}
+    /* Style duration label to match input height */
+    .duration-label {{
+        display: flex !important;
+        align-items: center !important;
+        height: 38px !important;
+        padding: 6px 12px !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: {config['text_primary']} !important;
+        margin: 0 !important;
+    }}
     /* Reduce vertical spacing for more compact layout */
     .block-container {{
-        padding-top: 2rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
     }}
     h1 {{
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 0 !important;
+        margin-bottom: 0.25rem !important;
+        font-size: 1.75rem !important;
     }}
     h2 {{
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+        font-size: 1.25rem !important;
     }}
     h3 {{
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+        font-size: 1rem !important;
     }}
     /* Reduce spacing between elements */
     .element-container {{
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
     }}
     /* Reduce divider spacing */
     hr {{
-        margin-top: 0.75rem !important;
-        margin-bottom: 0.75rem !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }}
+    /* Make metrics more compact */
+    [data-testid="stMetricValue"] {{
+        font-size: 1rem !important;
+    }}
+    [data-testid="stMetricLabel"] {{
+        font-size: 0.875rem !important;
+    }}
+    [data-testid="metric-container"] {{
+        padding: 0.25rem !important;
     }}
     /* Match text input and button heights and alignment */
     .stTextInput input {{
@@ -169,6 +193,26 @@ st.markdown(f"""
         align-items: center !important;
         width: 100% !important;
         margin-bottom: 1rem !important;
+    }}
+    /* Make selected tab bold */
+    button[aria-selected="true"] {{
+        font-weight: 700 !important;
+    }}
+    button[aria-selected="false"] {{
+        font-weight: 400 !important;
+    }}
+    /* Hide Streamlit menu and default UI elements */
+    #MainMenu {{
+        visibility: hidden;
+    }}
+    header {{
+        visibility: hidden;
+    }}
+    footer {{
+        visibility: hidden;
+    }}
+    .stDeployButton {{
+        visibility: hidden;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -766,8 +810,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["🌐 Load Balancer Configuration", "📡 Gnur
 
 # TAB 1: Load Balancer Configuration
 with tab1:
-    st.header("🌐 Load Balancer Configuration")
-
     # Admin Hostname input with Test SSH button inline
     col_host, col_test = st.columns([3, 1])
 
@@ -853,6 +895,9 @@ with tab1:
             st.rerun()
 
     # Instance URI input (full width, below admin URI)
+    # Add label above input to match other labels
+    st.markdown("**Instance URI**")
+
     # Single source of truth: store only the full URI
     if 'instance_uri_full' not in st.session_state:
         st.session_state.instance_uri_full = st.session_state.get('instance_uri', '')
@@ -869,23 +914,22 @@ with tab1:
         value=display_instance_uri,
         disabled=True,  # Instance URI is always read-only (set by reserve operation)
         help="URI assigned after reserving load balancer",
-        key=f"instance_uri_input_{is_obfuscated}_{instance_uri_hash}"
+        key=f"instance_uri_input_{is_obfuscated}_{instance_uri_hash}",
+        label_visibility="collapsed"
     )
 
     # Convenience: keep instance_uri in sync for backward compatibility
     st.session_state.instance_uri = st.session_state.instance_uri_full
 
     # Reserve LB section with duration input
-    # Add label row above both elements
-    col_label_dur, col_label_res, col_label_spacer = st.columns([0.7, 1.5, 2.8])
-    with col_label_dur:
-        st.markdown("**Duration (HH:MM:SS)**")
+    col_label, col_duration, col_reserve, col_spacer = st.columns([0.5, 0.7, 1.5, 2.3])
 
-    col_duration, col_reserve, col_spacer = st.columns([0.7, 1.5, 2.8])
+    with col_label:
+        st.markdown('<div class="duration-label">Duration</div>', unsafe_allow_html=True)
 
     with col_duration:
         duration_input = st.text_input(
-            "Duration (HH:MM:SS)",
+            "Duration",
             value=st.session_state.get('lb_duration', '1:00:00'),
             help="Load balancer reservation duration in HH:MM:SS format (e.g., 1:00:00 for 1 hour)",
             key="duration_input",
@@ -940,8 +984,6 @@ with tab1:
 
 # TAB 2: Gnuradio Control
 with tab2:
-    st.header("📡 Gnuradio Control")
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -980,14 +1022,10 @@ with tab2:
 
 # TAB 3: Bluesky Control
 with tab3:
-    st.header("☁️ Bluesky Control")
-
     st.info("Coming soon")
 
 # TAB 4: Load Balancer Monitor
 with tab4:
-    st.header("📊 Load Balancer Monitor")
-
     # Monitor control buttons
     monitoring_active = st.session_state.get('monitoring_active', False)
 
