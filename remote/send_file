@@ -1,0 +1,3 @@
+#!/bin/bash
+
+e2sar_ft -s --ip "$MY_IP"  --extension "$SEND_EXTENSION"  --sockets "$SEND_SOCKETS" --rate "$SEND_RATE" --smooth --withcp --path "$SEND_PATH"

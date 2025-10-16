@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ejfatclient
+  namespace: iri 
+  annotations:
+    k8s.v1.cni.cncf.io/networks: 'UPDATEME'
+     # An example for Multus usage (bridge/macvlan/pci-passtrhough,etc)
+     # '[{"gateway":["2001:1:1:1::1"],"ips":["2001:1:1:1::2/64"], "mac": "8a:9b:db:71:76:b6", "name":"multus2001"}]'
+spec:
+  containers:
+    - name: ejfatclient
+      image: UPDATEME/ejfatdemo:latest
+      imagePullPolicy: Always
+      command: ["/bin/sh"]
+      args: ["-c", "sleep infinity"]
+      resources:
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+

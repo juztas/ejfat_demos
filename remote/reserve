@@ -1,0 +1,3 @@
+#!/bin/bash
+
+lbadm -v -u "$EJFAT_URI_BETA" --reserve -d "$RESERVE_TIME" --lbname "$RESERVE_NAME" "$IP_VERSION" --export 
