@@ -11,7 +11,7 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 include $(MAKEFILE_DIR)Makefile.common
 
-.PHONY: help receive send send_file receive_file
+.PHONY: help receive send send_file receive_file monitor
 
 #------------------------------------------------------------------------------------------------
 # MAKEFILE TARGETS
@@ -48,7 +48,7 @@ ifndef NODE
 endif
 	@echo "Copying INSTANCE_URI to $(NODE)..."
 	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
-	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local receive IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" RX_DURATION="$(RX_DURATION)" RX_BUFSIZE="$(RX_BUFSIZE)" RX_TIMEOUT="$(RX_TIMEOUT)" RX_CORES="$(RX_CORES)" RX_DEQ="$(RX_DEQ)" MONITOR_PORTS="$(MONITOR_PORTS)" MONITOR_INTERVAL="$(MONITOR_INTERVAL)"'\'''
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local receive IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" RX_DURATION="$(RX_DURATION)" RX_BUFSIZE="$(RX_BUFSIZE)" RX_TIMEOUT="$(RX_TIMEOUT)" RX_CORES="$(RX_CORES)" RX_DEQ="$(RX_DEQ)" MONITOR_PORTS="$(MONITOR_PORTS)" MONITOR_INTERVAL="$(MONITOR_INTERVAL)" REASSEM_USE_CP="$(REASSEM_USE_CP)" REASSEM_VALIDATE_CERT="$(REASSEM_VALIDATE_CERT)" REASSEM_USE_HOST_ADDRESS="$(REASSEM_USE_HOST_ADDRESS)" REASSEM_PORT_RANGE="$(REASSEM_PORT_RANGE)" REASSEM_WITH_LB_HEADER="$(REASSEM_WITH_LB_HEADER)" REASSEM_EVENT_TIMEOUT_MS="$(REASSEM_EVENT_TIMEOUT_MS)" REASSEM_RCV_SOCKET_BUFSIZE="$(REASSEM_RCV_SOCKET_BUFSIZE)" REASSEM_EPOCH_MS="$(REASSEM_EPOCH_MS)" REASSEM_PERIOD_MS="$(REASSEM_PERIOD_MS)" REASSEM_PID_SETPOINT="$(REASSEM_PID_SETPOINT)" REASSEM_PID_KI="$(REASSEM_PID_KI)" REASSEM_PID_KP="$(REASSEM_PID_KP)" REASSEM_PID_KD="$(REASSEM_PID_KD)" REASSEM_PID_WEIGHT="$(REASSEM_PID_WEIGHT)" REASSEM_PID_MIN_FACTOR="$(REASSEM_PID_MIN_FACTOR)" REASSEM_PID_MAX_FACTOR="$(REASSEM_PID_MAX_FACTOR)"'\'''
 
 send :
 ifndef NODE
@@ -58,7 +58,7 @@ ifndef NODE
 endif
 	@echo "Copying INSTANCE_URI to $(NODE)..."
 	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
-	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local send IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" TX_RATE="$(TX_RATE)" TX_LENGTH="$(TX_LENGTH)" NFRAMES="$(NFRAMES)" SEND_SOCKETS="$(SEND_SOCKETS)" DATA_ID="$(DATA_ID)"'\'''
+	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local send IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" TX_RATE="$(TX_RATE)" TX_LENGTH="$(TX_LENGTH)" NFRAMES="$(NFRAMES)" SEND_SOCKETS="$(SEND_SOCKETS)" DATA_ID="$(DATA_ID)" USE_CP="$(USE_CP)" WARMUP_MS="$(WARMUP_MS)" SYNC_PERIOD_MS="$(SYNC_PERIOD_MS)" SYNC_PERIODS="$(SYNC_PERIODS)" CONNECTED_SOCKET="$(CONNECTED_SOCKET)" MTU="$(MTU)" SND_SOCKET_BUFSIZE="$(SND_SOCKET_BUFSIZE)" SMOOTH="$(SMOOTH)" MULTI_PORT="$(MULTI_PORT)"'\'''
 
 receive_file :
 ifndef NODE
@@ -79,3 +79,11 @@ endif
 	@echo "Copying INSTANCE_URI to $(NODE)..."
 	scp INSTANCE_URI $(NODE):~/ejfat_demos/perlmutter/
 	ssh -t $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local send_file IP_VERSION="$(IP_VERSION)" LOG_DIR="$(LOG_DIR)" FT_EXTENSION="$(FT_EXTENSION)" FT_RATE="$(FT_RATE)" SEND_SOCKETS="$(FT_SOCKETS)" DATA_PATH="$(DATA_PATH)"'\'''
+
+monitor :
+ifndef NODE
+	@echo "Error: NODE variable is required for SSH execution"
+	@echo "Usage: make -f Makefile.ssh monitor NODE=<nodename>"
+	@exit 1
+endif
+	@ssh $(NODE) 'bash -i -c '\''conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local monitor IP_VERSION="$(IP_VERSION)"'\'''

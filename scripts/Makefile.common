@@ -12,9 +12,17 @@
 #------------------------------------------------------------------------------------------------
 # NETWORK CONFIGURATION
 #------------------------------------------------------------------------------------------------
-IP_VERSION ?= -6
+# Accept either numeric (4, 6) or dash-prefixed (-4, -6) format
+# Default to 6 (IPv6)
+IP_VERSION ?= 6
 
-ifeq ($(IP_VERSION),-4)
+# Normalize IP_VERSION to numeric format (strip dash if present)
+IP_VERSION_NUMERIC := $(patsubst -%,%,$(IP_VERSION))
+
+# Convert to dash-prefixed format for use with commands that need it
+IP_VERSION_DASH := -$(IP_VERSION_NUMERIC)
+
+ifeq ($(IP_VERSION_NUMERIC),4)
   LB_IP ?= $(shell dig +short ejfat-lb.es.net A | tail -1 )
   MY_IP ?= $(shell ip route get $(LB_IP) | head -1 | sed 's/^.*src//' | awk '{ print $$1 }')
 else
@@ -50,6 +58,22 @@ NFRAMES ?= 10000
 DATA_ID ?= $(shell bash -c 'echo $$(( $$RANDOM % 1000 + 1 ))')
 
 #------------------------------------------------------------------------------------------------
+# SEGMENTER CONFIGURATION
+#------------------------------------------------------------------------------------------------
+# Control plane settings
+USE_CP ?= true
+WARMUP_MS ?= 1000
+SYNC_PERIOD_MS ?= 1000
+SYNC_PERIODS ?= 2
+
+# Data plane settings
+CONNECTED_SOCKET ?= true
+MTU ?= 0
+SND_SOCKET_BUFSIZE ?= 3145728
+SMOOTH ?= false
+MULTI_PORT ?= false
+
+#------------------------------------------------------------------------------------------------
 # FILE TRANSFER CONFIGURATION
 #------------------------------------------------------------------------------------------------
 FT_EXTENSION ?= root
@@ -64,6 +88,31 @@ FT_FILESIZE ?= 300
 DATA_DIR ?= $(SCRATCH)/storage/ejfat_ft/data
 DATA_RX_DIR ?= $(SCRATCH)/storage/ejfat_ft/data_rx
 DATA_PATH ?= /data
+
+#------------------------------------------------------------------------------------------------
+# REASSEMBLER CONFIGURATION
+#------------------------------------------------------------------------------------------------
+# Control plane settings
+REASSEM_USE_CP ?= true
+REASSEM_VALIDATE_CERT ?= true
+REASSEM_USE_HOST_ADDRESS ?= false
+
+# Data plane settings
+REASSEM_PORT_RANGE ?= -1
+REASSEM_WITH_LB_HEADER ?= false
+REASSEM_EVENT_TIMEOUT_MS ?= 500
+REASSEM_RCV_SOCKET_BUFSIZE ?= 3145728
+REASSEM_EPOCH_MS ?= 1000
+REASSEM_PERIOD_MS ?= 100
+
+# PID controller settings
+REASSEM_PID_SETPOINT ?= 0.0
+REASSEM_PID_KI ?= 0.0
+REASSEM_PID_KP ?= 0.0
+REASSEM_PID_KD ?= 0.0
+REASSEM_PID_WEIGHT ?= 1.0
+REASSEM_PID_MIN_FACTOR ?= 0.5
+REASSEM_PID_MAX_FACTOR ?= 2.0
 
 #------------------------------------------------------------------------------------------------
 # MONITORING CONFIGURATION

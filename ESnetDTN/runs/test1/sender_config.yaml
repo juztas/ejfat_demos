@@ -1,0 +1,139 @@
+#
+# EJFAT Sender Configuration
+#
+# This file configures the EJFAT sender parameters.
+# Copy this file to sender_config.yaml and customize as needed.
+#
+# Usage: ./start_sender.sh sender_config.yaml
+#
+
+# ============================================================================
+# INSTANCE URI CONFIGURATION
+# ============================================================================
+
+# Path to file containing the EJFAT instance URI
+# Default: INSTANCE_URI
+instance_uri_file: INSTANCE_URI
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+
+# IP version to use: 4 or 6
+# Default: 6
+ip_version: 6
+
+# ============================================================================
+# SENDER CONFIGURATION
+# ============================================================================
+
+# Transmission rate in Gbps
+# Default: 0.1
+tx_rate: 10
+
+# Transmission length (packet size in bytes)
+# Default: 2097152 (2 MB)
+tx_length: 2097152
+
+# Number of frames to send
+# Default: 10000
+nframes: 10000
+
+# Number of send sockets to use
+# Default: 8
+send_sockets: 8
+
+# Data ID (identifier for the data stream)
+# Default: random number between 1-1000
+# Leave empty to use random value, or specify a specific number
+# data_id: 123
+
+# ============================================================================
+# SEGMENTER CONFIGURATION
+# ============================================================================
+
+# Control Plane Settings
+# ----------------------
+
+# Enable control plane to send Sync packets
+# Default: true
+use_cp: true
+
+# Warm up period between sync thread starting and data allowed to be sent (milliseconds)
+# Default: 1000
+warmup_ms: 1000
+
+# Sync thread period in milliseconds
+# Default: 1000
+sync_period_ms: 1000
+
+# Number of sync periods to use for averaging reported send rate
+# Default: 2
+sync_periods: 2
+
+# Data Plane Settings
+# -------------------
+
+# Use connected sockets
+# Default: true
+connected_socket: true
+
+# MTU size to fit segmented data (must accommodate IP, UDP, and LBRE headers)
+# Value of 0 means auto-detect based on MTU of outgoing interface (Linux only)
+# Default: 0
+mtu: 0
+
+# Socket buffer size for sending (set via SO_SNDBUF setsockopt)
+# Note: This requires systemwide max set via sysctl (net.core.wmem_max) to be higher
+# Default: 3145728 (3 MB)
+snd_socket_bufsize: 3145728
+
+# Smooth out the rate per-frame rather than per event (for low rate values)
+# Default: false
+smooth: false
+
+# Use consecutive destination ports starting from EjfatURI data port
+# rather than a single port; source ports are still randomized
+# (incompatible with a load balancer, only useful in back-to-back testing)
+# Default: false
+multi_port: false
+
+# ============================================================================
+# FILE TRANSFER CONFIGURATION
+# ============================================================================
+
+# File extension for file transfer
+# Default: root
+ft_extension: root
+
+# File prefix for file transfer
+# Default: test
+ft_prefix: test
+
+# File transfer rate in Gbps
+# Default: 1
+ft_rate: 1
+
+# Number of sockets for file transfer
+# Default: 4
+ft_sockets: 4
+
+# File transfer timeout (in milliseconds)
+# Default: 7000
+ft_timeout: 7000
+
+# Number of threads for file transfer
+# Default: 4
+ft_threads: 4
+
+# Number of test files to generate
+# Default: 25
+ft_numfiles: 25
+
+# Test file size in MB
+# Default: 300
+ft_filesize: 300
+
+# Data directory path
+# Default: /data
+data_path: /data
