@@ -1,6 +1,6 @@
 # EJFAT Perlmutter Demo
 
-This directory contains a Makefile for building and operating the EJFAT (Elastic Java Frame-Aligned Transport) load balancer on NERSC's Perlmutter supercomputer. The Makefile uses `podman-hpc` containers and SLURM for distributed computing.
+This directory contains a Makefile for building and operating the EJFAT (ESnet JLab FPGA Accelerated Transport) load balancer on NERSC's Perlmutter supercomputer. The Makefile uses `podman-hpc` containers and SLURM for distributed computing.
 
 ## Prerequisites
 
