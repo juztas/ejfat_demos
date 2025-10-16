@@ -10,6 +10,17 @@
 #------------------------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------------------------
+# SCRIPT AND PATH CONFIGURATION
+#------------------------------------------------------------------------------------------------
+# Directory containing the execution scripts (reserve, send, receive, etc.)
+# Default: Same directory as this Makefile
+SCRIPT_DIR ?= $(MAKEFILE_DIR)
+
+# Working directory - where logs and output files will be written
+# Default: Current directory
+WORK_DIR ?= .
+
+#------------------------------------------------------------------------------------------------
 # NETWORK CONFIGURATION
 #------------------------------------------------------------------------------------------------
 # Accept either numeric (4, 6) or dash-prefixed (-4, -6) format
@@ -135,3 +146,11 @@ LOG_DIR ?= ./
 # REMOTE EXECUTION CONFIGURATION
 #------------------------------------------------------------------------------------------------
 NODE ?=
+
+# Remote script directory - where scripts are located on remote node
+# Default: ../scripts (relative to perlmutter working directory)
+REMOTE_SCRIPT_DIR ?= ../scripts
+
+# Remote working directory - where execution happens on remote node
+# Default: ~/ejfat_demos/perlmutter
+REMOTE_WORK_DIR ?= ~/ejfat_demos/perlmutter

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "ip version is $IP_VERSION"
+echo "EJFAT URI BETA IS $EJFAT_URI_BETA"
+echo "LB name is $LB_NAME"
+echo "Reserve duration is $LB_RESERVE_DURATION days"
+lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export 
