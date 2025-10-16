@@ -1,0 +1,42 @@
+#
+# EJFAT Load Balancer Configuration
+#
+# This file configures the EJFAT load balancer reservation parameters.
+# Copy this file to lb_config.yaml and customize as needed.
+#
+# Usage: Used by reservation scripts
+#
+
+# ============================================================================
+# INSTANCE URI CONFIGURATION
+# ============================================================================
+
+# Path to file containing the EJFAT instance URI
+# This file will be created/updated when reserving a load balancer
+# Default: INSTANCE_URI
+instance_uri_file: INSTANCE_URI
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+
+# IP version to use: 4 or 6
+# Default: 6
+ip_version: 6
+
+# ============================================================================
+# LOAD BALANCER CONFIGURATION
+# ============================================================================
+
+# Beta URI for load balancer reservation
+# This should be provided by the EJFAT service
+# Example: ejfat://192.168.1.1:12345
+# ejfat_uri_beta: ejfat://example-lb.es.net:12345
+
+# Duration for load balancer reservation (in minutes)
+# Default: 5
+lb_reserve_duration: 5
+
+# Name/identifier for the load balancer reservation
+# Default: yk_testing
+lb_name: yk_testing

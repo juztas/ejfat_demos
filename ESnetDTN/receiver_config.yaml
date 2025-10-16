@@ -1,0 +1,35 @@
+#
+# EJFAT Receiver Configuration
+#
+# Usage: ./start_receiver.sh receiver_config.yaml
+#
+
+# Path to file containing the EJFAT instance URI
+instance_uri_file: INSTANCE_URI
+
+# IP version: 4 or 6
+ip_version: 6
+
+# Duration to receive data (seconds)
+rx_duration: 120
+
+# Receive buffer size (bytes)
+rx_bufsize: 400000000
+
+# Receive timeout (milliseconds)
+rx_timeout: 7000
+
+# Number of CPU cores
+rx_cores: 1
+
+# Dequeue parameter
+rx_dequeue: 16
+
+# Log directory
+log_dir: ./
+
+# Monitor port range
+monitor_ports: 10000-10015
+
+# Monitoring interval (seconds)
+monitor_interval: 0.1
