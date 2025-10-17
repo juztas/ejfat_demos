@@ -170,12 +170,15 @@ log "Starting receivers on DTN nodes..."
 log "========================================================================="
 
 # Start receiver on each DTN node
+RX_INDEX=0
 for NODE in "${DTN_NODES[@]}"; do
-    log "Starting receiver on ${NODE}..."
-    ../../start_receiver.sh --node "${NODE}" receiver_config.yaml &
+    RX_LOG_FILE="rx_${RX_INDEX}.log"
+    log "Starting receiver on ${NODE} (log file: ${RX_LOG_FILE})..."
+    ../../start_receiver.sh --node "${NODE}" --log-file "${RX_LOG_FILE}" receiver_config.yaml &
 
     # Store the background process PID
     RECEIVER_PIDS+=($!)
+    RX_INDEX=$((RX_INDEX + 1))
 done
 
 log "All receivers started in background"
@@ -200,8 +203,11 @@ log "TX length: ${TX_LENGTH} bytes"
 log "Number of frames: ${NFRAMES}"
 log "Send sockets: ${SEND_SOCKETS}"
 
-# Start sender
-../../start_sender.sh --node "${SENDER_NODE}" sender_config.yaml &
+# Start sender with unique log file name
+TX_LOG_FILE="tx_0.log"
+log "Sender log file: ${TX_LOG_FILE}"
+
+../../start_sender.sh --node "${SENDER_NODE}" --log-file "${TX_LOG_FILE}" sender_config.yaml &
 
 SENDER_PID=$!
 log "Sender started in background (PID: ${SENDER_PID})"

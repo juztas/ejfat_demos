@@ -27,7 +27,14 @@ echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
 # tc -s qdisc show dev $MY_INTERFACE
 
 udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $WORK_DIR/$LOG_DIR/$(hostname)_rx_csvfile.csv &
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
+
+# Run e2sar_perf and optionally save output to log file using tee
+if [ -n "$PERF_LOG_FILE" ]; then
+    echo "Saving e2sar_perf output to: $WORK_DIR/$PERF_LOG_FILE"
+    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ 2>&1 | tee "$WORK_DIR/$PERF_LOG_FILE"
+else
+    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
+fi
 
 # tc -s qdisc show dev $MY_INTERFACE
 

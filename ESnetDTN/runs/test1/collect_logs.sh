@@ -33,11 +33,17 @@ mkdir -p "${LOCAL_OUTPUT_DIR}"
 # Collect logs from each node
 for NODE in "${DTN_NODES[@]}"; do
     echo "Collecting logs from ${NODE}..."
-    
-    # Download all CSV and log files
+
+    # Download all CSV files
     scp "${NODE}:${REMOTE_BASE_DIR}/*.csv" "${LOCAL_OUTPUT_DIR}/" 2>/dev/null || echo "  No CSV files found on ${NODE}"
-    scp "${NODE}:${REMOTE_BASE_DIR}/*.log" "${LOCAL_OUTPUT_DIR}/" 2>/dev/null || echo "  No log files found on ${NODE}"
-    
+
+    # Download rx_*.log and tx_*.log files (e2sar_perf output logs)
+    scp "${NODE}:${REMOTE_BASE_DIR}/rx_*.log" "${LOCAL_OUTPUT_DIR}/" 2>/dev/null || echo "  No rx_*.log files found on ${NODE}"
+    scp "${NODE}:${REMOTE_BASE_DIR}/tx_*.log" "${LOCAL_OUTPUT_DIR}/" 2>/dev/null || echo "  No tx_*.log files found on ${NODE}"
+
+    # Download any other log files
+    scp "${NODE}:${REMOTE_BASE_DIR}/*.log" "${LOCAL_OUTPUT_DIR}/" 2>/dev/null || echo "  No other log files found on ${NODE}"
+
     echo "  Done."
 done
 

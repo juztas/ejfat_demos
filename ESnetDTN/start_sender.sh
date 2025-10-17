@@ -21,19 +21,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Function to display help
 show_help() {
     cat << EOF
-Usage: ./start_sender.sh [--node <nodename>] <config.yaml>
+Usage: ./start_sender.sh [--node <nodename>] [--log-file <logfile>] <config.yaml>
 
 Start an EJFAT sender using configuration from a YAML file.
 
 Options:
-  --node <nodename>  Remote node name for SSH execution (uses Makefile.ssh)
+  --node <nodename>      Remote node name for SSH execution (uses Makefile.ssh)
+  --log-file <logfile>   Log file name for e2sar_perf output (placed in run_output/)
 
 Arguments:
-  config.yaml        Path to YAML configuration file
+  config.yaml            Path to YAML configuration file
 
 Examples:
   ./start_sender.sh sender_config.yaml                    # Local execution
   ./start_sender.sh --node nid001234 sender_config.yaml   # Remote execution
+  ./start_sender.sh --node nid001234 --log-file tx_0.log sender_config.yaml
 
 See sender_config.yaml.example for configuration options.
 EOF
@@ -55,12 +57,17 @@ fi
 
 # Parse command line arguments
 NODE=""
+LOG_FILE=""
 CONFIG_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --node)
             NODE="$2"
+            shift 2
+            ;;
+        --log-file)
+            LOG_FILE="$2"
             shift 2
             ;;
         -h|--help)
@@ -137,6 +144,9 @@ MAKE_VARS=""
 
 # Add NODE variable if specified (for Makefile.ssh)
 [ -n "$NODE" ] && MAKE_VARS="$MAKE_VARS NODE=$NODE"
+
+# Add LOG_FILE variable if specified
+[ -n "$LOG_FILE" ] && MAKE_VARS="$MAKE_VARS PERF_LOG_FILE=$LOG_FILE"
 
 # INSTANCE_URI_FILE is always set (has a default)
 MAKE_VARS="$MAKE_VARS INSTANCE_URI_FILE=$INSTANCE_URI_FILE"
