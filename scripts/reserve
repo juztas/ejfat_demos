@@ -8,7 +8,7 @@ echo "Reserve duration is $LB_RESERVE_DURATION days"
 # Check if INSTANCE_URI file exists from a previous reservation
 if [ -f "INSTANCE_URI" ]; then
     echo "Found existing INSTANCE_URI file, checking if it's still valid..."
-    INSTANCE_URI=$(cat INSTANCE_URI | sed 's/^[^=]*=//')
+    INSTANCE_URI=$(cat INSTANCE_URI | sed "s/^[^=]*=//" | tr -d "'")
 
     # Try to get overview of the existing instance to see if it's still valid
     if lbadm -u "$INSTANCE_URI" $IP_VERSION --overview >/dev/null 2>&1; then
