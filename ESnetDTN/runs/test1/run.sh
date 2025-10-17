@@ -116,47 +116,25 @@ log "========================================================================="
 # Ensure run_output directory exists
 mkdir -p run_output
 
-# Check if a load balancer with this name already exists
-log "Checking if load balancer '${LB_NAME}' already exists on ${FIRST_NODE}..."
+# Reserve load balancer (reserve script will check if it already exists)
+log "Reserving load balancer '${LB_NAME}' on ${FIRST_NODE}..."
+log "(The reserve script will reuse existing load balancer if found)"
 
-# Check if the load balancer exists by running check_lb_exists on the remote node
-if ssh "${FIRST_NODE}" "bash -i -c 'conda activate e2sar && cd ~/ejfat_demos/perlmutter && ./check_lb_exists \"${LB_NAME}\" \"${IP_VERSION}\"'"; then
-    log "Load balancer '${LB_NAME}' already exists! Skipping reservation."
-    log "Retrieving existing INSTANCE_URI..."
+# Use Makefile.local to reserve the load balancer
+# The reserve script will check if the LB already exists and reuse it if so
+ssh -t "${FIRST_NODE}" "bash -i -c 'conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local reserve EJFAT_URI_BETA=\"${EJFAT_URI_BETA}\" IP_VERSION=\"${IP_VERSION}\" LB_RESERVE_DURATION=\"${LB_RESERVE_DURATION}\" LB_NAME=\"${LB_NAME}\"'"
 
-    # Get the existing INSTANCE_URI by running a query command
-    # We'll use lbadm to get the status and extract the URI for this specific load balancer
-    ssh "${FIRST_NODE}" "bash -i -c 'conda activate e2sar && cd ~/ejfat_demos/perlmutter && lbadm ${IP_VERSION} --status | grep -A 5 \"name=${LB_NAME}\" | grep \"EJFAT_URI\" > INSTANCE_URI'" || error "Failed to retrieve INSTANCE_URI for existing load balancer"
+# Copy the INSTANCE_URI file back from the remote node
+log "Copying INSTANCE_URI from ${FIRST_NODE}..."
+scp "${FIRST_NODE}:~/ejfat_demos/perlmutter/INSTANCE_URI" ./run_output/INSTANCE_URI
 
-    # Copy the INSTANCE_URI file back from the remote node
-    scp "${FIRST_NODE}:~/ejfat_demos/perlmutter/INSTANCE_URI" ./run_output/INSTANCE_URI || error "Failed to copy INSTANCE_URI from ${FIRST_NODE}"
-
-    if [ ! -f run_output/INSTANCE_URI ]; then
-        error "Failed to retrieve INSTANCE_URI from ${FIRST_NODE}"
-    fi
-
-    log "Using existing load balancer!"
-    log "INSTANCE_URI contents:"
-    cat run_output/INSTANCE_URI
-else
-    log "Load balancer '${LB_NAME}' does not exist. Reserving new load balancer on ${FIRST_NODE}..."
-
-    # Use Makefile.ssh to reserve the load balancer
-    # Note: We need to SSH to the node and run the reserve target from Makefile.local
-    ssh -t "${FIRST_NODE}" "bash -i -c 'conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local reserve EJFAT_URI_BETA=\"${EJFAT_URI_BETA}\" IP_VERSION=\"${IP_VERSION}\" LB_RESERVE_DURATION=\"${LB_RESERVE_DURATION}\" LB_NAME=\"${LB_NAME}\"'"
-
-    # Copy the INSTANCE_URI file back from the remote node
-    log "Copying INSTANCE_URI from ${FIRST_NODE}..."
-    scp "${FIRST_NODE}:~/ejfat_demos/perlmutter/INSTANCE_URI" ./run_output/INSTANCE_URI
-
-    if [ ! -f run_output/INSTANCE_URI ]; then
-        error "Failed to retrieve INSTANCE_URI from ${FIRST_NODE}"
-    fi
-
-    log "Load balancer reserved successfully!"
-    log "INSTANCE_URI contents:"
-    cat run_output/INSTANCE_URI
+if [ ! -f run_output/INSTANCE_URI ]; then
+    error "Failed to retrieve INSTANCE_URI from ${FIRST_NODE}"
 fi
+
+log "Load balancer ready!"
+log "INSTANCE_URI contents:"
+cat run_output/INSTANCE_URI
 
 # Wait 1 second after reserving the load balancer
 log "Waiting 1 second after load balancer reservation..."

@@ -4,4 +4,14 @@ echo "ip version is $IP_VERSION"
 echo "EJFAT URI BETA IS $EJFAT_URI_BETA"
 echo "LB name is $LB_NAME"
 echo "Reserve duration is $LB_RESERVE_DURATION days"
-lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export 
+
+# Check if a load balancer with this name already exists
+echo "Checking if load balancer '$LB_NAME' already exists..."
+if lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --status 2>/dev/null | grep -q "name=$LB_NAME"; then
+    echo "Load balancer '$LB_NAME' already exists! Retrieving existing URI..."
+    # Extract and export the existing EJFAT_URI for this load balancer
+    lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --status | grep -A 5 "name=$LB_NAME" | grep "EJFAT_URI"
+else
+    echo "Load balancer '$LB_NAME' does not exist. Creating new reservation..."
+    lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export
+fi 
