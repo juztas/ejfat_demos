@@ -8,17 +8,24 @@ echo "Reserve duration is $LB_RESERVE_DURATION days"
 # Check if INSTANCE_URI file exists from a previous reservation
 if [ -f "INSTANCE_URI" ]; then
     echo "Found existing INSTANCE_URI file, checking if it's still valid..." >&2
+    echo "DEBUG: File contents:" >&2
+    cat INSTANCE_URI >&2
+    echo "DEBUG: End of file contents" >&2
+
     # Read the file and extract the URI, removing the export statement and quotes
+    INSTANCE_URI=""
     while IFS= read -r line; do
+        echo "DEBUG: Processing line: $line" >&2
         if [[ "$line" =~ export\ EJFAT_URI=(.+) ]]; then
             INSTANCE_URI="${BASH_REMATCH[1]}"
             # Remove surrounding quotes
             INSTANCE_URI="${INSTANCE_URI#\'}"
             INSTANCE_URI="${INSTANCE_URI%\'}"
+            echo "DEBUG: Matched and extracted: $INSTANCE_URI" >&2
             break
         fi
     done < INSTANCE_URI
-    echo "DEBUG: Extracted URI: $INSTANCE_URI" >&2
+    echo "DEBUG: Final extracted URI: $INSTANCE_URI" >&2
     echo "DEBUG: IP_VERSION: $IP_VERSION" >&2
 
     # Try to get overview of the existing instance to see if it's still valid
