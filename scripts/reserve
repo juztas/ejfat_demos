@@ -5,13 +5,36 @@ echo "EJFAT URI BETA IS $EJFAT_URI_BETA"
 echo "LB name is $LB_NAME"
 echo "Reserve duration is $LB_RESERVE_DURATION days"
 
-# Check if a load balancer with this name already exists
-echo "Checking if load balancer '$LB_NAME' already exists..."
-if lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --status 2>/dev/null | grep -q "name=$LB_NAME"; then
-    echo "Load balancer '$LB_NAME' already exists! Retrieving existing URI..."
-    # Extract and export the existing EJFAT_URI for this load balancer
-    lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --status | grep -A 5 "name=$LB_NAME" | grep "EJFAT_URI"
+# Check if INSTANCE_URI file exists from a previous reservation
+if [ -f "INSTANCE_URI" ]; then
+    echo "Found existing INSTANCE_URI file, checking if it's still valid..."
+    INSTANCE_URI=$(cat INSTANCE_URI | sed 's/^[^=]*=//')
+
+    # Try to get status of the existing instance
+    if export EJFAT_URI="$INSTANCE_URI" && lbadm $IP_VERSION --status >/dev/null 2>&1; then
+        echo "Existing load balancer is still valid! Reusing it."
+        cat INSTANCE_URI
+    else
+        echo "Existing load balancer is no longer valid. Reserving a new one..."
+        lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export
+
+        # Show overview of all load balancers with this name
+        echo ""
+        echo "=========================================================================="
+        echo "Overview of all load balancers named '$LB_NAME':"
+        echo "=========================================================================="
+        lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>/dev/null | grep -A 4 "^LB $LB_NAME "
+        echo "=========================================================================="
+    fi
 else
-    echo "Load balancer '$LB_NAME' does not exist. Creating new reservation..."
+    echo "No existing INSTANCE_URI found. Reserving new load balancer..."
     lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export
+
+    # Show overview of all load balancers with this name
+    echo ""
+    echo "=========================================================================="
+    echo "Overview of all load balancers named '$LB_NAME':"
+    echo "=========================================================================="
+    lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>/dev/null | grep -A 4 "^LB $LB_NAME "
+    echo "=========================================================================="
 fi 
