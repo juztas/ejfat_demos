@@ -10,8 +10,8 @@ if [ -f "INSTANCE_URI" ]; then
     echo "Found existing INSTANCE_URI file, checking if it's still valid..."
     INSTANCE_URI=$(cat INSTANCE_URI | sed 's/^[^=]*=//')
 
-    # Try to get status of the existing instance
-    if export EJFAT_URI="$INSTANCE_URI" && lbadm $IP_VERSION --status >/dev/null 2>&1; then
+    # Try to monitor the existing instance to see if it's still valid
+    if lbadm -u "$INSTANCE_URI" $IP_VERSION --monitor >/dev/null 2>&1; then
         echo "Existing load balancer is still valid! Reusing it."
         cat INSTANCE_URI
     else
