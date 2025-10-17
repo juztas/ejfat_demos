@@ -9,9 +9,13 @@ echo "Reserve duration is $LB_RESERVE_DURATION days"
 if [ -f "INSTANCE_URI" ]; then
     echo "Found existing INSTANCE_URI file, checking if it's still valid..." >&2
     INSTANCE_URI=$(cat INSTANCE_URI | sed "s/^[^=]*=//" | tr -d "'")
+    echo "DEBUG: Extracted URI: $INSTANCE_URI" >&2
+    echo "DEBUG: IP_VERSION: $IP_VERSION" >&2
 
     # Try to get overview of the existing instance to see if it's still valid
+    echo "DEBUG: Running: lbadm -u \"<uri>\" $IP_VERSION --overview" >&2
     if lbadm -u "$INSTANCE_URI" $IP_VERSION --overview >/dev/null 2>&1; then
+        echo "DEBUG: lbadm --overview succeeded (exit code 0)" >&2
         echo "Existing load balancer is still valid! Reusing it." >&2
         cat INSTANCE_URI
     else
