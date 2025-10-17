@@ -88,11 +88,12 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 # Determine which Makefile to use
+# Use absolute path relative to this script's location
 if [[ -n "$NODE" ]]; then
-    MAKEFILE="../scripts/Makefile.ssh"
+    MAKEFILE="$(dirname "$SCRIPT_DIR")/scripts/Makefile.ssh"
     EXEC_MODE="Remote SSH"
 else
-    MAKEFILE="../scripts/Makefile.local"
+    MAKEFILE="$(dirname "$SCRIPT_DIR")/scripts/Makefile.local"
     EXEC_MODE="Local"
 fi
 
@@ -223,11 +224,42 @@ smooth = $SMOOTH
 multiPort = $MULTI_PORT
 EOF
 
+# If executing remotely, upload config files to remote node
+if [[ -n "$NODE" ]]; then
+    # Determine test directory name (e.g., test1, test2, etc.)
+    # Use the current directory name if running from runs/testX, otherwise use 'default'
+    CURRENT_DIR=$(basename "$PWD")
+    if [[ "$PWD" =~ /runs/([^/]+)$ ]]; then
+        TEST_NAME="${BASH_REMATCH[1]}"
+    else
+        TEST_NAME="default"
+    fi
+
+    # Remote work directory for this test
+    # Get the home directory on the remote node and use absolute paths
+    REMOTE_HOME=$(ssh "${NODE}" 'echo $HOME')
+    REMOTE_WORK_DIR="${REMOTE_HOME}/ejfat_demos/runs/${TEST_NAME}/run_output"
+    # Script directory is always relative to the ejfat_demos directory
+    REMOTE_SCRIPT_DIR="${REMOTE_HOME}/ejfat_demos/scripts"
+
+    echo "Creating remote work directory: ${REMOTE_WORK_DIR} on ${NODE}..."
+    ssh "${NODE}" "mkdir -p ${REMOTE_WORK_DIR}"
+
+    echo "Uploading segmenter_config.ini to ${NODE}:${REMOTE_WORK_DIR}..."
+    scp "${INI_FILE}" "${NODE}:${REMOTE_WORK_DIR}/segmenter_config.ini"
+
+    # Add REMOTE_WORK_DIR, REMOTE_SCRIPT_DIR, and WORK_DIR to make variables
+    MAKE_VARS="$MAKE_VARS REMOTE_WORK_DIR=${REMOTE_WORK_DIR}"
+    MAKE_VARS="$MAKE_VARS REMOTE_SCRIPT_DIR=${REMOTE_SCRIPT_DIR}"
+    MAKE_VARS="$MAKE_VARS WORK_DIR=${REMOTE_WORK_DIR}"
+fi
+
 # Display configuration
 echo "========================================================================"
 echo "Starting EJFAT Sender - $EXEC_MODE Execution"
 echo "========================================================================"
 [ -n "$NODE" ] && echo "Remote Node:  $NODE"
+[ -n "$NODE" ] && echo "Remote Dir:   $REMOTE_WORK_DIR"
 echo "Config File:  $CONFIG_FILE"
 echo "INI File:     $INI_FILE"
 echo "Makefile:     $MAKEFILE"

@@ -172,8 +172,7 @@ log "========================================================================="
 # Start receiver on each DTN node
 for NODE in "${DTN_NODES[@]}"; do
     log "Starting receiver on ${NODE}..."
-    make -f "${MAKEFILE_SSH}" receive NODE="${NODE}" \
-        IP_VERSION="${IP_VERSION}" &
+    ../../start_receiver.sh --node "${NODE}" receiver_config.yaml &
 
     # Store the background process PID
     RECEIVER_PIDS+=($!)
@@ -202,12 +201,7 @@ log "Number of frames: ${NFRAMES}"
 log "Send sockets: ${SEND_SOCKETS}"
 
 # Start sender
-make -f "${MAKEFILE_SSH}" send NODE="${SENDER_NODE}" \
-    IP_VERSION="${IP_VERSION}" \
-    TX_RATE="${TX_RATE}" \
-    TX_LENGTH="${TX_LENGTH}" \
-    NFRAMES="${NFRAMES}" \
-    SEND_SOCKETS="${SEND_SOCKETS}" &
+../../start_sender.sh --node "${SENDER_NODE}" sender_config.yaml &
 
 SENDER_PID=$!
 log "Sender started in background (PID: ${SENDER_PID})"
