@@ -81,7 +81,7 @@ connected_socket: true
 # MTU size to fit segmented data (must accommodate IP, UDP, and LBRE headers)
 # Value of 0 means auto-detect based on MTU of outgoing interface (Linux only)
 # Default: 0
-mtu: 0
+mtu: 8000
 
 # Socket buffer size for sending (set via SO_SNDBUF setsockopt)
 # Note: This requires systemwide max set via sysctl (net.core.wmem_max) to be higher
