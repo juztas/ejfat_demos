@@ -120,6 +120,12 @@ mkdir -p run_output
 log "Reserving load balancer '${LB_NAME}' on ${FIRST_NODE}..."
 log "(The reserve script will reuse existing load balancer if found)"
 
+# If we have a local INSTANCE_URI from a previous run, upload it to the remote node
+if [ -f "run_output/INSTANCE_URI" ]; then
+    log "Found local INSTANCE_URI from previous run, uploading to ${FIRST_NODE}..."
+    scp run_output/INSTANCE_URI "${FIRST_NODE}:~/ejfat_demos/perlmutter/INSTANCE_URI"
+fi
+
 # Use Makefile.local to reserve the load balancer
 # The reserve script will check if the LB already exists and reuse it if so
 ssh -t "${FIRST_NODE}" "bash -i -c 'conda activate e2sar && cd ~/ejfat_demos/perlmutter && make -f ../scripts/Makefile.local reserve EJFAT_URI_BETA=\"${EJFAT_URI_BETA}\" IP_VERSION=\"${IP_VERSION}\" LB_RESERVE_DURATION=\"${LB_RESERVE_DURATION}\" LB_NAME=\"${LB_NAME}\"'"
