@@ -30,10 +30,5 @@ echo "NFRAMES: $NFRAMES"
 echo "SEND_SOCKETS: $SEND_SOCKETS"
 echo "DATA_ID: $DATA_ID"
 
-# Run e2sar_perf and optionally save output to log file using tee
-if [ -n "$PERF_LOG_FILE" ]; then
-    echo "Saving e2sar_perf output to: $WORK_DIR/$PERF_LOG_FILE"
-    e2sar_perf --send --withcp --ini $CONFIG_PATH $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH 2>&1 | tee "$WORK_DIR/$PERF_LOG_FILE"
-else
-    e2sar_perf --send --withcp --ini $CONFIG_PATH $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
-fi
+# Run e2sar_perf (output will be captured at Makefile level if LOG_FILE is set)
+e2sar_perf --send --withcp --ini $CONFIG_PATH $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
