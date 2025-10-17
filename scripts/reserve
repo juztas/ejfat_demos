@@ -7,34 +7,34 @@ echo "Reserve duration is $LB_RESERVE_DURATION days"
 
 # Check if INSTANCE_URI file exists from a previous reservation
 if [ -f "INSTANCE_URI" ]; then
-    echo "Found existing INSTANCE_URI file, checking if it's still valid..."
+    echo "Found existing INSTANCE_URI file, checking if it's still valid..." >&2
     INSTANCE_URI=$(cat INSTANCE_URI | sed "s/^[^=]*=//" | tr -d "'")
 
     # Try to get overview of the existing instance to see if it's still valid
     if lbadm -u "$INSTANCE_URI" $IP_VERSION --overview >/dev/null 2>&1; then
-        echo "Existing load balancer is still valid! Reusing it."
+        echo "Existing load balancer is still valid! Reusing it." >&2
         cat INSTANCE_URI
     else
-        echo "Existing load balancer is no longer valid. Reserving a new one..."
+        echo "Existing load balancer is no longer valid. Reserving a new one..." >&2
         lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export
 
         # Show overview of all load balancers with this name
-        echo ""
-        echo "=========================================================================="
-        echo "Overview of all load balancers named '$LB_NAME':"
-        echo "=========================================================================="
-        lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>/dev/null | grep -A 4 "^LB $LB_NAME "
-        echo "=========================================================================="
+        echo "" >&2
+        echo "==========================================================================" >&2
+        echo "Overview of all load balancers named '$LB_NAME':" >&2
+        echo "==========================================================================" >&2
+        lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>&1 | grep -A 4 "^LB $LB_NAME " >&2
+        echo "==========================================================================" >&2
     fi
 else
-    echo "No existing INSTANCE_URI found. Reserving new load balancer..."
+    echo "No existing INSTANCE_URI found. Reserving new load balancer..." >&2
     lbadm -v -u "$EJFAT_URI_BETA" --reserve -d $LB_RESERVE_DURATION --lbname $LB_NAME $IP_VERSION --export
 
     # Show overview of all load balancers with this name
-    echo ""
-    echo "=========================================================================="
-    echo "Overview of all load balancers named '$LB_NAME':"
-    echo "=========================================================================="
-    lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>/dev/null | grep -A 4 "^LB $LB_NAME "
-    echo "=========================================================================="
+    echo "" >&2
+    echo "==========================================================================" >&2
+    echo "Overview of all load balancers named '$LB_NAME':" >&2
+    echo "==========================================================================" >&2
+    lbadm -u "$EJFAT_URI_BETA" $IP_VERSION --overview 2>&1 | grep -A 4 "^LB $LB_NAME " >&2
+    echo "==========================================================================" >&2
 fi 
