@@ -176,7 +176,7 @@ receive:
 			source INSTANCE_URI && \
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
-			nohup $(SCRIPT_DIR)/receive $(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/receive $(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
