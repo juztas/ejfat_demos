@@ -82,11 +82,12 @@ reserve:
 	@echo ""
 	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
 		cd $(REMOTE_WORK_DIR) && \
-		$(SCRIPT_DIR)/reserve_lb.sh \
-			-u \"$(EJFAT_URI_BETA)\" \
-			-n \"$(LB_NAME)\" \
-			-d $(LB_RESERVE_DURATION) \
-			-i $(IP_VERSION)'"
+		export EJFAT_URI_BETA=\"$(EJFAT_URI_BETA)\" && \
+		export LB_NAME=\"$(LB_NAME)\" && \
+		export LB_RESERVE_DURATION=\"$(LB_RESERVE_DURATION)\" && \
+		export IP_VERSION=\"-$(IP_VERSION)\" && \
+		export INSTANCE_URI_FILE=\"INSTANCE_URI\" && \
+		$(SCRIPT_DIR)/reserve'"
 	@echo ""
 	@echo "Fetching INSTANCE_URI file from remote..."
 	@scp $(PRIMARY_DTN):$(REMOTE_WORK_DIR)/INSTANCE_URI ./INSTANCE_URI
