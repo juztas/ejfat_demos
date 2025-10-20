@@ -297,6 +297,17 @@ udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/$(hostn
 # RUN E2SAR_PERF RECEIVER
 #------------------------------------------------------------------------------------------------
 
+echo "========================================================================"
+echo "DEBUG: Current working directory: $(pwd)"
+echo "DEBUG: Contents of current directory:"
+ls -la
+echo "DEBUG: reassembler_config.ini location:"
+ls -la reassembler_config.ini 2>&1
+echo "DEBUG: e2sar_perf command:"
+echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -i reassembler_config.ini"
+echo "========================================================================"
+echo ""
+
 # e2sar_perf will use the reassembler_config.ini we generated
 e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -i reassembler_config.ini
 
