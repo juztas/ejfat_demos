@@ -1,8 +1,197 @@
 #!/bin/bash
+#
+# receive - EJFAT Receiver Script
+#
+# This script starts an EJFAT receiver using configuration from a YAML file.
+# It parses the YAML, generates reassembler_config.ini, and runs e2sar_perf.
+#
+# Usage: receive <config.yaml>
+#
+# Arguments:
+#   config.yaml  Path to YAML configuration file
+#
+# Environment Variables (optional overrides):
+#   WORK_DIR     Working directory (default: current directory)
+#   MY_IP        IP address to bind to (default: auto-detect)
+#
 
-# Auto-detect MY_IP if not already set
+set -e
+
+#------------------------------------------------------------------------------------------------
+# FUNCTIONS
+#------------------------------------------------------------------------------------------------
+
+# Function to parse YAML and extract value
+parse_yaml() {
+    local yaml_file="$1"
+    local key="$2"
+    # Simple YAML parser for key: value format
+    grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+}
+
+# Function to display help
+show_help() {
+    cat << EOF
+Usage: receive <config.yaml>
+
+Start an EJFAT receiver using configuration from a YAML file.
+
+Arguments:
+  config.yaml  Path to YAML configuration file
+
+Environment Variables (optional):
+  WORK_DIR     Working directory (default: current directory)
+  MY_IP        IP address to bind to (default: auto-detect)
+
+Examples:
+  receive receiver_config.yaml
+  WORK_DIR=./run_output receive receiver_config.yaml
+
+See receiver_config.yaml for configuration options.
+EOF
+    exit 0
+}
+
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+# Check for help flag
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ -z "$1" ]]; then
+    show_help
+fi
+
+CONFIG_FILE="$1"
+
+# Check if config file exists
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Error: Configuration file not found: $CONFIG_FILE"
+    exit 1
+fi
+
+#------------------------------------------------------------------------------------------------
+# PARSE YAML CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "EJFAT Receiver - Parsing Configuration"
+echo "========================================================================"
+echo "Config file: $CONFIG_FILE"
+
+# Instance URI configuration
+INSTANCE_URI_FILE=$(parse_yaml "$CONFIG_FILE" "instance_uri_file")
+INSTANCE_URI_FILE="${INSTANCE_URI_FILE:-INSTANCE_URI}"
+
+# Network configuration
+IP_VERSION=$(parse_yaml "$CONFIG_FILE" "ip_version")
+IP_VERSION="${IP_VERSION:-6}"
+IP_VERSION_DASH="-${IP_VERSION}"
+
+# Receiver configuration
+RX_DURATION=$(parse_yaml "$CONFIG_FILE" "rx_duration")
+RX_DURATION="${RX_DURATION:-120}"
+
+RX_THREADS=$(parse_yaml "$CONFIG_FILE" "rx_threads")
+RX_THREADS="${RX_THREADS:-16}"
+
+RX_BUFSIZE=$(parse_yaml "$CONFIG_FILE" "rx_bufsize")
+RX_BUFSIZE="${RX_BUFSIZE:-400000000}"
+
+RX_TIMEOUT=$(parse_yaml "$CONFIG_FILE" "rx_timeout")
+RX_TIMEOUT="${RX_TIMEOUT:-7000}"
+
+RX_CORES=$(parse_yaml "$CONFIG_FILE" "rx_cores")
+RX_CORES="${RX_CORES:-1}"
+
+RX_DEQ=$(parse_yaml "$CONFIG_FILE" "rx_dequeue")
+RX_DEQ="${RX_DEQ:-16}"
+
+# Logging configuration
+LOG_DIR=$(parse_yaml "$CONFIG_FILE" "log_dir")
+LOG_DIR="${LOG_DIR:-./}"
+
+# Monitoring configuration
+MONITOR_PORTS=$(parse_yaml "$CONFIG_FILE" "monitor_ports")
+MONITOR_PORTS="${MONITOR_PORTS:-10000-10015}"
+
+MONITOR_INTERVAL=$(parse_yaml "$CONFIG_FILE" "monitor_interval")
+MONITOR_INTERVAL="${MONITOR_INTERVAL:-0.1}"
+
+MY_INTERFACE=$(parse_yaml "$CONFIG_FILE" "interface")
+
+# Reassembler configuration
+REASSEM_USE_CP=$(parse_yaml "$CONFIG_FILE" "reassem_use_cp")
+REASSEM_USE_CP="${REASSEM_USE_CP:-true}"
+
+REASSEM_VALIDATE_CERT=$(parse_yaml "$CONFIG_FILE" "reassem_validate_cert")
+REASSEM_VALIDATE_CERT="${REASSEM_VALIDATE_CERT:-true}"
+
+REASSEM_USE_HOST_ADDRESS=$(parse_yaml "$CONFIG_FILE" "reassem_use_host_address")
+REASSEM_USE_HOST_ADDRESS="${REASSEM_USE_HOST_ADDRESS:-false}"
+
+REASSEM_DATA_PORT=$(parse_yaml "$CONFIG_FILE" "reassem_data_port")
+REASSEM_DATA_PORT="${REASSEM_DATA_PORT:-10000}"
+
+REASSEM_PORT_RANGE=$(parse_yaml "$CONFIG_FILE" "reassem_port_range")
+REASSEM_PORT_RANGE="${REASSEM_PORT_RANGE:--1}"
+
+REASSEM_WITH_LB_HEADER=$(parse_yaml "$CONFIG_FILE" "reassem_with_lb_header")
+REASSEM_WITH_LB_HEADER="${REASSEM_WITH_LB_HEADER:-false}"
+
+REASSEM_EVENT_TIMEOUT_MS=$(parse_yaml "$CONFIG_FILE" "reassem_event_timeout_ms")
+REASSEM_EVENT_TIMEOUT_MS="${REASSEM_EVENT_TIMEOUT_MS:-500}"
+
+REASSEM_RCV_SOCKET_BUFSIZE=$(parse_yaml "$CONFIG_FILE" "reassem_rcv_socket_bufsize")
+REASSEM_RCV_SOCKET_BUFSIZE="${REASSEM_RCV_SOCKET_BUFSIZE:-3145728}"
+
+REASSEM_EPOCH_MS=$(parse_yaml "$CONFIG_FILE" "reassem_epoch_ms")
+REASSEM_EPOCH_MS="${REASSEM_EPOCH_MS:-1000}"
+
+REASSEM_PERIOD_MS=$(parse_yaml "$CONFIG_FILE" "reassem_period_ms")
+REASSEM_PERIOD_MS="${REASSEM_PERIOD_MS:-100}"
+
+# PID controller settings
+REASSEM_PID_SETPOINT=$(parse_yaml "$CONFIG_FILE" "reassem_pid_setpoint")
+REASSEM_PID_SETPOINT="${REASSEM_PID_SETPOINT:-0.0}"
+
+REASSEM_PID_KI=$(parse_yaml "$CONFIG_FILE" "reassem_pid_ki")
+REASSEM_PID_KI="${REASSEM_PID_KI:-0.0}"
+
+REASSEM_PID_KP=$(parse_yaml "$CONFIG_FILE" "reassem_pid_kp")
+REASSEM_PID_KP="${REASSEM_PID_KP:-0.0}"
+
+REASSEM_PID_KD=$(parse_yaml "$CONFIG_FILE" "reassem_pid_kd")
+REASSEM_PID_KD="${REASSEM_PID_KD:-0.0}"
+
+REASSEM_PID_WEIGHT=$(parse_yaml "$CONFIG_FILE" "reassem_pid_weight")
+REASSEM_PID_WEIGHT="${REASSEM_PID_WEIGHT:-1.0}"
+
+REASSEM_PID_MIN_FACTOR=$(parse_yaml "$CONFIG_FILE" "reassem_pid_min_factor")
+REASSEM_PID_MIN_FACTOR="${REASSEM_PID_MIN_FACTOR:-0.5}"
+
+REASSEM_PID_MAX_FACTOR=$(parse_yaml "$CONFIG_FILE" "reassem_pid_max_factor")
+REASSEM_PID_MAX_FACTOR="${REASSEM_PID_MAX_FACTOR:-2.0}"
+
+#------------------------------------------------------------------------------------------------
+# SETUP WORK DIRECTORY
+#------------------------------------------------------------------------------------------------
+
+# Use WORK_DIR from environment, or default to current directory
+WORK_DIR="${WORK_DIR:-.}"
+
+# Create work directory if it doesn't exist
+mkdir -p "$WORK_DIR"
+mkdir -p "$WORK_DIR/$LOG_DIR"
+
+# Change to WORK_DIR so e2sar_perf can find reassembler_config.ini
+cd "$WORK_DIR"
+
+#------------------------------------------------------------------------------------------------
+# AUTO-DETECT IP ADDRESS
+#------------------------------------------------------------------------------------------------
+
 if [ -z "$MY_IP" ]; then
-    if [ "$IP_VERSION" = "-4" ]; then
+    if [ "$IP_VERSION" = "4" ]; then
         LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
     else
         LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
@@ -10,31 +199,118 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
-# Use WORK_DIR from environment, or default to current directory
-WORK_DIR="${WORK_DIR:-.}"
+if [ -z "$MY_INTERFACE" ]; then
+    if [ "$IP_VERSION" = "4" ]; then
+        LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+    else
+        LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+    fi
+    MY_INTERFACE=$(ip route get $LB_IP | head -1 | sed 's/^.*dev//' | awk '{ print $1 }')
+fi
 
-echo "Receiver IP is: $MY_IP"
-echo "IP VERSION IS $IP_VERSION"
-echo "Writing logs to $LOG_DIR"
-echo "RX_DURATION: $RX_DURATION"
-echo "RX_BUFSIZE: $RX_BUFSIZE"
-echo "RX_TIMEOUT: $RX_TIMEOUT"
-echo "RX_CORES: $RX_CORES"
-echo "RX_DEQ: $RX_DEQ"
-echo "MONITOR_PORTS: $MONITOR_PORTS"
-echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
+#------------------------------------------------------------------------------------------------
+# GENERATE REASSEMBLER CONFIG
+#------------------------------------------------------------------------------------------------
 
-# tc -s qdisc show dev $MY_INTERFACE
+echo "Generating reassembler_config.ini..."
 
-udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $WORK_DIR/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+cat > reassembler_config.ini << EOF
+[general]
+; whether to use the control plane (gRPC sendState, registerWorker)
+useCP = $REASSEM_USE_CP
 
-# Run e2sar_perf (output will be captured at Makefile level if LOG_FILE is set)
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
+[control-plane]
+; validate control plane TLS certificate in gRPC communications
+validateCert = $REASSEM_VALIDATE_CERT
+; force using address (v4 or v6) even if hostname specified in the URI
+useHostAddress = $REASSEM_USE_HOST_ADDRESS
 
-# tc -s qdisc show dev $MY_INTERFACE
+[data-plane]
+; starting port for receiving data (default: 10000)
+dataPort = $REASSEM_DATA_PORT
+; 2^portRange (0<=portRange<=14) listening ports will be open starting from dataPort.
+; If -1, then the number of ports matches either the number of CPU cores or the number of threads. Normally
+; this value is calculated based on the number of cores or threads requested, but
+; it can be overridden here. Use with caution.
+portRange = $REASSEM_PORT_RANGE
+; expect LB header to be included (mainly for testing when withCP==false,
+; as normally LB strips it off in normal operation)
+withLBHeader = $REASSEM_WITH_LB_HEADER
+; how long (in ms) we allow events to remain in assembly before we give up
+eventTimeoutMS = $REASSEM_EVENT_TIMEOUT_MS
+; socket buffer size for receiving set via SO_RCVBUF setsockopt. Note
+; that this requires systemwide max set via sysctl (net.core.rmem_max) to be higher.
+rcvSocketBufSize = $REASSEM_RCV_SOCKET_BUFSIZE
+; period of one epoch in milliseconds
+epochMS = $REASSEM_EPOCH_MS
+; period of the send state thread in milliseconds
+periodMS = $REASSEM_PERIOD_MS
 
+[pid]
+; setPoint queue occupied percentage to which to drive the PID controller
+setPoint = $REASSEM_PID_SETPOINT
+; PID gains (integral, proportional and derivative)
+Ki = $REASSEM_PID_KI
+Kp = $REASSEM_PID_KP
+Kd = $REASSEM_PID_KD
+; schedule weight parameters
+weight = $REASSEM_PID_WEIGHT
+; multiplied with the number of slots that would be assigned evenly to determine min number of slots
+; for example, 4 nodes with a minFactor of 0.5 = (512 slots / 4) * 0.5 = min 64 slots
+min_factor = $REASSEM_PID_MIN_FACTOR
+; multiplied with the number of slots that would be assigned evenly to determine max number of slots
+; for example, 4 nodes with a maxFactor of 2 = (512 slots / 4) * 2 = max 256 slots set to 0 to specify no maximum
+max_factor = $REASSEM_PID_MAX_FACTOR
+EOF
+
+#------------------------------------------------------------------------------------------------
+# DISPLAY CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "EJFAT Receiver - Starting"
+echo "========================================================================"
+echo "Receiver IP:        $MY_IP"
+echo "IP Version:         IPv$IP_VERSION"
+echo "Interface:          $MY_INTERFACE"
+echo "Work Directory:     $WORK_DIR"
+echo "Log Directory:      $LOG_DIR"
+echo "Data Port:          $REASSEM_DATA_PORT"
+echo "Monitor Ports:      $MONITOR_PORTS"
+echo "RX Duration:        $RX_DURATION sec"
+echo "RX Buffer Size:     $RX_BUFSIZE bytes"
+echo "RX Timeout:         $RX_TIMEOUT ms"
+echo "RX Cores:           $RX_CORES"
+echo "RX Dequeue:         $RX_DEQ"
+echo "Monitor Interval:   $MONITOR_INTERVAL sec"
+echo "Use Control Plane:  $REASSEM_USE_CP"
+echo "========================================================================"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# START UDP SOCKET MONITOR
+#------------------------------------------------------------------------------------------------
+
+udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/$(hostname)_rx_csvfile.csv &
+
+#------------------------------------------------------------------------------------------------
+# RUN E2SAR_PERF RECEIVER
+#------------------------------------------------------------------------------------------------
+
+# e2sar_perf will look for reassembler_config.ini in the current directory
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
+
+#------------------------------------------------------------------------------------------------
+# CLEANUP
+#------------------------------------------------------------------------------------------------
+
+# Kill the UDP socket monitor
 jobs
-kill -15 %1
+kill -15 %1 2>/dev/null || true
 sleep 3
 jobs
 
+echo ""
+echo "========================================================================"
+echo "Receiver completed"
+echo "========================================================================"

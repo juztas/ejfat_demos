@@ -24,6 +24,10 @@ LB_NAME ?= yk_testing
 LB_RESERVE_DURATION ?= 5
 IP_VERSION ?= 6
 
+# Receiver configuration
+RECEIVER_CONFIG ?= receiver_config.yaml
+RECEIVER_LOG_DIR ?= run_output
+
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
 # On remote nodes, ejfat_demos is located under the user's home directory
@@ -31,7 +35,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free
+.PHONY: help reserve free receive
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -46,6 +50,7 @@ help:
 	@echo "  help              Display this help message"
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
+	@echo "  receive           Start receivers on all DTN nodes"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  DTN_LIST:         $(DTN_LIST)"
@@ -58,12 +63,16 @@ help:
 	@echo "  LB_NAME           Load balancer name (default: $(LB_NAME))"
 	@echo "  LB_RESERVE_DURATION  Reserve duration in days (default: $(LB_RESERVE_DURATION))"
 	@echo "  IP_VERSION        IP version: 4 or 6 (default: $(IP_VERSION))"
+	@echo "  RECEIVER_CONFIG   Receiver config file (default: $(RECEIVER_CONFIG))"
+	@echo "  RECEIVER_LOG_DIR  Receiver log directory (default: $(RECEIVER_LOG_DIR))"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
 	@echo "  make reserve EJFAT_URI_BETA=\$$EJFAT_URI_BETA LB_NAME=my_test"
 	@echo "  make free"
 	@echo "  make free IP_VERSION=4"
+	@echo "  make receive"
+	@echo "  make receive RECEIVER_CONFIG=custom_config.yaml"
 	@echo ""
 	@echo "========================================================================"
 
@@ -126,5 +135,55 @@ free:
 	@echo ""
 	@echo "========================================================================"
 	@echo "Load balancer freed successfully."
+	@echo "========================================================================"
+	@echo ""
+
+receive:
+	@echo "========================================================================"
+	@echo "Starting Receivers on All DTN Nodes"
+	@echo "========================================================================"
+	@echo "DTN Nodes:           $(DTN_LIST)"
+	@echo "Receiver Config:     $(RECEIVER_CONFIG)"
+	@echo "Log Directory:       $(RECEIVER_LOG_DIR)"
+	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
+	@echo "========================================================================"
+	@echo ""
+	@if [ ! -f INSTANCE_URI ]; then \
+		echo "Error: INSTANCE_URI file not found."; \
+		echo "Please run 'make reserve' first to create the load balancer."; \
+		exit 1; \
+	fi
+	@if [ ! -f $(RECEIVER_CONFIG) ]; then \
+		echo "Error: Receiver config file not found: $(RECEIVER_CONFIG)"; \
+		exit 1; \
+	fi
+	@echo "Creating log directory if needed..."
+	@mkdir -p $(RECEIVER_LOG_DIR)
+	@echo ""
+	@echo "Starting receivers on all DTN nodes..."
+	@i=0; \
+	for node in $(DTN_LIST); do \
+		log_file="rx_$$i.log"; \
+		echo "------------------------------------------------------------------------"; \
+		echo "Starting receiver $$i on $$node..."; \
+		echo "  Log file: $(RECEIVER_LOG_DIR)/$$log_file"; \
+		echo "  Copying config files to $$node..."; \
+		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
+		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG); \
+		echo "  Starting receiver in background..."; \
+		ssh -t $$node bash -i -c "'conda activate e2sar && \
+			cd $(REMOTE_WORK_DIR) && \
+			source INSTANCE_URI && \
+			mkdir -p $(RECEIVER_LOG_DIR) && \
+			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
+			nohup $(SCRIPT_DIR)/receive $(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
+			echo \"Receiver started in background (PID: \$$!)\"'"; \
+		echo ""; \
+		i=$$((i+1)); \
+	done
+	@echo "========================================================================"
+	@echo "All receivers started successfully!"
+	@echo "Receivers running on: $(DTN_LIST)"
+	@echo "Log files on remote nodes: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log"
 	@echo "========================================================================"
 	@echo ""
