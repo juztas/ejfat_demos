@@ -14,6 +14,25 @@ This framework provides a production-ready environment for running controlled ex
 - **Analysis and visualization tools**
 - **Multiple export formats** (CSV, HDF5, Excel, JSON)
 
+## ⭐ What's New: Scripts Reorganization
+
+All utility scripts have been organized into the `scripts/` directory for better code organization:
+
+```
+scripts/
+├── cli/           # Command-line tools (run_experiment.py)
+├── config_setup/  # Configuration files and setup utilities
+├── data_access/   # Data retrieval and analysis tools
+├── demos/         # Example demonstrations
+└── testing/       # Test scripts
+```
+
+**Important:** Script paths have changed. Update your commands:
+- **OLD:** `python run_experiment.py mock_experiment`
+- **NEW:** `python scripts/cli/run_experiment.py mock_experiment`
+
+See [scripts/README.md](scripts/README.md) for complete documentation.
+
 ## Quick Start
 
 ### 1. Installation
@@ -30,7 +49,7 @@ pip install bluesky ophyd databroker matplotlib pandas scipy openpyxl h5py
 **Without hardware** (using mock devices):
 
 ```bash
-python run_experiment.py mock_experiment
+python scripts/cli/run_experiment.py mock_experiment
 ```
 
 **With GNU Radio** (requires flowgraph with XML-RPC server on port 8080):
@@ -42,20 +61,59 @@ python sine_wave_demo.py
 
 # Terminal 2: Run experiment
 cd ../full_system
-python run_experiment.py frequency_characterization
+python scripts/cli/run_experiment.py frequency_characterization
 ```
 
 ### 3. List Available Experiments
 
 ```bash
-python run_experiment.py list
+python scripts/cli/run_experiment.py list
 ```
 
 ### 4. View Experiment Details
 
 ```bash
-python run_experiment.py info mock_experiment
+python scripts/cli/run_experiment.py info mock_experiment
 ```
+
+### 5. View Experiment Data
+
+```bash
+# Quick access to latest data
+python scripts/data_access/access_my_data.py
+
+# List all saved runs
+python scripts/data_access/retrieve_data.py --list
+
+# Show latest run with full details
+python scripts/data_access/retrieve_data.py --latest --all
+```
+
+## Documentation and Tutorials
+
+📚 **[Complete Documentation Index](docs/)** - Organized documentation hub for all user, tutorial, and developer guides
+
+### For New Users
+
+📖 **[Step-by-Step Tutorial](docs/tutorial/TUTORIAL_RUNNING_EXPERIMENTS.md)** - Complete guide to running experiments and capturing data (15 minutes)
+
+📚 **[Jupyter Book Tutorial](jupyter_book_tutorial/)** - Interactive web-based tutorial with executable code cells (build required)
+
+⚡ **[Quick Reference](docs/user/QUICK_REFERENCE.md)** - One-liners and common patterns for quick lookup
+
+🚀 **[Quick Start Notebook](notebooks/quick_start.ipynb)** - Interactive 5-minute Jupyter tutorial
+
+### For Data Analysis
+
+📊 **[Data Retrieval Guide](docs/user/DATA_RETRIEVAL_AND_ANALYSIS_GUIDE.md)** - Complete reference for analyzing captured data
+
+📓 **[Analysis Tutorial Notebook](notebooks/data_retrieval_and_analysis_tutorial.ipynb)** - Comprehensive 30-minute interactive guide
+
+### For Developers
+
+🔧 **[CLAUDE.md](docs/developer/CLAUDE.md)** - Development guidelines and best practices
+
+📋 **[Implementation Status](docs/developer/IMPLEMENTATION_STATUS.md)** - Feature tracking and roadmap
 
 ## Architecture
 
@@ -103,14 +161,85 @@ full_system/
 │   ├── plotting.py          # Plotting functions
 │   ├── export.py            # Data export utilities
 │   └── statistics.py        # Statistical analysis
+├── scripts/                 # Organized utility scripts ⭐ NEW
+│   ├── cli/                 # Command-line interface
+│   │   └── run_experiment.py
+│   ├── config_setup/        # Configuration & environment
+│   │   ├── config.py        # Central configuration
+│   │   ├── init_databroker.py
+│   │   ├── register_catalog.py
+│   │   ├── setup_databroker_helper.py
+│   │   └── setup_environment.py
+│   ├── data_access/         # Data retrieval & analysis
+│   │   ├── access_my_data.py
+│   │   └── retrieve_data.py
+│   ├── demos/               # Example demonstrations
+│   │   ├── quick_scan_test.py
+│   │   └── comprehensive_scan_demo.py
+│   ├── testing/             # Test scripts
+│   │   ├── test_all_experiments.py
+│   │   ├── test_fm_beamline.py
+│   │   └── test_fm_plans_callbacks.py
+│   └── README.md            # Scripts documentation
 ├── data/                    # Persistent data storage
 │   ├── documents/           # Bluesky documents (JSON)
-│   └── exports/             # Exported data files
+│   ├── exports/             # Exported data files
+│   └── catalog/             # DataBroker catalog
+├── docs/                    # Documentation
+│   ├── user/                # User guides
+│   ├── tutorial/            # Tutorials
+│   └── developer/           # Developer docs
 ├── notebooks/               # Jupyter notebooks
-├── config.py                # Configuration settings
-├── setup_environment.py     # Environment setup
-├── run_experiment.py        # Main CLI
 └── README.md               # This file
+```
+
+### Scripts Directory Organization
+
+All utility scripts have been organized into the `scripts/` directory by purpose:
+
+- **cli/** - Command-line interface for running experiments
+- **config_setup/** - Configuration and environment setup utilities
+- **data_access/** - Tools for retrieving and analyzing saved data
+- **demos/** - Example demonstrations and usage patterns
+- **testing/** - Test scripts for verifying functionality
+
+📚 **See [scripts/README.md](scripts/README.md) for detailed documentation** of all available scripts.
+
+### Quick Script Reference
+
+**Running Experiments:**
+```bash
+python scripts/cli/run_experiment.py list              # List available experiments
+python scripts/cli/run_experiment.py <name>            # Run an experiment
+python scripts/cli/run_experiment.py info <name>       # Show experiment details
+python scripts/cli/run_experiment.py status            # Show DataBroker status
+```
+
+**Accessing Data:**
+```bash
+python scripts/data_access/access_my_data.py           # Quick view of latest run
+python scripts/data_access/retrieve_data.py --list     # List all saved runs
+python scripts/data_access/retrieve_data.py --latest --all  # Full details of latest run
+python scripts/data_access/retrieve_data.py --uid <prefix>  # View specific run
+```
+
+**Running Tests:**
+```bash
+python scripts/testing/test_all_experiments.py --all --mock  # Test all experiment types
+python scripts/testing/test_fm_beamline.py             # Test FM beamline devices
+python scripts/testing/test_fm_plans_callbacks.py     # Test FM plans and callbacks
+```
+
+**Running Demos:**
+```bash
+python scripts/demos/quick_scan_test.py                # Simple frequency scan demo
+python scripts/demos/comprehensive_scan_demo.py        # Full workflow demo
+```
+
+**Configuration:**
+```bash
+python scripts/config_setup/init_databroker.py --stats     # Initialize DataBroker
+python scripts/config_setup/register_catalog.py --test     # Register catalog
 ```
 
 ## Available Devices
@@ -364,7 +493,10 @@ Description of what this experiment does.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "scripts" / "config_setup"))
 
 from bluesky import RunEngine
 from bluesky.callbacks.best_effort import BestEffortCallback
@@ -409,12 +541,12 @@ chmod +x experiments/my_experiment.py
 Run it:
 
 ```bash
-python run_experiment.py my_experiment
+python scripts/cli/run_experiment.py my_experiment
 ```
 
 ## Configuration
 
-Edit `config.py` to customize:
+Edit `scripts/config_setup/config.py` to customize:
 
 ### DataBroker Settings
 
@@ -509,9 +641,12 @@ Every experiment produces four document types:
 
 ```bash
 # Run mock experiment (no hardware needed)
-python run_experiment.py mock_experiment
+python scripts/cli/run_experiment.py mock_experiment
 
-# Analyze in Python
+# View data with convenience script
+python scripts/data_access/access_my_data.py
+
+# Or analyze in Python
 python
 >>> from databroker import Broker
 >>> db = Broker.named('temp')
@@ -529,9 +664,12 @@ python sine_wave_demo.py
 
 # Terminal 2: Run experiment
 cd ../full_system
-python run_experiment.py frequency_characterization
+python scripts/cli/run_experiment.py frequency_characterization
 
-# Analyze and export
+# Quick analysis
+python scripts/data_access/retrieve_data.py --latest --all
+
+# Or detailed analysis in Python
 python
 >>> from databroker import Broker
 >>> from analysis.plotting import plot_run
@@ -596,11 +734,28 @@ pip install databroker
 ModuleNotFoundError: No module named 'bluesky_config'
 ```
 
-**Solution:** Run experiments from the `full_system/` directory or use the CLI:
+**Solution:** Run experiments from the `full_system/` directory using the CLI:
 ```bash
 cd full_system
-python run_experiment.py <experiment_name>
+python scripts/cli/run_experiment.py <experiment_name>
 ```
+
+### Script Not Found
+
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'run_experiment.py'
+```
+
+**Solution:** Scripts have been reorganized into subdirectories:
+```bash
+# OLD (deprecated)
+python run_experiment.py mock_experiment
+
+# NEW (current)
+python scripts/cli/run_experiment.py mock_experiment
+```
+
+See [scripts/README.md](scripts/README.md) for the complete list of scripts and their new locations.
 
 ## Future Enhancements
 
@@ -628,11 +783,18 @@ Planned features for Phase 2:
 
 ## References
 
+### External Documentation
 - [Bluesky Documentation](https://blueskyproject.io/)
 - [Ophyd Documentation](https://blueskyproject.io/ophyd/)
 - [DataBroker Documentation](https://blueskyproject.io/databroker/)
-- [Comprehensive Plan](BLUESKY_COMPREHENSIVE_PLAN.md)
-- [GNU Radio Integration](../widget/README_BLUESKY.md)
+
+### Project Documentation
+- **[Documentation Index](docs/)** - Complete documentation hub
+- [Running Experiments Tutorial](docs/tutorial/TUTORIAL_RUNNING_EXPERIMENTS.md) - Step-by-step guide
+- [Quick Reference](docs/user/QUICK_REFERENCE.md) - Commands and patterns
+- [Data Analysis Guide](docs/user/DATA_RETRIEVAL_AND_ANALYSIS_GUIDE.md) - Complete analysis reference
+- [Comprehensive Plan](docs/developer/BLUESKY_COMPREHENSIVE_PLAN.md) - Original design document
+- [GNU Radio Integration](../widget/README_BLUESKY.md) - Hardware integration guide
 
 ## License
 
@@ -648,7 +810,7 @@ For issues or questions:
 
 ## Phase 2: Persistent Data Storage (COMPLETE ✅)
 
-All experiment data is now automatically saved to disk for persistence. See [PHASE2_README.md](PHASE2_README.md) for details.
+All experiment data is now automatically saved to disk for persistence. See [docs/developer/PHASE2_README.md](docs/developer/PHASE2_README.md) for details.
 
 ### Key Features
 
@@ -662,16 +824,19 @@ All experiment data is now automatically saved to disk for persistence. See [PHA
 
 ```bash
 # Run experiment (data automatically saved)
-python run_experiment.py mock_experiment
+python scripts/cli/run_experiment.py mock_experiment
 
-# View saved data
-python retrieve_data.py --latest --all
+# Quick access to latest data
+python scripts/data_access/access_my_data.py
+
+# View saved data with details
+python scripts/data_access/retrieve_data.py --latest --all
 
 # List all runs
-python retrieve_data.py --list
+python scripts/data_access/retrieve_data.py --list
 
 # Access specific run
-python retrieve_data.py --uid <uid_prefix>
+python scripts/data_access/retrieve_data.py --uid <uid_prefix>
 ```
 
 ### Document Storage

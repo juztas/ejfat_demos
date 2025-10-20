@@ -1,0 +1,145 @@
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 154, in wrapped
+    asyncio.get_running_loop()
+RuntimeError: no running event loop
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
+    executenb(
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 1319, in execute
+    return NotebookClient(nb=nb, resources=resources, km=km, **kwargs).execute()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 158, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 709, in async_execute
+    await self.async_execute_cell(
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+# Setup imports (add parent to path if needed)
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
+from bluesky import RunEngine
+from ophyd import Signal
+from bluesky.plans import scan
+from bluesky_config.devices import MockDetector
+from bluesky_config.callbacks import DocumentLogger, StatisticsCallback
+from bluesky_config.metadata import create_experiment_metadata
+
+# Setup
+RE = RunEngine({})
+doc_logger = DocumentLogger(str(parent_dir / 'data' / 'documents'))
+RE.subscribe(doc_logger)
+
+stats = StatisticsCallback(['det_value'])
+RE.subscribe(stats)
+
+# Create devices
+motor = Signal(name='motor', value=0)
+detector = MockDetector(name='det', noise_level=0.1)
+
+# CUSTOMIZE PARAMETERS HERE!
+start = 0
+stop = 20  # Different from default
+num_points = 50  # More points
+
+# Create metadata
+md = create_experiment_metadata(
+    experiment_id='CUSTOM-001',
+    purpose='Custom parameter scan with 50 points',
+    plan_type='scan',
+    start=start,
+    stop=stop,
+    num_points=num_points,
+)
+
+# Run the scan
+print(f"Running custom scan: {start} to {stop} with {num_points} points")
+uid = RE(scan([detector], motor, start, stop, num_points), **md)
+
+print(f"\n✓ Complete! Run UID: {uid[0][:8]}")
+print(f"\nStatistics:")
+print(f"  Mean: {stats.mean['det_value']:.3f}")
+print(f"  Std Dev: {stats.std['det_value']:.3f}")
+------------------
+
+----- stdout -----
+Running custom scan: 0 to 20 with 50 points
+----- stdout -----
+
+----- stdout -----
+📝 Logging documents to: 7fe914bb_documents.jsonl
+----- stdout -----
+
+----- stdout -----
+
+📈 Computing statistics for: det_value
+----- stdout -----
+
+----- stdout -----
+   Saved stop document
+----- stdout -----
+
+----- stdout -----
+
+   📊 Statistics Summary:
+----- stdout -----
+
+----- stdout -----
+      det_value:
+----- stdout -----
+
+----- stdout -----
+         Mean:   0.9868
+----- stdout -----
+
+----- stdout -----
+         Std:    0.1140
+----- stdout -----
+
+----- stdout -----
+         Min:    0.6758
+----- stdout -----
+
+----- stdout -----
+         Max:    1.2093
+----- stdout -----
+
+----- stdout -----
+         Median: 0.9783
+----- stdout -----
+
+----- stdout -----
+
+----- stdout -----
+
+✓ Complete! Run UID: 7fe914bb
+----- stdout -----
+
+----- stdout -----
+
+Statistics:
+----- stdout -----
+
+------------------
+
+[31m---------------------------------------------------------------------------[39m
+[31mAttributeError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[3][39m[32m, line 45[39m
+[32m     43[39m [38;5;28mprint[39m([33mf[39m[33m"[39m[38;5;130;01m\n[39;00m[33m✓ Complete! Run UID: [39m[38;5;132;01m{[39;00muid[[32m0[39m][:[32m8[39m][38;5;132;01m}[39;00m[33m"[39m)
+[32m     44[39m [38;5;28mprint[39m([33mf[39m[33m"[39m[38;5;130;01m\n[39;00m[33mStatistics:[39m[33m"[39m)
+[32m---> [39m[32m45[39m [38;5;28mprint[39m([33mf[39m[33m"[39m[33m  Mean: [39m[38;5;132;01m{[39;00m[43mstats[49m[43m.[49m[43mmean[49m[[33m'[39m[33mdet_value[39m[33m'[39m][38;5;132;01m:[39;00m[33m.3f[39m[38;5;132;01m}[39;00m[33m"[39m)
+[32m     46[39m [38;5;28mprint[39m([33mf[39m[33m"[39m[33m  Std Dev: [39m[38;5;132;01m{[39;00mstats.std[[33m'[39m[33mdet_value[39m[33m'[39m][38;5;132;01m:[39;00m[33m.3f[39m[38;5;132;01m}[39;00m[33m"[39m)
+
+[31mAttributeError[39m: 'StatisticsCallback' object has no attribute 'mean'
+

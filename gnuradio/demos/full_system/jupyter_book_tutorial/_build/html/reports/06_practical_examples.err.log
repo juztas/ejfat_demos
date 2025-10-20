@@ -1,0 +1,92 @@
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 154, in wrapped
+    asyncio.get_running_loop()
+RuntimeError: no running event loop
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
+    executenb(
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 1319, in execute
+    return NotebookClient(nb=nb, resources=resources, km=km, **kwargs).execute()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 158, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 709, in async_execute
+    await self.async_execute_cell(
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/opt/anaconda3/envs/gnuradio/lib/python3.11/site-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+from bluesky_config.callbacks import PeakDetectorCallback
+
+# Add peak detector callback
+peak_detector = PeakDetectorCallback('det1_value', threshold=2.0)
+RE.subscribe(peak_detector)
+
+# Run scan
+det1.noise_level = 0.4  # Higher noise for more peaks
+uid = RE(scan([det1], motor, 0, 10, 30))
+
+# Show detected peaks
+print(f"\nDetected {len(peak_detector.peaks)} peaks:")
+for motor_pos, det_val in peak_detector.peaks[:5]:  # Show first 5
+    print(f"  Motor={motor_pos:.2f}, Detector={det_val:.3f}")
+------------------
+
+----- stdout -----
+📝 Logging documents to: 312d7056_documents.jsonl
+----- stdout -----
+
+----- stdout -----
+
+🔍 Peak Detector: Monitoring 'det1_value'
+----- stdout -----
+
+----- stdout -----
+   Alert threshold: 2.0
+----- stdout -----
+
+----- stdout -----
+   Position signal: 'motor' (auto-detected)
+----- stdout -----
+
+----- stdout -----
+   Saved stop document
+----- stdout -----
+
+----- stdout -----
+
+   📊 Peak Summary:
+----- stdout -----
+
+----- stdout -----
+      Peak value: 1.8634
+----- stdout -----
+
+----- stdout -----
+      Peak position (motor): 3.4483e+00
+----- stdout -----
+
+----- stdout -----
+
+------------------
+
+[31m---------------------------------------------------------------------------[39m
+[31mAttributeError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[4][39m[32m, line 12[39m
+[32m      9[39m uid = RE(scan([det1], motor, [32m0[39m, [32m10[39m, [32m30[39m))
+[32m     11[39m [38;5;66;03m# Show detected peaks[39;00m
+[32m---> [39m[32m12[39m [38;5;28mprint[39m([33mf[39m[33m"[39m[38;5;130;01m\n[39;00m[33mDetected [39m[38;5;132;01m{[39;00m[38;5;28mlen[39m([43mpeak_detector[49m[43m.[49m[43mpeaks[49m)[38;5;132;01m}[39;00m[33m peaks:[39m[33m"[39m)
+[32m     13[39m [38;5;28;01mfor[39;00m motor_pos, det_val [38;5;129;01min[39;00m peak_detector.peaks[:[32m5[39m]:  [38;5;66;03m# Show first 5[39;00m
+[32m     14[39m     [38;5;28mprint[39m([33mf[39m[33m"[39m[33m  Motor=[39m[38;5;132;01m{[39;00mmotor_pos[38;5;132;01m:[39;00m[33m.2f[39m[38;5;132;01m}[39;00m[33m, Detector=[39m[38;5;132;01m{[39;00mdet_val[38;5;132;01m:[39;00m[33m.3f[39m[38;5;132;01m}[39;00m[33m"[39m)
+
+[31mAttributeError[39m: 'PeakDetectorCallback' object has no attribute 'peaks'
+

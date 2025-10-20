@@ -1,0 +1,886 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Jupyter Book Tutorial: Running Experiments with Bluesky &#8212; Running Experiments with Bluesky</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css?v=6644e6bb" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'README';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="intro.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Running Experiments with Bluesky</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="01_quick_start.html">Quick Start (5 Minutes)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02_running_methods.html">Methods for Running Experiments</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Understanding the Framework</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="03_data_capture.html">What Gets Captured</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04_verification.html">Verifying Data Capture</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Working with Data</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="05_retrieval_analysis.html">Retrieving and Analyzing Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_practical_examples.html">Practical Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="07_troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="08_next_steps.html">Next Steps</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/JeffersonLab/E2SAR" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/README.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Jupyter Book Tutorial: Running Experiments with Bluesky</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#about-this-tutorial">About This Tutorial</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-contents">Tutorial Contents</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-1-getting-started">Part 1: Getting Started</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-2-understanding-the-framework">Part 2: Understanding the Framework</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-3-working-with-data">Part 3: Working with Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-4-reference">Part 4: Reference</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-the-book">Building the Book</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-build">Quick Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#view-the-book">View the Book</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#clean-build-if-needed">Clean Build (if needed)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-the-interactive-tutorial">Using the Interactive Tutorial</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-view-built-html">Option 1: View Built HTML</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-with-jupyterlab-notebook">Option 2: Use with JupyterLab/Notebook</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3-deploy-as-website">Option 3: Deploy as Website</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#directory-structure">Directory Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#customization">Customization</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#change-book-title-or-author">Change Book Title or Author</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#modify-table-of-contents">Modify Table of Contents</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#add-new-chapters">Add New Chapters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#change-theme-styling">Change Theme/Styling</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#navigation">Navigation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#code-blocks">Code Blocks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#special-content-blocks">Special Content Blocks</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting-build-issues">Troubleshooting Build Issues</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-jupyter-book-command-not-found">Issue: “jupyter-book: command not found”</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-import-errors-in-notebooks">Issue: Import errors in notebooks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-notebooks-fail-to-execute-during-build">Issue: Notebooks fail to execute during build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-build-is-slow">Issue: Build is slow</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#differences-from-original-tutorial">Differences from Original Tutorial</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#advantages-of-jupyter-book-version">Advantages of Jupyter Book Version:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#when-to-use-original-markdown">When to Use Original Markdown:</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-resources">Additional Resources</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing">Contributing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#support">Support</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="jupyter-book-tutorial-running-experiments-with-bluesky">
+<h1>Jupyter Book Tutorial: Running Experiments with Bluesky<a class="headerlink" href="#jupyter-book-tutorial-running-experiments-with-bluesky" title="Link to this heading">#</a></h1>
+<p>This directory contains an interactive Jupyter Book tutorial for running experiments and capturing data with the Bluesky framework.</p>
+<section id="about-this-tutorial">
+<h2>About This Tutorial<a class="headerlink" href="#about-this-tutorial" title="Link to this heading">#</a></h2>
+<p>This is the same content as <code class="docutils literal notranslate"><span class="pre">TUTORIAL_RUNNING_EXPERIMENTS.md</span></code> but converted into an interactive Jupyter Book format with:</p>
+<ul class="simple">
+<li><p>✅ <strong>Executable code cells</strong> - Run examples directly in your browser</p></li>
+<li><p>✅ <strong>Live visualizations</strong> - See plots and data inline</p></li>
+<li><p>✅ <strong>Easy navigation</strong> - Sidebar, search, and chapter links</p></li>
+<li><p>✅ <strong>Professional formatting</strong> - Publication-quality presentation</p></li>
+<li><p>✅ <strong>Copy-paste ready</strong> - All code blocks have copy buttons</p></li>
+</ul>
+</section>
+<section id="tutorial-contents">
+<h2>Tutorial Contents<a class="headerlink" href="#tutorial-contents" title="Link to this heading">#</a></h2>
+<section id="part-1-getting-started">
+<h3>Part 1: Getting Started<a class="headerlink" href="#part-1-getting-started" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Introduction</strong> - Prerequisites and setup verification</p></li>
+<li><p><strong>Quick Start (5 Minutes)</strong> - Run your first experiment immediately</p></li>
+<li><p><strong>Running Methods</strong> - Four different approaches explained</p></li>
+</ol>
+</section>
+<section id="part-2-understanding-the-framework">
+<h3>Part 2: Understanding the Framework<a class="headerlink" href="#part-2-understanding-the-framework" title="Link to this heading">#</a></h3>
+<ol class="arabic simple" start="4">
+<li><p><strong>What Gets Captured</strong> - The Bluesky document model</p></li>
+<li><p><strong>Verifying Data Capture</strong> - Ensure data was saved correctly</p></li>
+</ol>
+</section>
+<section id="part-3-working-with-data">
+<h3>Part 3: Working with Data<a class="headerlink" href="#part-3-working-with-data" title="Link to this heading">#</a></h3>
+<ol class="arabic simple" start="6">
+<li><p><strong>Retrieving and Analyzing Data</strong> - Access and process results</p></li>
+<li><p><strong>Practical Examples</strong> - Complete working examples</p></li>
+</ol>
+</section>
+<section id="part-4-reference">
+<h3>Part 4: Reference<a class="headerlink" href="#part-4-reference" title="Link to this heading">#</a></h3>
+<ol class="arabic simple" start="8">
+<li><p><strong>Troubleshooting</strong> - Solutions to common problems</p></li>
+<li><p><strong>Next Steps</strong> - Where to go from here</p></li>
+</ol>
+</section>
+</section>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h2>
+<p>Before building or using this tutorial:</p>
+<ol class="arabic">
+<li><p><strong>Conda environment activated:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>gnuradio
+</pre></div>
+</div>
+</li>
+<li><p><strong>Required packages installed:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>bluesky<span class="w"> </span>ophyd<span class="w"> </span>databroker<span class="w"> </span>matplotlib<span class="w"> </span>pandas<span class="w"> </span>scipy<span class="w"> </span>openpyxl<span class="w"> </span>h5py
+</pre></div>
+</div>
+</li>
+<li><p><strong>Jupyter Book installed:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>jupyter-book
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="building-the-book">
+<h2>Building the Book<a class="headerlink" href="#building-the-book" title="Link to this heading">#</a></h2>
+<section id="quick-build">
+<h3>Quick Build<a class="headerlink" href="#quick-build" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># From the jupyter_book_tutorial directory</span>
+jupyter-book<span class="w"> </span>build<span class="w"> </span>.
+</pre></div>
+</div>
+<p>The built HTML will be in <code class="docutils literal notranslate"><span class="pre">_build/html/</span></code>.</p>
+</section>
+<section id="view-the-book">
+<h3>View the Book<a class="headerlink" href="#view-the-book" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Open in browser (macOS)</span>
+open<span class="w"> </span>_build/html/index.html
+
+<span class="c1"># Linux</span>
+xdg-open<span class="w"> </span>_build/html/index.html
+
+<span class="c1"># Windows</span>
+start<span class="w"> </span>_build/html/index.html
+</pre></div>
+</div>
+</section>
+<section id="clean-build-if-needed">
+<h3>Clean Build (if needed)<a class="headerlink" href="#clean-build-if-needed" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Remove old build</span>
+jupyter-book<span class="w"> </span>clean<span class="w"> </span>.
+
+<span class="c1"># Rebuild from scratch</span>
+jupyter-book<span class="w"> </span>build<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+</section>
+<section id="using-the-interactive-tutorial">
+<h2>Using the Interactive Tutorial<a class="headerlink" href="#using-the-interactive-tutorial" title="Link to this heading">#</a></h2>
+<section id="option-1-view-built-html">
+<h3>Option 1: View Built HTML<a class="headerlink" href="#option-1-view-built-html" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Build the book (see above)</p></li>
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">_build/html/index.html</span></code> in your browser</p></li>
+<li><p>Navigate through chapters</p></li>
+<li><p>Code cells are syntax-highlighted but not executable</p></li>
+</ol>
+</section>
+<section id="option-2-use-with-jupyterlab-notebook">
+<h3>Option 2: Use with JupyterLab/Notebook<a class="headerlink" href="#option-2-use-with-jupyterlab-notebook" title="Link to this heading">#</a></h3>
+<ol class="arabic">
+<li><p>Open individual notebooks:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jupyter<span class="w"> </span>notebook<span class="w"> </span>intro.ipynb
+<span class="c1"># or</span>
+jupyter<span class="w"> </span>lab
+</pre></div>
+</div>
+</li>
+<li><p>Execute code cells interactively</p></li>
+<li><p>Modify and experiment</p></li>
+</ol>
+</section>
+<section id="option-3-deploy-as-website">
+<h3>Option 3: Deploy as Website<a class="headerlink" href="#option-3-deploy-as-website" title="Link to this heading">#</a></h3>
+<p>The built HTML can be deployed to:</p>
+<ul class="simple">
+<li><p>GitHub Pages</p></li>
+<li><p>Read the Docs</p></li>
+<li><p>Netlify</p></li>
+<li><p>Any static web hosting</p></li>
+</ul>
+<p>Example for GitHub Pages:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># After building</span>
+pip<span class="w"> </span>install<span class="w"> </span>ghp-import
+ghp-import<span class="w"> </span>-n<span class="w"> </span>-p<span class="w"> </span>-f<span class="w"> </span>_build/html
+</pre></div>
+</div>
+</section>
+</section>
+<section id="directory-structure">
+<h2>Directory Structure<a class="headerlink" href="#directory-structure" title="Link to this heading">#</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>jupyter_book_tutorial/
+├── _config.yml              # Jupyter Book configuration
+├── _toc.yml                 # Table of contents
+├── references.bib           # Bibliography (optional)
+├── README.md               # This file
+├── intro.ipynb             # Landing page
+├── 01_quick_start.ipynb    # Quick start tutorial
+├── 02_running_methods.ipynb
+├── 03_data_capture.ipynb
+├── 04_verification.ipynb
+├── 05_retrieval_analysis.ipynb
+├── 06_practical_examples.ipynb
+├── 07_troubleshooting.ipynb
+├── 08_next_steps.ipynb
+└── _build/                 # Generated HTML (after building)
+    └── html/
+        └── index.html      # Main entry point
+</pre></div>
+</div>
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="Link to this heading">#</a></h2>
+<section id="change-book-title-or-author">
+<h3>Change Book Title or Author<a class="headerlink" href="#change-book-title-or-author" title="Link to this heading">#</a></h3>
+<p>Edit <code class="docutils literal notranslate"><span class="pre">_config.yml</span></code>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Your</span><span class="nv"> </span><span class="s">Custom</span><span class="nv"> </span><span class="s">Title&quot;</span>
+<span class="nt">author</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Your</span><span class="nv"> </span><span class="s">Name&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="modify-table-of-contents">
+<h3>Modify Table of Contents<a class="headerlink" href="#modify-table-of-contents" title="Link to this heading">#</a></h3>
+<p>Edit <code class="docutils literal notranslate"><span class="pre">_toc.yml</span></code> to reorder chapters or add new ones.</p>
+</section>
+<section id="add-new-chapters">
+<h3>Add New Chapters<a class="headerlink" href="#add-new-chapters" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Create new <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code> file</p></li>
+<li><p>Add entry to <code class="docutils literal notranslate"><span class="pre">_toc.yml</span></code></p></li>
+<li><p>Rebuild the book</p></li>
+</ol>
+</section>
+<section id="change-theme-styling">
+<h3>Change Theme/Styling<a class="headerlink" href="#change-theme-styling" title="Link to this heading">#</a></h3>
+<p>In <code class="docutils literal notranslate"><span class="pre">_config.yml</span></code>, modify:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">html</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">use_issues_button</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">use_repository_button</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</pre></div>
+</div>
+<p>See <a class="reference external" href="https://jupyterbook.org/">Jupyter Book documentation</a> for all options.</p>
+</section>
+</section>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h2>
+<section id="navigation">
+<h3>Navigation<a class="headerlink" href="#navigation" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Sidebar</strong>: Chapter list and search</p></li>
+<li><p><strong>Previous/Next</strong>: Buttons at bottom of each page</p></li>
+<li><p><strong>Breadcrumbs</strong>: Current location indicator</p></li>
+</ul>
+</section>
+<section id="code-blocks">
+<h3>Code Blocks<a class="headerlink" href="#code-blocks" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Copy button</strong>: Hover over code blocks</p></li>
+<li><p><strong>Syntax highlighting</strong>: Language-specific colors</p></li>
+<li><p><strong>Line numbers</strong>: Optional</p></li>
+</ul>
+</section>
+<section id="special-content-blocks">
+<h3>Special Content Blocks<a class="headerlink" href="#special-content-blocks" title="Link to this heading">#</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Blue note boxes for tips</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Yellow warning boxes for cautions</p>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Red important boxes for critical info</p>
+</div>
+</section>
+</section>
+<section id="troubleshooting-build-issues">
+<h2>Troubleshooting Build Issues<a class="headerlink" href="#troubleshooting-build-issues" title="Link to this heading">#</a></h2>
+<section id="issue-jupyter-book-command-not-found">
+<h3>Issue: “jupyter-book: command not found”<a class="headerlink" href="#issue-jupyter-book-command-not-found" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>jupyter-book
+</pre></div>
+</div>
+</section>
+<section id="issue-import-errors-in-notebooks">
+<h3>Issue: Import errors in notebooks<a class="headerlink" href="#issue-import-errors-in-notebooks" title="Link to this heading">#</a></h3>
+<p>Make sure you’re in the correct directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>/path/to/full_system/jupyter_book_tutorial
+</pre></div>
+</div>
+<p>Or notebooks will handle path adjustments automatically.</p>
+</section>
+<section id="issue-notebooks-fail-to-execute-during-build">
+<h3>Issue: Notebooks fail to execute during build<a class="headerlink" href="#issue-notebooks-fail-to-execute-during-build" title="Link to this heading">#</a></h3>
+<p>Set <code class="docutils literal notranslate"><span class="pre">execute_notebooks:</span> <span class="pre">cache</span></code> in <code class="docutils literal notranslate"><span class="pre">_config.yml</span></code> (already configured).</p>
+<p>Or force no execution:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">execute</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">execute_notebooks</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;off&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="issue-build-is-slow">
+<h3>Issue: Build is slow<a class="headerlink" href="#issue-build-is-slow" title="Link to this heading">#</a></h3>
+<p>Use cache mode (default) or skip execution:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jupyter-book<span class="w"> </span>build<span class="w"> </span>.<span class="w"> </span>--builder<span class="w"> </span>html<span class="w"> </span>--execute-notebooks<span class="w"> </span>cache
+</pre></div>
+</div>
+</section>
+</section>
+<section id="differences-from-original-tutorial">
+<h2>Differences from Original Tutorial<a class="headerlink" href="#differences-from-original-tutorial" title="Link to this heading">#</a></h2>
+<section id="advantages-of-jupyter-book-version">
+<h3>Advantages of Jupyter Book Version:<a class="headerlink" href="#advantages-of-jupyter-book-version" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>✅ Professional web interface</p></li>
+<li><p>✅ Easy navigation and search</p></li>
+<li><p>✅ Executable code cells</p></li>
+<li><p>✅ Better for distribution</p></li>
+<li><p>✅ Can deploy as website</p></li>
+</ul>
+</section>
+<section id="when-to-use-original-markdown">
+<h3>When to Use Original Markdown:<a class="headerlink" href="#when-to-use-original-markdown" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>📄 Quick reference</p></li>
+<li><p>📄 Reading offline</p></li>
+<li><p>📄 Viewing in IDE</p></li>
+<li><p>📄 Simple text search</p></li>
+</ul>
+<p><strong>Both versions contain the same content</strong> - use whichever format suits your workflow!</p>
+</section>
+</section>
+<section id="additional-resources">
+<h2>Additional Resources<a class="headerlink" href="#additional-resources" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>Original Tutorial</strong>: <code class="docutils literal notranslate"><span class="pre">../TUTORIAL_RUNNING_EXPERIMENTS.md</span></code></p></li>
+<li><p><strong>Quick Reference</strong>: <code class="docutils literal notranslate"><span class="pre">../QUICK_REFERENCE.md</span></code></p></li>
+<li><p><strong>Main Documentation</strong>: <code class="docutils literal notranslate"><span class="pre">../README.md</span></code></p></li>
+<li><p><strong>Data Analysis Guide</strong>: <code class="docutils literal notranslate"><span class="pre">../DATA_RETRIEVAL_AND_ANALYSIS_GUIDE.md</span></code></p></li>
+</ul>
+</section>
+<section id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Link to this heading">#</a></h2>
+<p>To add or improve content:</p>
+<ol class="arabic simple">
+<li><p>Edit the relevant <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code> file</p></li>
+<li><p>Test in Jupyter: <code class="docutils literal notranslate"><span class="pre">jupyter</span> <span class="pre">notebook</span> <span class="pre">&lt;file&gt;.ipynb</span></code></p></li>
+<li><p>Rebuild book: <code class="docutils literal notranslate"><span class="pre">jupyter-book</span> <span class="pre">build</span> <span class="pre">.</span></code></p></li>
+<li><p>Verify in browser</p></li>
+</ol>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<p>This tutorial is part of the EJFAT demos and follows the same license as the main project.</p>
+</section>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>EJFAT GitHub: <a class="github reference external" href="https://github.com/JeffersonLab/E2SAR">JeffersonLab/E2SAR</a></p></li>
+<li><p>Jupyter Book Docs: <a class="reference external" href="https://jupyterbook.org/">https://jupyterbook.org/</a></p></li>
+<li><p>Bluesky Docs: <a class="reference external" href="https://blueskyproject.io/">https://blueskyproject.io/</a></p></li>
+</ul>
+<hr class="docutils" />
+<p><strong>Happy Learning!</strong> 🚀</p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#about-this-tutorial">About This Tutorial</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-contents">Tutorial Contents</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-1-getting-started">Part 1: Getting Started</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-2-understanding-the-framework">Part 2: Understanding the Framework</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-3-working-with-data">Part 3: Working with Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#part-4-reference">Part 4: Reference</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-the-book">Building the Book</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-build">Quick Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#view-the-book">View the Book</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#clean-build-if-needed">Clean Build (if needed)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-the-interactive-tutorial">Using the Interactive Tutorial</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-view-built-html">Option 1: View Built HTML</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-with-jupyterlab-notebook">Option 2: Use with JupyterLab/Notebook</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3-deploy-as-website">Option 3: Deploy as Website</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#directory-structure">Directory Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#customization">Customization</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#change-book-title-or-author">Change Book Title or Author</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#modify-table-of-contents">Modify Table of Contents</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#add-new-chapters">Add New Chapters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#change-theme-styling">Change Theme/Styling</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#navigation">Navigation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#code-blocks">Code Blocks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#special-content-blocks">Special Content Blocks</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting-build-issues">Troubleshooting Build Issues</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-jupyter-book-command-not-found">Issue: “jupyter-book: command not found”</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-import-errors-in-notebooks">Issue: Import errors in notebooks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-notebooks-fail-to-execute-during-build">Issue: Notebooks fail to execute during build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#issue-build-is-slow">Issue: Build is slow</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#differences-from-original-tutorial">Differences from Original Tutorial</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#advantages-of-jupyter-book-version">Advantages of Jupyter Book Version:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#when-to-use-original-markdown">When to Use Original Markdown:</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-resources">Additional Resources</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing">Contributing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#support">Support</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By EJFAT Team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
