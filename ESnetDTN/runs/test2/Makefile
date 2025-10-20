@@ -31,7 +31,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve
+.PHONY: help reserve free
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -45,6 +45,7 @@ help:
 	@echo "TARGETS:"
 	@echo "  help              Display this help message"
 	@echo "  reserve           Reserve a load balancer on primary DTN"
+	@echo "  free              Free the load balancer on primary DTN"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  DTN_LIST:         $(DTN_LIST)"
@@ -61,6 +62,8 @@ help:
 	@echo "USAGE:"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
 	@echo "  make reserve EJFAT_URI_BETA=\$$EJFAT_URI_BETA LB_NAME=my_test"
+	@echo "  make free"
+	@echo "  make free IP_VERSION=4"
 	@echo ""
 	@echo "========================================================================"
 
@@ -95,4 +98,33 @@ reserve:
 	@echo "Reservation complete! INSTANCE_URI saved locally."
 	@echo "========================================================================"
 	@cat INSTANCE_URI
+	@echo ""
+
+free:
+	@echo "========================================================================"
+	@echo "Freeing Load Balancer on $(PRIMARY_DTN)"
+	@echo "========================================================================"
+	@echo "IP Version:          IPv$(IP_VERSION)"
+	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
+	@echo "========================================================================"
+	@echo ""
+	@if [ -f INSTANCE_URI ]; then \
+		echo "Found local INSTANCE_URI file, copying to remote..."; \
+		cat INSTANCE_URI | ssh -t $(PRIMARY_DTN) "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
+		echo ""; \
+	fi
+	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
+		cd $(REMOTE_WORK_DIR) && \
+		if [ -f INSTANCE_URI ]; then \
+			source INSTANCE_URI; \
+		else \
+			echo \"Error: INSTANCE_URI file not found. Cannot free load balancer.\"; \
+			exit 1; \
+		fi && \
+		export IP_VERSION=\"-$(IP_VERSION)\" && \
+		$(SCRIPT_DIR)/free'"
+	@echo ""
+	@echo "========================================================================"
+	@echo "Load balancer freed successfully."
+	@echo "========================================================================"
 	@echo ""

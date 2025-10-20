@@ -69,7 +69,7 @@ log_dir: ./
 
 # Port range to monitor (format: start-end)
 # Default: 10000-10015
-monitor_ports: 10000-10015
+monitor_ports: 50016-50032
 
 # Monitoring interval (in seconds)
 # Default: 0.1
@@ -93,9 +93,13 @@ monitor_interval: 0.1
 
 # Force using address (v4 or v6) even if hostname specified in the URI
 # Default: false
-# reassem_use_host_address: false
+reassem_use_host_address: true
 
 # --- Data Plane Settings ---
+
+# Starting port for receiving data
+# Default: 10000
+reassem_data_port: 50016
 
 # Port range: 2^portRange listening ports will be open starting from dataPort
 # Values: 0-14 (power of 2), or -1 to match number of CPU cores/threads

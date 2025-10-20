@@ -121,6 +121,7 @@ MONITOR_INTERVAL=$(parse_yaml "$CONFIG_FILE" "monitor_interval")
 REASSEM_USE_CP=$(parse_yaml "$CONFIG_FILE" "reassem_use_cp")
 REASSEM_VALIDATE_CERT=$(parse_yaml "$CONFIG_FILE" "reassem_validate_cert")
 REASSEM_USE_HOST_ADDRESS=$(parse_yaml "$CONFIG_FILE" "reassem_use_host_address")
+REASSEM_DATA_PORT=$(parse_yaml "$CONFIG_FILE" "reassem_data_port")
 REASSEM_PORT_RANGE=$(parse_yaml "$CONFIG_FILE" "reassem_port_range")
 REASSEM_WITH_LB_HEADER=$(parse_yaml "$CONFIG_FILE" "reassem_with_lb_header")
 REASSEM_EVENT_TIMEOUT_MS=$(parse_yaml "$CONFIG_FILE" "reassem_event_timeout_ms")
@@ -143,6 +144,7 @@ IP_VERSION="${IP_VERSION:-6}"
 REASSEM_USE_CP="${REASSEM_USE_CP:-true}"
 REASSEM_VALIDATE_CERT="${REASSEM_VALIDATE_CERT:-true}"
 REASSEM_USE_HOST_ADDRESS="${REASSEM_USE_HOST_ADDRESS:-false}"
+REASSEM_DATA_PORT="${REASSEM_DATA_PORT:-10000}"
 REASSEM_PORT_RANGE="${REASSEM_PORT_RANGE:--1}"
 REASSEM_WITH_LB_HEADER="${REASSEM_WITH_LB_HEADER:-false}"
 REASSEM_EVENT_TIMEOUT_MS="${REASSEM_EVENT_TIMEOUT_MS:-500}"
@@ -187,6 +189,7 @@ MAKE_VARS="$MAKE_VARS IP_VERSION=-$IP_VERSION"
 MAKE_VARS="$MAKE_VARS REASSEM_USE_CP=$REASSEM_USE_CP"
 MAKE_VARS="$MAKE_VARS REASSEM_VALIDATE_CERT=$REASSEM_VALIDATE_CERT"
 MAKE_VARS="$MAKE_VARS REASSEM_USE_HOST_ADDRESS=$REASSEM_USE_HOST_ADDRESS"
+MAKE_VARS="$MAKE_VARS REASSEM_DATA_PORT=$REASSEM_DATA_PORT"
 MAKE_VARS="$MAKE_VARS REASSEM_PORT_RANGE=$REASSEM_PORT_RANGE"
 MAKE_VARS="$MAKE_VARS REASSEM_WITH_LB_HEADER=$REASSEM_WITH_LB_HEADER"
 MAKE_VARS="$MAKE_VARS REASSEM_EVENT_TIMEOUT_MS=$REASSEM_EVENT_TIMEOUT_MS"
@@ -216,6 +219,8 @@ validateCert = $REASSEM_VALIDATE_CERT
 useHostAddress = $REASSEM_USE_HOST_ADDRESS
 
 [data-plane]
+; starting port for receiving data (default: 10000)
+dataPort = $REASSEM_DATA_PORT
 ; 2^portRange (0<=portRange<=14) listening ports will be open starting from dataPort.
 ; If -1, then the number of ports matches either the number of CPU cores or the number of threads. Normally
 ; this value is calculated based on the number of cores or threads requested, but
