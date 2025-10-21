@@ -35,7 +35,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive
+.PHONY: help reserve free receive run
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -51,6 +51,7 @@ help:
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  receive           Start receivers on all DTN nodes"
+	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  DTN_LIST:         $(DTN_LIST)"
@@ -185,5 +186,44 @@ receive:
 	@echo "All receivers started successfully!"
 	@echo "Receivers running on: $(DTN_LIST)"
 	@echo "Log files on remote nodes: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log"
+	@echo "========================================================================"
+	@echo ""
+
+run:
+	@echo "========================================================================"
+	@echo "Running Complete EJFAT Workflow"
+	@echo "========================================================================"
+	@echo ""
+	@echo "Step 1: Reserving load balancer..."
+	@echo "------------------------------------------------------------------------"
+	@$(MAKE) reserve
+	@echo ""
+	@echo "========================================================================"
+	@echo "Load Balancer Summary"
+	@echo "========================================================================"
+	@if [ -f INSTANCE_URI ]; then \
+		cat INSTANCE_URI; \
+	else \
+		echo "Error: INSTANCE_URI not found"; \
+		exit 1; \
+	fi
+	@echo "========================================================================"
+	@echo ""
+	@echo "Waiting 5 seconds before starting receivers..."
+	@sleep 5
+	@echo ""
+	@echo "Step 2: Starting receivers on all DTN nodes..."
+	@echo "------------------------------------------------------------------------"
+	@$(MAKE) receive
+	@echo ""
+	@echo "Waiting 5 seconds for receivers to initialize..."
+	@sleep 5
+	@echo ""
+	@echo "Step 3: Starting sender..."
+	@echo "------------------------------------------------------------------------"
+	@$(MAKE) send
+	@echo ""
+	@echo "========================================================================"
+	@echo "Workflow Complete!"
 	@echo "========================================================================"
 	@echo ""
