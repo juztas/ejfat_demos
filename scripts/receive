@@ -226,8 +226,7 @@ validateCert = $REASSEM_VALIDATE_CERT
 useHostAddress = $REASSEM_USE_HOST_ADDRESS
 
 [data-plane]
-; starting port for receiving data (default: 10000)
-dataPort = $REASSEM_DATA_PORT
+; Note: dataPort is now specified via e2sar_perf -p command line option
 ; 2^portRange (0<=portRange<=14) listening ports will be open starting from dataPort.
 ; If -1, then the number of ports matches either the number of CPU cores or the number of threads. Normally
 ; this value is calculated based on the number of cores or threads requested, but
@@ -304,12 +303,12 @@ ls -la
 echo "DEBUG: reassembler_config.ini location:"
 ls -la reassembler_config.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -i reassembler_config.ini"
+echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -p $REASSEM_DATA_PORT -i reassembler_config.ini"
 echo "========================================================================"
 echo ""
 
-# e2sar_perf will use the reassembler_config.ini we generated
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -i reassembler_config.ini
+# e2sar_perf will use the reassembler_config.ini we generated and the -p option for dataPort
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -p $REASSEM_DATA_PORT -i reassembler_config.ini
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP
