@@ -303,12 +303,12 @@ ls -la
 echo "DEBUG: reassembler_config.ini location:"
 ls -la reassembler_config.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -p $REASSEM_DATA_PORT -i reassembler_config.ini"
+echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config.ini"
 echo "========================================================================"
 echo ""
 
-# e2sar_perf will use the reassembler_config.ini we generated and the -p option for dataPort
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ -p $REASSEM_DATA_PORT -i reassembler_config.ini
+# e2sar_perf will use the reassembler_config.ini we generated and the --port option for dataPort
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config.ini
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP
