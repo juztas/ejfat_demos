@@ -28,6 +28,10 @@ IP_VERSION ?= 6
 RECEIVER_CONFIG ?= receiver_config.yaml
 RECEIVER_LOG_DIR ?= run_output
 
+# Sender configuration
+SENDER_CONFIG ?= sender_config.yaml
+SENDER_LOG_DIR ?= run_output
+
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
 # On remote nodes, ejfat_demos is located under the user's home directory
@@ -35,7 +39,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive run
+.PHONY: help reserve free receive send run
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -51,6 +55,7 @@ help:
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  receive           Start receivers on all DTN nodes"
+	@echo "  send              Start sender on primary DTN"
 	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo ""
 	@echo "CONFIGURATION:"
@@ -66,6 +71,8 @@ help:
 	@echo "  IP_VERSION        IP version: 4 or 6 (default: $(IP_VERSION))"
 	@echo "  RECEIVER_CONFIG   Receiver config file (default: $(RECEIVER_CONFIG))"
 	@echo "  RECEIVER_LOG_DIR  Receiver log directory (default: $(RECEIVER_LOG_DIR))"
+	@echo "  SENDER_CONFIG     Sender config file (default: $(SENDER_CONFIG))"
+	@echo "  SENDER_LOG_DIR    Sender log directory (default: $(SENDER_LOG_DIR))"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
@@ -74,6 +81,8 @@ help:
 	@echo "  make free IP_VERSION=4"
 	@echo "  make receive"
 	@echo "  make receive RECEIVER_CONFIG=custom_config.yaml"
+	@echo "  make send"
+	@echo "  make send SENDER_CONFIG=custom_sender_config.yaml"
 	@echo ""
 	@echo "========================================================================"
 
@@ -186,6 +195,49 @@ receive:
 	@echo "All receivers started successfully!"
 	@echo "Receivers running on: $(DTN_LIST)"
 	@echo "Log files on remote nodes: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log"
+	@echo "========================================================================"
+	@echo ""
+
+send:
+	@echo "========================================================================"
+	@echo "Starting Sender on Primary DTN"
+	@echo "========================================================================"
+	@echo "Primary DTN:         $(PRIMARY_DTN)"
+	@echo "Sender Config:       $(SENDER_CONFIG)"
+	@echo "Log Directory:       $(SENDER_LOG_DIR)"
+	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
+	@echo "========================================================================"
+	@echo ""
+	@if [ ! -f INSTANCE_URI ]; then \
+		echo "Error: INSTANCE_URI file not found."; \
+		echo "Please run 'make reserve' first to create the load balancer."; \
+		exit 1; \
+	fi
+	@if [ ! -f $(SENDER_CONFIG) ]; then \
+		echo "Error: Sender config file not found: $(SENDER_CONFIG)"; \
+		exit 1; \
+	fi
+	@echo "Creating log directory if needed..."
+	@mkdir -p $(SENDER_LOG_DIR)
+	@echo ""
+	@echo "Starting sender on $(PRIMARY_DTN)..."
+	@echo "------------------------------------------------------------------------"
+	@echo "Copying config files to $(PRIMARY_DTN)..."
+	@cat INSTANCE_URI | ssh $(PRIMARY_DTN) "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"
+	@scp $(SENDER_CONFIG) $(PRIMARY_DTN):$(REMOTE_WORK_DIR)/$(SENDER_CONFIG)
+	@echo "Starting sender..."
+	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
+		cd $(REMOTE_WORK_DIR) && \
+		source INSTANCE_URI && \
+		mkdir -p $(SENDER_LOG_DIR) && \
+		export WORK_DIR=$(SENDER_LOG_DIR) && \
+		$(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_CONFIG) | tee $(SENDER_LOG_DIR)/sender.log'"
+	@echo ""
+	@echo "Fetching sender log from remote..."
+	@scp $(PRIMARY_DTN):$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/sender.log ./$(SENDER_LOG_DIR)/sender.log
+	@echo "========================================================================"
+	@echo "Sender completed successfully!"
+	@echo "Log file saved locally: $(SENDER_LOG_DIR)/sender.log"
 	@echo "========================================================================"
 	@echo ""
 

@@ -1,8 +1,157 @@
 #!/bin/bash
+#
+# send - EJFAT Sender Script
+#
+# This script starts an EJFAT sender using configuration from a YAML file.
+# It parses the YAML, generates segmenter_config.ini, and runs e2sar_perf.
+#
+# Usage: send <config.yaml>
+#
+# Arguments:
+#   config.yaml  Path to YAML configuration file
+#
+# Environment Variables (optional overrides):
+#   WORK_DIR     Working directory (default: current directory)
+#   MY_IP        IP address to bind to (default: auto-detect)
+#
 
-# Auto-detect MY_IP if not already set
+set -e
+
+#------------------------------------------------------------------------------------------------
+# FUNCTIONS
+#------------------------------------------------------------------------------------------------
+
+# Function to parse YAML and extract value
+parse_yaml() {
+    local yaml_file="$1"
+    local key="$2"
+    # Simple YAML parser for key: value format
+    grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+}
+
+# Function to display help
+show_help() {
+    cat << EOF
+Usage: send <config.yaml>
+
+Start an EJFAT sender using configuration from a YAML file.
+
+Arguments:
+  config.yaml  Path to YAML configuration file
+
+Environment Variables (optional):
+  WORK_DIR     Working directory (default: current directory)
+  MY_IP        IP address to bind to (default: auto-detect)
+
+Examples:
+  send sender_config.yaml
+  WORK_DIR=./run_output send sender_config.yaml
+
+See sender_config.yaml for configuration options.
+EOF
+    exit 0
+}
+
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+# Check for help flag
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ -z "$1" ]]; then
+    show_help
+fi
+
+CONFIG_FILE="$1"
+
+# Check if config file exists
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Error: Configuration file not found: $CONFIG_FILE"
+    exit 1
+fi
+
+#------------------------------------------------------------------------------------------------
+# PARSE YAML CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "EJFAT Sender - Parsing Configuration"
+echo "========================================================================"
+echo "Config file: $CONFIG_FILE"
+
+# Instance URI configuration
+INSTANCE_URI_FILE=$(parse_yaml "$CONFIG_FILE" "instance_uri_file")
+INSTANCE_URI_FILE="${INSTANCE_URI_FILE:-INSTANCE_URI}"
+
+# Network configuration
+IP_VERSION=$(parse_yaml "$CONFIG_FILE" "ip_version")
+IP_VERSION="${IP_VERSION:-6}"
+IP_VERSION_DASH="-${IP_VERSION}"
+
+# Sender configuration
+TX_RATE=$(parse_yaml "$CONFIG_FILE" "tx_rate")
+TX_RATE="${TX_RATE:-0.1}"
+
+TX_LENGTH=$(parse_yaml "$CONFIG_FILE" "tx_length")
+TX_LENGTH="${TX_LENGTH:-2097152}"
+
+NFRAMES=$(parse_yaml "$CONFIG_FILE" "nframes")
+NFRAMES="${NFRAMES:-10000}"
+
+SEND_SOCKETS=$(parse_yaml "$CONFIG_FILE" "send_sockets")
+SEND_SOCKETS="${SEND_SOCKETS:-8}"
+
+DATA_ID=$(parse_yaml "$CONFIG_FILE" "data_id")
+if [ -z "$DATA_ID" ]; then
+    DATA_ID=$((RANDOM % 1000 + 1))
+fi
+
+# Segmenter configuration
+USE_CP=$(parse_yaml "$CONFIG_FILE" "use_cp")
+USE_CP="${USE_CP:-true}"
+
+WARMUP_MS=$(parse_yaml "$CONFIG_FILE" "warmup_ms")
+WARMUP_MS="${WARMUP_MS:-1000}"
+
+SYNC_PERIOD_MS=$(parse_yaml "$CONFIG_FILE" "sync_period_ms")
+SYNC_PERIOD_MS="${SYNC_PERIOD_MS:-1000}"
+
+SYNC_PERIODS=$(parse_yaml "$CONFIG_FILE" "sync_periods")
+SYNC_PERIODS="${SYNC_PERIODS:-2}"
+
+CONNECTED_SOCKET=$(parse_yaml "$CONFIG_FILE" "connected_socket")
+CONNECTED_SOCKET="${CONNECTED_SOCKET:-true}"
+
+MTU=$(parse_yaml "$CONFIG_FILE" "mtu")
+MTU="${MTU:-8000}"
+
+SND_SOCKET_BUFSIZE=$(parse_yaml "$CONFIG_FILE" "snd_socket_bufsize")
+SND_SOCKET_BUFSIZE="${SND_SOCKET_BUFSIZE:-3145728}"
+
+SMOOTH=$(parse_yaml "$CONFIG_FILE" "smooth")
+SMOOTH="${SMOOTH:-false}"
+
+MULTI_PORT=$(parse_yaml "$CONFIG_FILE" "multi_port")
+MULTI_PORT="${MULTI_PORT:-false}"
+
+#------------------------------------------------------------------------------------------------
+# SETUP WORK DIRECTORY
+#------------------------------------------------------------------------------------------------
+
+# Use WORK_DIR from environment, or default to current directory
+WORK_DIR="${WORK_DIR:-.}"
+
+# Create work directory if it doesn't exist
+mkdir -p "$WORK_DIR"
+
+# Change to WORK_DIR so e2sar_perf can find segmenter_config.ini
+cd "$WORK_DIR"
+
+#------------------------------------------------------------------------------------------------
+# AUTO-DETECT IP ADDRESS
+#------------------------------------------------------------------------------------------------
+
 if [ -z "$MY_IP" ]; then
-    if [ "$IP_VERSION" = "-4" ]; then
+    if [ "$IP_VERSION" = "4" ]; then
         LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
     else
         LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
@@ -10,25 +159,81 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
-# Use WORK_DIR from environment, or default to current directory
-WORK_DIR="${WORK_DIR:-.}"
+#------------------------------------------------------------------------------------------------
+# GENERATE SEGMENTER CONFIG
+#------------------------------------------------------------------------------------------------
 
-# Config file path - look in WORK_DIR, or fall back to hardcoded paths
-if [ -f "$WORK_DIR/segmenter_config.ini" ]; then
-    CONFIG_PATH="$WORK_DIR/segmenter_config.ini"
-elif [ -f "/ejfat_demos/perlmutter/segmenter_config.ini" ]; then
-    CONFIG_PATH="/ejfat_demos/perlmutter/segmenter_config.ini"
-else
-    CONFIG_PATH="~/ejfat_demos/perlmutter/segmenter_config.ini"
-fi
+echo "Generating segmenter_config.ini..."
 
-echo "Sender IP is : $MY_IP"
-echo "IP VERSION IS $IP_VERSION"
-echo "TX_RATE: $TX_RATE"
-echo "TX_LENGTH: $TX_LENGTH"
-echo "NFRAMES: $NFRAMES"
-echo "SEND_SOCKETS: $SEND_SOCKETS"
-echo "DATA_ID: $DATA_ID"
+cat > segmenter_config.ini << EOF
+[general]
+; whether to use the control plane (gRPC sendState)
+useCP = $USE_CP
 
-# Run e2sar_perf (output will be captured at Makefile level if LOG_FILE is set)
-e2sar_perf --send --withcp --ini $CONFIG_PATH $IP_VERSION --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --smooth --length $TX_LENGTH
+[control-plane]
+; warmup period between sync thread starting and data allowed to be sent (milliseconds)
+warmupMS = $WARMUP_MS
+; sync thread period in milliseconds
+syncPeriodMS = $SYNC_PERIOD_MS
+; number of sync periods to use for averaging reported send rate
+syncPeriods = $SYNC_PERIODS
+
+[data-plane]
+; use connected sockets
+connectedSocket = $CONNECTED_SOCKET
+; MTU size to fit segmented data (must accommodate IP, UDP, and LBRE headers)
+; value of 0 means auto-detect based on MTU of outgoing interface (Linux only)
+mtu = $MTU
+; socket buffer size for sending set via SO_SNDBUF setsockopt. Note
+; that this requires systemwide max set via sysctl (net.core.wmem_max) to be higher.
+sndSocketBufSize = $SND_SOCKET_BUFSIZE
+; smooth out the rate per-frame rather than per event (for low rate values)
+smooth = $SMOOTH
+; use consecutive destination ports starting from EjfatURI data port
+; rather than a single port; source ports are still randomized
+; (incompatible with a load balancer, only useful in back-to-back testing)
+multiPort = $MULTI_PORT
+EOF
+
+#------------------------------------------------------------------------------------------------
+# DISPLAY CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "EJFAT Sender - Starting"
+echo "========================================================================"
+echo "Sender IP:          $MY_IP"
+echo "IP Version:         IPv$IP_VERSION"
+echo "Work Directory:     $WORK_DIR"
+echo "TX Rate:            $TX_RATE Gbps"
+echo "TX Length:          $TX_LENGTH bytes"
+echo "Frames:             $NFRAMES"
+echo "Send Sockets:       $SEND_SOCKETS"
+echo "Data ID:            $DATA_ID"
+echo "Use Control Plane:  $USE_CP"
+echo "MTU:                $MTU"
+echo "========================================================================"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# RUN E2SAR_PERF SENDER
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "DEBUG: Current working directory: $(pwd)"
+echo "DEBUG: Contents of current directory:"
+ls -la
+echo "DEBUG: segmenter_config.ini location:"
+ls -la segmenter_config.ini 2>&1
+echo "DEBUG: e2sar_perf command:"
+echo "e2sar_perf --send --withcp --ini segmenter_config.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
+echo "========================================================================"
+echo ""
+
+# e2sar_perf will use the segmenter_config.ini we generated
+e2sar_perf --send --withcp --ini segmenter_config.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
+
+echo ""
+echo "========================================================================"
+echo "Sender completed"
+echo "========================================================================"
