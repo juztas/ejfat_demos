@@ -6,11 +6,14 @@
 #
 #------------------------------------------------------------------------------------------------
 
-# List of DTN nodes (in priority order)
-DTN_LIST := wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+# List of DTN nodes for senders (in priority order)
+SENDERS_LIST ?= wash-dtn1-mgt.es.net
 
-# Get the first DTN from the list
-PRIMARY_DTN := $(word 1,$(DTN_LIST))
+# List of DTN nodes for receivers (in priority order)
+RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+
+# Get the first DTN from the senders list for reservation operations
+PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
 
 # Path to scripts relative to this Makefile
 # This same relative path works on both local and remote nodes
@@ -54,17 +57,22 @@ help:
 	@echo "  help              Display this help message"
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
-	@echo "  receive           Start receivers on all DTN nodes"
-	@echo "  send              Start sender on primary DTN"
-	@echo "  run               Run complete workflow: reserve, receive, send"
+	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
+	@echo "  send              Start senders on nodes in SENDERS_LIST"
+	@echo "  run               Run complete workflow: reserve, receive, send, retrieve logs"
 	@echo ""
 	@echo "CONFIGURATION:"
-	@echo "  DTN_LIST:         $(DTN_LIST)"
+	@echo "  SENDERS_LIST:     $(SENDERS_LIST)"
+	@echo "  RECEIVERS_LIST:   $(RECEIVERS_LIST)"
 	@echo "  PRIMARY_DTN:      $(PRIMARY_DTN)"
 	@echo "  SCRIPT_DIR:       $(SCRIPT_DIR)"
 	@echo "  REMOTE_WORK_DIR:  $(REMOTE_WORK_DIR)"
 	@echo ""
 	@echo "VARIABLES:"
+	@echo "  SENDERS_LIST      Space-separated list of DTN nodes for senders"
+	@echo "                    (default: $(SENDERS_LIST))"
+	@echo "  RECEIVERS_LIST    Space-separated list of DTN nodes for receivers"
+	@echo "                    (default: $(RECEIVERS_LIST))"
 	@echo "  EJFAT_URI_BETA    Base URI for load balancer service (required)"
 	@echo "  LB_NAME           Load balancer name (default: $(LB_NAME))"
 	@echo "  LB_RESERVE_DURATION  Reserve duration in days (default: $(LB_RESERVE_DURATION))"
@@ -80,9 +88,10 @@ help:
 	@echo "  make free"
 	@echo "  make free IP_VERSION=4"
 	@echo "  make receive"
-	@echo "  make receive RECEIVER_CONFIG=custom_config.yaml"
+	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make send"
-	@echo "  make send SENDER_CONFIG=custom_sender_config.yaml"
+	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
+	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
 	@echo ""
 	@echo "========================================================================"
 
@@ -150,9 +159,9 @@ free:
 
 receive:
 	@echo "========================================================================"
-	@echo "Starting Receivers on All DTN Nodes"
+	@echo "Starting Receivers on DTN Nodes"
 	@echo "========================================================================"
-	@echo "DTN Nodes:           $(DTN_LIST)"
+	@echo "Receiver Nodes:      $(RECEIVERS_LIST)"
 	@echo "Receiver Config:     $(RECEIVER_CONFIG)"
 	@echo "Log Directory:       $(RECEIVER_LOG_DIR)"
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
@@ -170,9 +179,9 @@ receive:
 	@echo "Creating log directory if needed..."
 	@mkdir -p $(RECEIVER_LOG_DIR)
 	@echo ""
-	@echo "Starting receivers on all DTN nodes..."
+	@echo "Starting receivers on all receiver nodes..."
 	@i=0; \
-	for node in $(DTN_LIST); do \
+	for node in $(RECEIVERS_LIST); do \
 		log_file="rx_$$i.log"; \
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting receiver $$i on $$node..."; \
@@ -193,16 +202,16 @@ receive:
 	done
 	@echo "========================================================================"
 	@echo "All receivers started successfully!"
-	@echo "Receivers running on: $(DTN_LIST)"
+	@echo "Receivers running on: $(RECEIVERS_LIST)"
 	@echo "Log files on remote nodes: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log"
 	@echo "========================================================================"
 	@echo ""
 
 send:
 	@echo "========================================================================"
-	@echo "Starting Sender on Primary DTN"
+	@echo "Starting Senders on DTN Nodes"
 	@echo "========================================================================"
-	@echo "Primary DTN:         $(PRIMARY_DTN)"
+	@echo "Sender Nodes:        $(SENDERS_LIST)"
 	@echo "Sender Config:       $(SENDER_CONFIG)"
 	@echo "Log Directory:       $(SENDER_LOG_DIR)"
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
@@ -220,24 +229,35 @@ send:
 	@echo "Creating log directory if needed..."
 	@mkdir -p $(SENDER_LOG_DIR)
 	@echo ""
-	@echo "Starting sender on $(PRIMARY_DTN)..."
-	@echo "------------------------------------------------------------------------"
-	@echo "Copying config files to $(PRIMARY_DTN)..."
-	@cat INSTANCE_URI | ssh $(PRIMARY_DTN) "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"
-	@scp $(SENDER_CONFIG) $(PRIMARY_DTN):$(REMOTE_WORK_DIR)/$(SENDER_CONFIG)
-	@echo "Starting sender..."
-	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
-		cd $(REMOTE_WORK_DIR) && \
-		source INSTANCE_URI && \
-		mkdir -p $(SENDER_LOG_DIR) && \
-		export WORK_DIR=$(SENDER_LOG_DIR) && \
-		$(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_CONFIG) | tee $(SENDER_LOG_DIR)/sender.log'"
-	@echo ""
-	@echo "Fetching sender log from remote..."
-	@scp $(PRIMARY_DTN):$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/sender.log ./$(SENDER_LOG_DIR)/sender.log
+	@echo "Starting senders on all sender nodes..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		log_file="tx_$$i.log"; \
+		data_id=$$((100 + i)); \
+		echo "------------------------------------------------------------------------"; \
+		echo "Starting sender $$i on $$node..."; \
+		echo "  Log file: $(SENDER_LOG_DIR)/$$log_file"; \
+		echo "  Data ID:  $$data_id"; \
+		echo "  Copying config files to $$node..."; \
+		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
+		scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i; \
+		echo "  Modifying config to set data_id: $$data_id"; \
+		ssh $$node "sed 's/^# data_id:.*/data_id: $$data_id/' $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i > $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i.tmp && mv $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i.tmp $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i"; \
+		echo "  Starting sender in background..."; \
+		ssh -t $$node bash -i -c "'conda activate e2sar && \
+			cd $(REMOTE_WORK_DIR) && \
+			source INSTANCE_URI && \
+			mkdir -p $(SENDER_LOG_DIR) && \
+			export WORK_DIR=$(SENDER_LOG_DIR) && \
+			nohup $(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
+			echo \"Sender started in background (PID: \$$!)\"'"; \
+		echo ""; \
+		i=$$((i+1)); \
+	done
 	@echo "========================================================================"
-	@echo "Sender completed successfully!"
-	@echo "Log file saved locally: $(SENDER_LOG_DIR)/sender.log"
+	@echo "All senders started successfully!"
+	@echo "Senders running on: $(SENDERS_LIST)"
+	@echo "Log files on remote nodes: $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/tx_*.log"
 	@echo "========================================================================"
 	@echo ""
 
@@ -275,7 +295,58 @@ run:
 	@echo "------------------------------------------------------------------------"
 	@$(MAKE) send
 	@echo ""
+	@echo "Step 4: Retrieving all logs from DTN nodes..."
+	@echo "------------------------------------------------------------------------"
+	@echo "Creating local log directories..."
+	@mkdir -p $(RECEIVER_LOG_DIR)
+	@mkdir -p $(SENDER_LOG_DIR)
+	@echo ""
+	@echo "Fetching receiver logs from all receiver nodes..."
+	@i=0; \
+	for node in $(RECEIVERS_LIST); do \
+		echo "  Fetching logs from $$node (receiver $$i)..."; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.log ./$(RECEIVER_LOG_DIR)/rx_$$i.log 2>/dev/null && \
+			echo "    ✓ rx_$$i.log retrieved" || \
+			echo "    ✗ Failed to retrieve rx_$$i.log from $$node"; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/*_rx_csvfile.csv ./$(RECEIVER_LOG_DIR)/ 2>/dev/null && \
+			echo "    ✓ CSV files retrieved from $$node" || \
+			echo "    ✗ No CSV files found on $$node"; \
+		i=$$((i+1)); \
+	done
+	@echo ""
+	@echo "Fetching sender logs from all sender nodes..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		echo "  Fetching logs from $$node (sender $$i)..."; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/tx_$$i.log ./$(SENDER_LOG_DIR)/tx_$$i.log 2>/dev/null && \
+			echo "    ✓ tx_$$i.log retrieved" || \
+			echo "    ✗ Failed to retrieve tx_$$i.log from $$node"; \
+		i=$$((i+1)); \
+	done
+	@echo ""
+	@echo "Fetching segmenter and reassembler config files..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/segmenter_config.ini ./$(SENDER_LOG_DIR)/segmenter_config_$$hostname.ini 2>/dev/null && \
+			echo "  ✓ segmenter_config.ini retrieved from $$node" || \
+			echo "  ✗ segmenter_config.ini not found on $$node"; \
+		i=$$((i+1)); \
+	done
+	@i=0; \
+	for node in $(RECEIVERS_LIST); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/reassembler_config.ini ./$(RECEIVER_LOG_DIR)/reassembler_config_$$hostname.ini 2>/dev/null && \
+			echo "  ✓ reassembler_config.ini retrieved from $$node" || \
+			echo "  ✗ reassembler_config.ini not found on $$node"; \
+		i=$$((i+1)); \
+	done
+	@echo ""
 	@echo "========================================================================"
 	@echo "Workflow Complete!"
 	@echo "========================================================================"
+	@echo "All logs retrieved to local directory: $(RECEIVER_LOG_DIR)/"
+	@echo ""
+	@echo "Log files:"
+	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(SENDER_LOG_DIR)/*.log 2>/dev/null || echo "  No log files found"
 	@echo ""
