@@ -315,7 +315,9 @@ def add_frames(cxi_file, frames, translations, masks=None, intensities=None,
     if groups['detector'] + 'data' not in cxi_file:
         # We start with the frame data
         chunk_shape = (1,) + frames.shape[-2:]
-        max_shape = (None,) + frames.shape[-2:]
+        #max_shape = (None,) + frames.shape[-2:]
+        #print(frames.shape[-2:], frames.shape[-1], frames.shape[-1])
+        max_shape = [None, frames.shape[-2], frames.shape[-1]]
         cxi_file.create_dataset(groups['detector'] + 'data',
                                 data=frames.cpu().numpy(),
                                 chunks=chunk_shape,

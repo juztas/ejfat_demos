@@ -21,7 +21,7 @@ from display import *
 
 from process_stxm_file import process_file_std
 
-verbose = False
+verbose = True
 
 # Example paths
 basedir = os.getenv("WORKDIR", "/data")

@@ -26,11 +26,11 @@ import e2sar_py
 
 dataset_url = os.getenv("DATAURL", "https://downloads.es.net/pub/ejfat_demos/ptycho/NS_231012080_ccdframes_0_0.stxm")
 
-CHUNK_BYTES=8192
+CHUNK_BYTES=8192*1000
 DATA_ID = 0x0506   # decimal value: 1085
 EVENTSRC_ID = 0x11223345   # decimal value: 287454020
-DP_IPV4_ADDR = "127.0.0.1"
-DP_IPV4_PORT = 19522
+DP_IPV4_ADDR = os.environ.get("DP_ADDR", "127.0.0.1")
+DP_IPV4_PORT = os.environ.get("DP_PORT", 19522)
 SEG_URI = f"ejfat://useless@127.0.0.1:9876/lb/1?sync=127.0.0.1:12345&data={DP_IPV4_ADDR}:{DP_IPV4_PORT}"
 USECP = False
 
@@ -100,10 +100,12 @@ async def recv_and_process():
         # Iterate over the response content in chunks
         print("Starting download")
 
+        chunk_size = 0
         for chunk in response.iter_content(chunk_size=CHUNK_BYTES):
+            chunk_size = chunk_size + len(chunk)
             if chunk:  # Filter out keep-alive new chunks
+                print("Total chunk sent: ", chunk_size)
                 msg_pickle = send_signed_zipped_pickle(chunk, HMAC_BYTES)
-
                 res = seg.sendEvent(msg_pickle, len(msg_pickle), int(time.time()*1e6))
                 assert(res.value() == 0)
 
