@@ -118,14 +118,22 @@ SYNC_PERIOD_MS="${SYNC_PERIOD_MS:-1000}"
 SYNC_PERIODS=$(parse_yaml "$CONFIG_FILE" "sync_periods")
 SYNC_PERIODS="${SYNC_PERIODS:-2}"
 
+# Data plane configuration
+DPV6=$(parse_yaml "$CONFIG_FILE" "dpv6")
+DPV6="${DPV6:-false}"
+
 CONNECTED_SOCKET=$(parse_yaml "$CONFIG_FILE" "connected_socket")
 CONNECTED_SOCKET="${CONNECTED_SOCKET:-true}"
 
 MTU=$(parse_yaml "$CONFIG_FILE" "mtu")
 MTU="${MTU:-8000}"
 
+NUM_SEND_SOCKETS="$SEND_SOCKETS"
+
 SND_SOCKET_BUFSIZE=$(parse_yaml "$CONFIG_FILE" "snd_socket_bufsize")
 SND_SOCKET_BUFSIZE="${SND_SOCKET_BUFSIZE:-3145728}"
+
+RATE_GBPS="$TX_RATE"
 
 SMOOTH=$(parse_yaml "$CONFIG_FILE" "smooth")
 SMOOTH="${SMOOTH:-false}"
@@ -179,14 +187,20 @@ syncPeriodMS = $SYNC_PERIOD_MS
 syncPeriods = $SYNC_PERIODS
 
 [data-plane]
+; prefer V6 dataplane if the URI specifies both data=<ipv4>&data=<ipv6> addresses
+dpV6 = $DPV6
 ; use connected sockets
 connectedSocket = $CONNECTED_SOCKET
 ; MTU size to fit segmented data (must accommodate IP, UDP, and LBRE headers)
 ; value of 0 means auto-detect based on MTU of outgoing interface (Linux only)
 mtu = $MTU
+; number of sockets/source ports we will be sending data from
+numSendSockets = $NUM_SEND_SOCKETS
 ; socket buffer size for sending set via SO_SNDBUF setsockopt. Note
 ; that this requires systemwide max set via sysctl (net.core.wmem_max) to be higher.
 sndSocketBufSize = $SND_SOCKET_BUFSIZE
+; send rate in Gbps (can be fractions). Negative value means send full rate
+rateGbps = $RATE_GBPS
 ; smooth out the rate per-frame rather than per event (for low rate values)
 smooth = $SMOOTH
 ; use consecutive destination ports starting from EjfatURI data port

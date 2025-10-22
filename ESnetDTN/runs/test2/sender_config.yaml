@@ -74,6 +74,10 @@ sync_periods: 2
 # Data Plane Settings
 # -------------------
 
+# Prefer V6 dataplane if the URI specifies both data=<ipv4>&data=<ipv6> addresses
+# Default: false
+dpv6: false
+
 # Use connected sockets
 # Default: true
 connected_socket: true
