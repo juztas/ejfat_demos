@@ -37,6 +37,9 @@ USECP = False
 SEG_URI = os.environ.get("SEG_URI", SEG_URI)
 HMAC_BYTES = os.environ.get("HMAC", SEG_URI).encode("utf-8")
 
+if "useless" not in SEG_URI:
+    USECP = True
+
 ####################
 ####################
 ####################

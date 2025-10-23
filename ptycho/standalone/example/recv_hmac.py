@@ -42,6 +42,11 @@ HMAC_BYTES = os.environ.get("HMAC", REAS_URI_).encode("utf-8")
 
 reas_uri = e2sar_py.EjfatURI(uri=REAS_URI_, tt=e2sar_py.EjfatURI.TokenType.instance)
 
+USECP = False
+
+if "useless" not in REAS_URI:
+    USECP = True
+
 def sign(key: bytes, msg: bytes) -> bytes:
     """Compute the HMAC digest of msg, given signing key `key`"""
     return hmac.HMAC(
@@ -72,6 +77,7 @@ def print_stats(stats):
     print(f'        lastErrno      {stats.lastErrno}')
 
 def init_ejfat():
+    global USECP
     # Get data plane IPv4 address
     print("Data Plane Address (v4):", str(reas_uri.get_data_addr_v4().value()[0]))
 
@@ -79,8 +85,13 @@ def init_ejfat():
     rflags = e2sar_py.DataPlane.Reassembler.ReassemblerFlags()
 
     # These two flags are needed to make direct connection without LB work
-    rflags.useCP = False  # turn off CP. Default value is True
-    rflags.withLBHeader = True  # LB header will be attached since there is no LB
+    if not USECP:
+        rflags.useCP = False  # turn off CP. Default value is True
+        rflags.withLBHeader = True  # LB header will be attached since there is no LB
+    else:
+        rflags.useCP = True  # turn off CP. Default value is True
+        rflags.withLBHeader = False  # LB header will be attached since there is no LB
+
 
     print("Reassembler flags:")
     print(f"  period_ms={rflags.period_ms}")  # should be 100 according to the C++ constructor
