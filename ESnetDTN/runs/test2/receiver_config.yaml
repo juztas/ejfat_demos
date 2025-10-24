@@ -33,7 +33,7 @@ ip_version: 6
 
 # Duration to receive data (in seconds)
 # Default: 120
-rx_duration: 30
+rx_duration: 120
 
 # Number of receiver threads
 # Default: 16
@@ -69,7 +69,7 @@ log_dir: ./
 
 # Port range to monitor (format: start-end)
 # Default: 10000-10015
-monitor_ports: 50016-50032
+monitor_ports: 10000-10015
 
 # Monitoring interval (in seconds)
 # Default: 0.1
@@ -99,7 +99,7 @@ reassem_use_host_address: true
 
 # Starting port for receiving data
 # Default: 10000
-reassem_data_port: 50016
+reassem_data_port: 10000
 
 # Port range: 2^portRange listening ports will be open starting from dataPort
 # Values: 0-14 (power of 2), or -1 to match number of CPU cores/threads

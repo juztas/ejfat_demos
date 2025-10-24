@@ -75,8 +75,9 @@ sync_periods: 2
 # -------------------
 
 # Prefer V6 dataplane if the URI specifies both data=<ipv4>&data=<ipv6> addresses
-# Default: false
-dpv6: false
+# If not specified, automatically set to true when ip_version is 6, false when ip_version is 4
+# Uncomment to override automatic behavior:
+# dpv6: false
 
 # Use connected sockets
 # Default: true

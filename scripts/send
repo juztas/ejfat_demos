@@ -120,7 +120,14 @@ SYNC_PERIODS="${SYNC_PERIODS:-2}"
 
 # Data plane configuration
 DPV6=$(parse_yaml "$CONFIG_FILE" "dpv6")
-DPV6="${DPV6:-false}"
+# If dpv6 not explicitly set, derive from ip_version
+if [ -z "$DPV6" ]; then
+    if [ "$IP_VERSION" = "6" ]; then
+        DPV6="true"
+    else
+        DPV6="false"
+    fi
+fi
 
 CONNECTED_SOCKET=$(parse_yaml "$CONFIG_FILE" "connected_socket")
 CONNECTED_SOCKET="${CONNECTED_SOCKET:-true}"
