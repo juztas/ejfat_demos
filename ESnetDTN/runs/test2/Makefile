@@ -10,7 +10,8 @@
 SENDERS_LIST ?= wash-dtn1-mgt.es.net
 
 # List of DTN nodes for receivers (in priority order)
-RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+#RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -365,7 +366,11 @@ tcpdump-commands:
 		echo "Please run 'make reserve' first to create the load balancer."; \
 		exit 1; \
 	fi
-	@./generate_tcpdump_commands.sh
+	@if [ ! -f $(RECEIVER_CONFIG) ]; then \
+		echo "Error: Receiver config file not found: $(RECEIVER_CONFIG)"; \
+		exit 1; \
+	fi
+	@$(SCRIPT_DIR)/generate_tcpdump_commands.sh $(RECEIVER_CONFIG) INSTANCE_URI $(RECEIVERS_LIST)
 
 retrieve-logs:
 	@echo "========================================================================"

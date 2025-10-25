@@ -5,8 +5,27 @@
 # This script generates the tcpdump commands needed for packet capture on each
 # receiver node, including proper filters and durations.
 #
+# Usage: generate_tcpdump_commands.sh <receiver_config.yaml> <INSTANCE_URI_file> <node1> <node2> ...
+#
 
 set -e
+
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+if [ $# -lt 3 ]; then
+    echo "Usage: $0 <receiver_config.yaml> <INSTANCE_URI_file> <node1> [node2] [node3] ..."
+    echo ""
+    echo "Example:"
+    echo "  $0 receiver_config.yaml INSTANCE_URI wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net"
+    exit 1
+fi
+
+RECEIVER_CONFIG="$1"
+INSTANCE_URI_FILE="$2"
+shift 2
+RECEIVER_NODES=("$@")
 
 #------------------------------------------------------------------------------------------------
 # CONFIGURATION
@@ -28,9 +47,6 @@ extract_lb_hostname() {
 #------------------------------------------------------------------------------------------------
 # LOAD CONFIGURATION
 #------------------------------------------------------------------------------------------------
-
-RECEIVER_CONFIG="receiver_config.yaml"
-INSTANCE_URI_FILE="INSTANCE_URI"
 
 if [ ! -f "$RECEIVER_CONFIG" ]; then
     echo "Error: $RECEIVER_CONFIG not found"
@@ -103,21 +119,14 @@ echo "  Filter:            $TCPDUMP_FILTER"
 echo "  RX Duration:       $RX_DURATION seconds"
 echo "  tcpdump Duration:  $TCPDUMP_DURATION seconds"
 echo "  IP Version:        IPv$IP_VERSION"
+echo "  Receiver Nodes:    ${RECEIVER_NODES[*]}"
 echo ""
 echo "========================================================================"
 echo ""
 
-# Define receiver nodes and their typical interface
-# Note: Interface detection requires being on the node
-RECEIVERS=(
-    "wash-dtn1-mgt.es.net:0"
-    "sunn-dtn1-mgt.es.net:1"
-    "star-dtn1-mgt.es.net:2"
-)
-
-for receiver in "${RECEIVERS[@]}"; do
-    node="${receiver%%:*}"
-    index="${receiver##*:}"
+# Generate commands for each receiver node
+index=0
+for node in "${RECEIVER_NODES[@]}"; do
 
     echo "------------------------------------------------------------------------"
     echo "Receiver $index: $node"
@@ -148,6 +157,8 @@ for receiver in "${RECEIVERS[@]}"; do
     echo "   Alternative - show detailed packets without saving:"
     echo "   sudo timeout $TCPDUMP_DURATION tcpdump -i dtn1.916 '$TCPDUMP_FILTER' -s 0 -vvv"
     echo ""
+
+    index=$((index + 1))
 done
 
 echo "========================================================================"
@@ -169,10 +180,8 @@ echo ""
 echo "OPTION 1: Save to file AND show packet summaries (recommended)"
 echo "------------------------------------------------------------------------"
 
-for receiver in "${RECEIVERS[@]}"; do
-    node="${receiver%%:*}"
-    index="${receiver##*:}"
-
+index=0
+for node in "${RECEIVER_NODES[@]}"; do
     echo "# $node (receiver $index) - Open in separate terminal"
     if [ "$IP_VERSION" = "4" ]; then
         echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
@@ -180,16 +189,15 @@ for receiver in "${RECEIVERS[@]}"; do
         echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
     fi
     echo ""
+    index=$((index + 1))
 done
 
 echo ""
 echo "OPTION 2: Show detailed packets only (no file saved)"
 echo "------------------------------------------------------------------------"
 
-for receiver in "${RECEIVERS[@]}"; do
-    node="${receiver%%:*}"
-    index="${receiver##*:}"
-
+index=0
+for node in "${RECEIVER_NODES[@]}"; do
     echo "# $node (receiver $index) - Open in separate terminal"
     if [ "$IP_VERSION" = "4" ]; then
         echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
@@ -197,6 +205,7 @@ for receiver in "${RECEIVERS[@]}"; do
         echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
     fi
     echo ""
+    index=$((index + 1))
 done
 
 echo "========================================================================"
