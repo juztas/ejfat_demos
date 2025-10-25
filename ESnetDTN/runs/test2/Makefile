@@ -42,7 +42,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run
+.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -60,6 +60,8 @@ help:
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send, retrieve logs"
+	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
+	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  SENDERS_LIST:     $(SENDERS_LIST)"
@@ -92,6 +94,8 @@ help:
 	@echo "  make send"
 	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
+	@echo "  make retrieve-logs"
+	@echo "  make tcpdump-commands"
 	@echo ""
 	@echo "========================================================================"
 
@@ -186,6 +190,7 @@ receive:
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting receiver $$i on $$node..."; \
 		echo "  Log file: $(RECEIVER_LOG_DIR)/$$log_file"; \
+		echo "  RX Index: $$i"; \
 		echo "  Copying config files to $$node..."; \
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
 		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG); \
@@ -195,7 +200,7 @@ receive:
 			source INSTANCE_URI && \
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
-			nohup $(SCRIPT_DIR)/receive $(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
@@ -349,4 +354,86 @@ run:
 	@echo ""
 	@echo "Log files:"
 	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(SENDER_LOG_DIR)/*.log 2>/dev/null || echo "  No log files found"
+	@echo ""
+
+tcpdump-commands:
+	@echo "========================================================================"
+	@echo "Generating tcpdump Commands"
+	@echo "========================================================================"
+	@if [ ! -f INSTANCE_URI ]; then \
+		echo "Error: INSTANCE_URI file not found."; \
+		echo "Please run 'make reserve' first to create the load balancer."; \
+		exit 1; \
+	fi
+	@./generate_tcpdump_commands.sh
+
+retrieve-logs:
+	@echo "========================================================================"
+	@echo "Retrieving Logs from Remote Nodes"
+	@echo "========================================================================"
+	@echo "Creating local log directories..."
+	@mkdir -p $(RECEIVER_LOG_DIR)
+	@mkdir -p $(SENDER_LOG_DIR)
+	@echo ""
+	@echo "Fetching receiver logs from all receiver nodes..."
+	@i=0; \
+	for node in $(RECEIVERS_LIST); do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Fetching logs from $$node (receiver $$i)..."; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.log ./$(RECEIVER_LOG_DIR)/rx_$$i.log 2>/dev/null && \
+			echo "  ✓ rx_$$i.log retrieved" || \
+			echo "  ✗ rx_$$i.log not found on $$node"; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/*_rx_csvfile.csv ./$(RECEIVER_LOG_DIR)/ 2>/dev/null && \
+			echo "  ✓ CSV files retrieved from $$node" || \
+			echo "  ✗ No CSV files found on $$node"; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.pcap ./$(RECEIVER_LOG_DIR)/rx_$$i.pcap 2>/dev/null && \
+			echo "  ✓ rx_$$i.pcap retrieved ($(shell du -h ./$(RECEIVER_LOG_DIR)/rx_$$i.pcap 2>/dev/null | awk '{print $$1}'))" || \
+			echo "  ✗ No PCAP file found on $$node"; \
+		i=$$((i+1)); \
+		echo ""; \
+	done
+	@echo "Fetching sender logs from all sender nodes..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Fetching logs from $$node (sender $$i)..."; \
+		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/tx_$$i.log ./$(SENDER_LOG_DIR)/tx_$$i.log 2>/dev/null && \
+			echo "  ✓ tx_$$i.log retrieved" || \
+			echo "  ✗ tx_$$i.log not found on $$node"; \
+		i=$$((i+1)); \
+		echo ""; \
+	done
+	@echo "Fetching segmenter and reassembler config files..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/segmenter_config.ini ./$(SENDER_LOG_DIR)/segmenter_config_$$hostname.ini 2>/dev/null && \
+			echo "  ✓ segmenter_config.ini retrieved from $$node" || \
+			echo "  ✗ segmenter_config.ini not found on $$node"; \
+		i=$$((i+1)); \
+	done
+	@i=0; \
+	for node in $(RECEIVERS_LIST); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/reassembler_config.ini ./$(RECEIVER_LOG_DIR)/reassembler_config_$$hostname.ini 2>/dev/null && \
+			echo "  ✓ reassembler_config.ini retrieved from $$node" || \
+			echo "  ✗ reassembler_config.ini not found on $$node"; \
+		i=$$((i+1)); \
+	done
+	@echo ""
+	@echo "========================================================================"
+	@echo "Log Retrieval Complete!"
+	@echo "========================================================================"
+	@echo "All logs saved to: $(RECEIVER_LOG_DIR)/ and $(SENDER_LOG_DIR)/"
+	@echo ""
+	@echo "Retrieved files:"
+	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.pcap $(RECEIVER_LOG_DIR)/*.csv $(SENDER_LOG_DIR)/*.log 2>/dev/null | awk '{printf "  %s %s %s\n", $$5, $$9, ""}'
+	@echo ""
+	@echo "Summary:"
+	@echo "  RX logs:      $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
+	@echo "  TX logs:      $$(ls -1 $(SENDER_LOG_DIR)/tx_*.log 2>/dev/null | wc -l) files"
+	@echo "  CSV files:    $$(ls -1 $(RECEIVER_LOG_DIR)/*.csv 2>/dev/null | wc -l) files"
+	@echo "  PCAP files:   $$(ls -1 $(RECEIVER_LOG_DIR)/*.pcap 2>/dev/null | wc -l) files"
+	@echo "  Config files: $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_*.ini $(SENDER_LOG_DIR)/segmenter_config_*.ini 2>/dev/null | wc -l) files"
+	@echo "========================================================================"
 	@echo ""

@@ -1,5 +1,44 @@
 #!/bin/bash
 
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+USE_TCPDUMP=false
+RX_INDEX=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --tcpdump)
+            USE_TCPDUMP=true
+            shift
+            ;;
+        --rx-index)
+            RX_INDEX="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--tcpdump] [--rx-index <index>]"
+            exit 1
+            ;;
+    esac
+done
+
+# Default RX_INDEX to 0 if not specified
+RX_INDEX="${RX_INDEX:-0}"
+
+#------------------------------------------------------------------------------------------------
+# LOAD BALANCER ADDRESS RESOLUTION
+#------------------------------------------------------------------------------------------------
+
+# Extract hostname from EJFAT URI
+# Format: ejfat[s]://<token>@<hostname>:<port>/...
+extract_lb_hostname() {
+    local uri="$1"
+    echo "$uri" | sed -E 's|^ejfats?://[^@]+@([^:]+):.*|\1|'
+}
+
 # Auto-detect MY_IP if not already set
 if [ -z "$MY_IP" ]; then
     if [ "$IP_VERSION" = "-4" ]; then
@@ -8,6 +47,16 @@ if [ -z "$MY_IP" ]; then
         LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
     fi
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
+fi
+
+# Detect network interface
+if [ -z "$MY_INTERFACE" ]; then
+    if [ "$IP_VERSION" = "-4" ]; then
+        LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+    else
+        LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+    fi
+    MY_INTERFACE=$(ip route get $LB_IP | head -1 | sed 's/^.*dev//' | awk '{ print $1 }')
 fi
 
 # Determine base path based on execution environment
@@ -21,6 +70,7 @@ fi
 
 echo "Receiver IP is: $MY_IP"
 echo "IP VERSION IS $IP_VERSION"
+echo "Network interface: $MY_INTERFACE"
 echo "Writing logs to $LOG_DIR"
 echo "RX_DURATION: $RX_DURATION"
 echo "RX_BUFSIZE: $RX_BUFSIZE"
@@ -29,16 +79,99 @@ echo "RX_CORES: $RX_CORES"
 echo "RX_DEQ: $RX_DEQ"
 echo "MONITOR_PORTS: $MONITOR_PORTS"
 echo "MONITOR_INTERVAL: $MONITOR_INTERVAL"
+echo "tcpdump enabled: $USE_TCPDUMP"
+
+#------------------------------------------------------------------------------------------------
+# START TCPDUMP (if enabled)
+#------------------------------------------------------------------------------------------------
+
+TCPDUMP_PID=""
+if [ "$USE_TCPDUMP" = true ]; then
+    echo "========================================================================="
+    echo "Starting tcpdump..."
+    echo "========================================================================="
+
+    # Extract load balancer hostname from EJFAT_URI
+    if [ -z "$EJFAT_URI" ]; then
+        echo "ERROR: EJFAT_URI not set, cannot start tcpdump"
+        exit 1
+    fi
+
+    LB_HOSTNAME=$(extract_lb_hostname "$EJFAT_URI")
+    if [ -z "$LB_HOSTNAME" ]; then
+        echo "ERROR: Failed to extract load balancer hostname from URI"
+        exit 1
+    fi
+
+    echo "Load balancer hostname: $LB_HOSTNAME"
+
+    # Resolve load balancer to both IPv4 and IPv6 addresses
+    LB_IPV4=$(dig +short "$LB_HOSTNAME" A | tail -1)
+    LB_IPV6=$(dig +short "$LB_HOSTNAME" AAAA | tail -1)
+
+    echo "Load balancer IPv4: ${LB_IPV4:-none}"
+    echo "Load balancer IPv6: ${LB_IPV6:-none}"
+
+    # Build tcpdump filter for source address
+    TCPDUMP_FILTER=""
+    if [ -n "$LB_IPV4" ] && [ -n "$LB_IPV6" ]; then
+        TCPDUMP_FILTER="src host $LB_IPV4 or src host $LB_IPV6"
+    elif [ -n "$LB_IPV4" ]; then
+        TCPDUMP_FILTER="src host $LB_IPV4"
+    elif [ -n "$LB_IPV6" ]; then
+        TCPDUMP_FILTER="src host $LB_IPV6"
+    else
+        echo "ERROR: Failed to resolve load balancer to any IP address"
+        exit 1
+    fi
+
+    echo "tcpdump filter: $TCPDUMP_FILTER"
+
+    # Calculate tcpdump duration (rx_duration + 30 seconds)
+    TCPDUMP_DURATION=$((RX_DURATION + 30))
+    echo "tcpdump duration: $TCPDUMP_DURATION seconds"
+
+    # Output file
+    PCAP_FILE="$BASE_PATH/$LOG_DIR/rx_${RX_INDEX}.pcap"
+    echo "PCAP file: $PCAP_FILE"
+
+    # Start tcpdump in background with timeout
+    sudo timeout "$TCPDUMP_DURATION" tcpdump -i "$MY_INTERFACE" -w "$PCAP_FILE" "$TCPDUMP_FILTER" -s 0 &
+    TCPDUMP_PID=$!
+
+    echo "tcpdump started (PID: $TCPDUMP_PID)"
+    echo "Capturing packets on interface $MY_INTERFACE"
+
+    # Give tcpdump a moment to initialize
+    sleep 2
+    echo "========================================================================="
+fi
 
 # tc -s qdisc show dev $MY_INTERFACE
 
 udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $BASE_PATH/$LOG_DIR/$(hostname)_rx_csvfile.csv &
+MONITOR_PID=$!
+
 e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ
 
 # tc -s qdisc show dev $MY_INTERFACE
 
-jobs
-kill -15 %1
-sleep 3
+echo "Stopping UDP socket monitor..."
+kill -15 $MONITOR_PID 2>/dev/null || true
+sleep 1
+
+# Wait for tcpdump to finish if it was started
+if [ -n "$TCPDUMP_PID" ]; then
+    echo "Waiting for tcpdump to complete (up to 30 more seconds)..."
+    wait $TCPDUMP_PID 2>/dev/null || true
+    echo "tcpdump capture complete: $PCAP_FILE"
+
+    # Display PCAP file info
+    if [ -f "$PCAP_FILE" ]; then
+        PCAP_SIZE=$(du -h "$PCAP_FILE" | awk '{print $1}')
+        echo "PCAP file size: $PCAP_SIZE"
+    fi
+fi
+
 jobs
 

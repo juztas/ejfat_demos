@@ -56,12 +56,34 @@ EOF
 # ARGUMENT PARSING
 #------------------------------------------------------------------------------------------------
 
-# Check for help flag
-if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ -z "$1" ]]; then
+# Default values
+RX_INDEX=0
+CONFIG_FILE=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        --rx-index)
+            RX_INDEX="$2"
+            shift 2
+            continue
+            ;;
+        *)
+            CONFIG_FILE="$1"
+            shift
+            break
+            ;;
+    esac
+done
+
+# Check for config file
+if [[ -z "$CONFIG_FILE" ]]; then
+    echo "Error: Configuration file not specified"
     show_help
 fi
-
-CONFIG_FILE="$1"
 
 # Check if config file exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -283,6 +305,7 @@ echo "RX Cores:           $RX_CORES"
 echo "RX Dequeue:         $RX_DEQ"
 echo "Monitor Interval:   $MONITOR_INTERVAL sec"
 echo "Use Control Plane:  $REASSEM_USE_CP"
+echo "RX Index:           $RX_INDEX"
 echo "========================================================================"
 echo ""
 
@@ -291,6 +314,7 @@ echo ""
 #------------------------------------------------------------------------------------------------
 
 udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/$(hostname)_rx_csvfile.csv &
+MONITOR_PID=$!
 
 #------------------------------------------------------------------------------------------------
 # RUN E2SAR_PERF RECEIVER
@@ -315,9 +339,10 @@ e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP 
 #------------------------------------------------------------------------------------------------
 
 # Kill the UDP socket monitor
-jobs
-kill -15 %1 2>/dev/null || true
-sleep 3
+echo "Stopping UDP socket monitor..."
+kill -15 $MONITOR_PID 2>/dev/null || true
+sleep 1
+
 jobs
 
 echo ""

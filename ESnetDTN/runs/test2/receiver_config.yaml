@@ -33,7 +33,7 @@ ip_version: 6
 
 # Duration to receive data (in seconds)
 # Default: 120
-rx_duration: 120
+rx_duration: 300
 
 # Number of receiver threads
 # Default: 16

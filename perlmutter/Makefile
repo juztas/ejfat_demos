@@ -53,6 +53,10 @@
 #   MONITOR_PORTS     - Port range to monitor (format: start-end)
 #   MONITOR_INTERVAL  - Monitoring sample interval in seconds
 #
+# Packet Capture Configuration:
+#   RXTCPDUMP         - Enable tcpdump packet capture (true/false)
+#   RX_INDEX          - Receiver index for output file naming
+#
 # Load Balancer Configuration:
 #   LB_RESERVE_DURATION - Reservation duration in days
 #   LB_NAME             - Load balancer instance name
@@ -118,6 +122,12 @@ DATA_RX_DIR ?= $(SCRATCH)/storage/ejfat_ft/data_rx
 #------------------------------------------------------------------------------------------------
 MONITOR_PORTS ?= 10000-10015
 MONITOR_INTERVAL ?= 0.1
+
+#------------------------------------------------------------------------------------------------
+# PACKET CAPTURE CONFIGURATION
+#------------------------------------------------------------------------------------------------
+RXTCPDUMP ?= false
+RX_INDEX ?= 0
 
 #------------------------------------------------------------------------------------------------
 # LOAD BALANCER CONFIGURATION
@@ -197,6 +207,9 @@ help :
 	@echo "  # Use IPv4 instead of IPv6"
 	@echo "  make send IP_VERSION=-4"
 	@echo ""
+	@echo "  # Enable tcpdump packet capture"
+	@echo "  make receive RXTCPDUMP=true RX_INDEX=0"
+	@echo ""
 	@echo "  # Free reservation when done"
 	@echo "  make free"
 	@echo ""
@@ -210,6 +223,8 @@ help :
 	@echo "  FT_NUMFILES       Number of test files (default: 25)"
 	@echo "  FT_FILESIZE       Test file size in MB (default: 300)"
 	@echo "  LOG_DIR           Directory for log files (default: ./)"
+	@echo "  RXTCPDUMP         Enable tcpdump packet capture (default: false)"
+	@echo "  RX_INDEX          Receiver index for file naming (default: 0)"
 	@echo ""
 	@echo "For complete variable documentation, see lines 13-67 in the Makefile."
 	@echo ""
@@ -255,10 +270,13 @@ else
 endif
 
 receive :
+	$(eval RECEIVE_FLAGS := $(if $(filter true,$(RXTCPDUMP)),--tcpdump) --rx-index $(RX_INDEX))
 ifeq ($(NODE),)
 ifeq ($(USE_PODMAN),yes)
 	podman-hpc run \
 		--cap-add SYS_NICE \
+		--cap-add NET_RAW \
+		--cap-add NET_ADMIN \
 		-v ./:/ejfat_demos/perlmutter \
 		--env LOG_DIR=$(LOG_DIR) \
 		--env EJFAT_URI=$(INSTANCE_URI) \
@@ -273,7 +291,7 @@ ifeq ($(USE_PODMAN),yes)
 		--env MONITOR_PORTS=$(MONITOR_PORTS) \
 		--env MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
 		--network host --rm -it --entrypoint= \
-		e2sar_dev /ejfat_demos/perlmutter/receive
+		e2sar_dev /ejfat_demos/perlmutter/receive $(RECEIVE_FLAGS)
 else
 	EJFAT_URI=$(INSTANCE_URI) \
 	IP_VERSION=$(IP_VERSION) \
@@ -286,7 +304,7 @@ else
 	RX_DEQ=$(RX_DEQ) \
 	MONITOR_PORTS=$(MONITOR_PORTS) \
 	MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
-	./receive
+	./receive $(RECEIVE_FLAGS)
 endif
 else
 	IP_VERSION=$(IP_VERSION) \
@@ -298,7 +316,7 @@ else
 	RX_DEQ=$(RX_DEQ) \
 	MONITOR_PORTS=$(MONITOR_PORTS) \
 	MONITOR_INTERVAL=$(MONITOR_INTERVAL) \
-	./receive --node $(NODE)
+	./receive --node $(NODE) $(RECEIVE_FLAGS)
 endif
 
 send :
