@@ -60,7 +60,7 @@ help:
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
-	@echo "  run               Run complete workflow: reserve, receive, send, retrieve logs"
+	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo ""
@@ -301,60 +301,32 @@ run:
 	@echo "------------------------------------------------------------------------"
 	@$(MAKE) send
 	@echo ""
-	@echo "Step 4: Retrieving all logs from DTN nodes..."
-	@echo "------------------------------------------------------------------------"
-	@echo "Creating local log directories..."
-	@mkdir -p $(RECEIVER_LOG_DIR)
-	@mkdir -p $(SENDER_LOG_DIR)
+	@echo "========================================================================"
+	@echo "Workflow Started Successfully!"
+	@echo "========================================================================"
 	@echo ""
-	@echo "Fetching receiver logs from all receiver nodes..."
-	@i=0; \
-	for node in $(RECEIVERS_LIST); do \
-		echo "  Fetching logs from $$node (receiver $$i)..."; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.log ./$(RECEIVER_LOG_DIR)/rx_$$i.log 2>/dev/null && \
-			echo "    ✓ rx_$$i.log retrieved" || \
-			echo "    ✗ Failed to retrieve rx_$$i.log from $$node"; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/*_rx_csvfile.csv ./$(RECEIVER_LOG_DIR)/ 2>/dev/null && \
-			echo "    ✓ CSV files retrieved from $$node" || \
-			echo "    ✗ No CSV files found on $$node"; \
-		i=$$((i+1)); \
-	done
+	@echo "Receivers running on: $(RECEIVERS_LIST)"
+	@echo "Senders running on:   $(SENDERS_LIST)"
 	@echo ""
-	@echo "Fetching sender logs from all sender nodes..."
-	@i=0; \
-	for node in $(SENDERS_LIST); do \
-		echo "  Fetching logs from $$node (sender $$i)..."; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/tx_$$i.log ./$(SENDER_LOG_DIR)/tx_$$i.log 2>/dev/null && \
-			echo "    ✓ tx_$$i.log retrieved" || \
-			echo "    ✗ Failed to retrieve tx_$$i.log from $$node"; \
-		i=$$((i+1)); \
-	done
-	@echo ""
-	@echo "Fetching segmenter and reassembler config files..."
-	@i=0; \
-	for node in $(SENDERS_LIST); do \
-		hostname=$$(echo $$node | cut -d'-' -f1); \
-		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/segmenter_config.ini ./$(SENDER_LOG_DIR)/segmenter_config_$$hostname.ini 2>/dev/null && \
-			echo "  ✓ segmenter_config.ini retrieved from $$node" || \
-			echo "  ✗ segmenter_config.ini not found on $$node"; \
-		i=$$((i+1)); \
-	done
-	@i=0; \
-	for node in $(RECEIVERS_LIST); do \
-		hostname=$$(echo $$node | cut -d'-' -f1); \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/reassembler_config.ini ./$(RECEIVER_LOG_DIR)/reassembler_config_$$hostname.ini 2>/dev/null && \
-			echo "  ✓ reassembler_config.ini retrieved from $$node" || \
-			echo "  ✗ reassembler_config.ini not found on $$node"; \
-		i=$$((i+1)); \
-	done
+	@echo "Remote log directories:"
+	@echo "  Receiver logs: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/"
+	@echo "  Sender logs:   $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/"
 	@echo ""
 	@echo "========================================================================"
-	@echo "Workflow Complete!"
+	@echo "NEXT STEPS:"
 	@echo "========================================================================"
-	@echo "All logs retrieved to local directory: $(RECEIVER_LOG_DIR)/"
 	@echo ""
-	@echo "Log files:"
-	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(SENDER_LOG_DIR)/*.log 2>/dev/null || echo "  No log files found"
+	@echo "1. Monitor the test progress on remote nodes (optional)"
+	@echo "   ssh <node> 'tail -f $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log'"
+	@echo ""
+	@echo "2. Wait for the test to complete"
+	@echo "   - Receivers will run for the configured duration (rx_duration)"
+	@echo "   - Sender will complete when all frames are sent"
+	@echo ""
+	@echo "3. Retrieve logs when ready:"
+	@echo "   make retrieve-logs"
+	@echo ""
+	@echo "========================================================================"
 	@echo ""
 
 tcpdump-commands:
