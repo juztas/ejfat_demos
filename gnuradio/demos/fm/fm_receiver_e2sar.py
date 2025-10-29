@@ -144,6 +144,7 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
         self.qtgui_freq_sink_x_0.set_fft_window_normalized(False)
 
+        self.qtgui_freq_sink_x_0.disable_legend()
 
 
         labels = ['', '', '', '', '',
@@ -189,6 +190,14 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
             min_factor=0.5,
             max_factor=2.0
         )
+        self.blocks_wavfile_sink_0 = blocks.wavfile_sink(
+            'fm_e2sar.wav',
+            2,
+            audio_rate,
+            blocks.FORMAT_WAV,
+            blocks.FORMAT_PCM_16,
+            False
+            )
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vlen)
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_ff(volume)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(volume)
@@ -206,7 +215,9 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
         self.connect((self.analog_wfm_rcv_pll_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.analog_wfm_rcv_pll_0, 1), (self.blocks_multiply_const_vxx_1, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_wavfile_sink_0, 0))
         self.connect((self.blocks_multiply_const_vxx_1, 0), (self.audio_sink_0, 1))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.blocks_wavfile_sink_0, 1))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_waterfall_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.rational_resampler_xxx_0, 0))

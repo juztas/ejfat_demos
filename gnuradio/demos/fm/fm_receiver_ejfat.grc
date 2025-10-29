@@ -148,10 +148,24 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
+    connected_socket: 'True'
+    cpu_cores: ''
+    data_id: '0'
+    dpv6: 'False'
+    ejfat_uri: ''
+    event_src_id: '0'
     filename: ejfat_file
     maxoutbuf: '0'
     minoutbuf: '0'
+    mtu: '1500'
+    num_send_sockets: '4'
+    rate_gbps: '-1.0'
     repeat: 'True'
+    snd_socket_buf_size: '3145728'
+    sync_period_ms: '1000'
+    sync_periods: '2'
+    use_cp: 'True'
+    use_ejfat: 'False'
   states:
     bus_sink: false
     bus_source: false
@@ -174,7 +188,7 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
+    autoscale: 'True'
     average: '1.0'
     axislabels: 'True'
     bw: samp_rate
@@ -206,7 +220,7 @@ blocks:
     label7: ''
     label8: ''
     label9: ''
-    legend: 'True'
+    legend: 'False'
     maxoutbuf: '0'
     minoutbuf: '0'
     name: '""'

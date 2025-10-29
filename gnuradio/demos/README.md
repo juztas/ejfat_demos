@@ -89,9 +89,44 @@ cd widget
 
 **Location:** `full_system/`
 
-Comprehensive Bluesky + GNU Radio integration with data broker and experiment plans.
+Production-ready Bluesky experiment framework for controlled experiments with GNU Radio and EJFAT.
 
-**Documentation:** See `full_system/README.md`
+**Features:**
+- Ophyd devices for hardware abstraction (GNU Radio via XML-RPC, mock devices)
+- Custom scan plans (frequency scans, characterization, adaptive scans, 2D grids)
+- Live callbacks for real-time feedback and data processing
+- Persistent data storage via DataBroker with full metadata capture
+- Analysis and visualization tools with multiple export formats (CSV, HDF5, Excel, JSON)
+
+**Quick start (no hardware required):**
+```bash
+cd full_system
+python scripts/cli/run_experiment.py mock_experiment
+python scripts/data_access/access_my_data.py
+```
+
+**With GNU Radio:**
+```bash
+# Terminal 1: Start GNU Radio flowgraph
+cd widget && python sine_wave_demo.py
+
+# Terminal 2: Run experiment
+cd ../full_system
+python scripts/cli/run_experiment.py frequency_characterization
+```
+
+**Key utilities:**
+```bash
+python scripts/cli/run_experiment.py list              # List experiments
+python scripts/data_access/retrieve_data.py --list     # View saved data
+python scripts/testing/test_all_experiments.py --all   # Run tests
+```
+
+**Documentation:**
+- Complete guide: `full_system/README.md`
+- Tutorial: `full_system/docs/tutorial/TUTORIAL_RUNNING_EXPERIMENTS.md`
+- Quick reference: `full_system/docs/user/QUICK_REFERENCE.md`
+- Data analysis: `full_system/docs/user/DATA_RETRIEVAL_AND_ANALYSIS_GUIDE.md`
 
 ---
 
@@ -117,6 +152,13 @@ cd e2sar_test
 ./test_e2sar_simple.py
 ```
 
+**For Bluesky experiments (no hardware required):**
+```bash
+cd full_system
+python scripts/cli/run_experiment.py mock_experiment
+python scripts/data_access/access_my_data.py
+```
+
 **For FM radio:**
 ```bash
 cd fm
@@ -133,6 +175,12 @@ gnuradio-companion ejfat_blocks_test.grc
 ```bash
 cd fm_bluesky
 ./run_ottawa_fm_quick_test.py
+```
+
+**For widget/parameter control:**
+```bash
+cd widget
+./run_bluesky_demo.py
 ```
 
 ## Prerequisites
@@ -218,6 +266,14 @@ cd fm_bluesky && ./run_ottawa_fm_quick_test.py
 ### Widget Control Demo
 ```bash
 cd widget && ./run_bluesky_demo.py
+```
+
+### Full System Experiments
+```bash
+cd full_system
+python scripts/cli/run_experiment.py mock_experiment        # No hardware test
+python scripts/data_access/access_my_data.py                # View latest data
+python scripts/data_access/retrieve_data.py --list          # List all runs
 ```
 
 ## Support

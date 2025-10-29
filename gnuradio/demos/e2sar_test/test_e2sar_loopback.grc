@@ -42,7 +42,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [288, 12.0]
+    coordinate: [288, 16.0]
     rotation: 0
     state: enabled
 - name: data_port
@@ -54,7 +54,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [400, 12.0]
+    coordinate: [400, 16.0]
     rotation: 0
     state: enabled
 - name: ejfat_uri
@@ -66,7 +66,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [512, 12.0]
+    coordinate: [512, 16.0]
     rotation: 0
     state: enabled
 - name: samp_rate
@@ -78,7 +78,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [184, 12]
+    coordinate: [184, 16.0]
     rotation: 0
     state: enabled
 - name: signal_freq
@@ -90,7 +90,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [752, 12.0]
+    coordinate: [648, 16.0]
     rotation: 0
     state: enabled
 - name: vector_size
@@ -102,7 +102,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [856, 12.0]
+    coordinate: [728, 16.0]
     rotation: 0
     state: enabled
 - name: analog_sig_source_x_0
@@ -110,14 +110,14 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    amp: '1.0'
+    amp: '0.5'
     comment: 'Generate 10 kHz test tone
 
       (cosine wave)'
     freq: signal_freq
     maxoutbuf: '0'
     minoutbuf: '0'
-    offset: '0'
+    offset: '0.5'
     phase: '0'
     samp_rate: samp_rate
     showports: 'False'
@@ -130,6 +130,38 @@ blocks:
     coordinate: [32, 212.0]
     rotation: 0
     state: true
+- name: blocks_complex_to_float_0
+  id: blocks_complex_to_float
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [528, 468.0]
+    rotation: 0
+    state: enabled
+- name: blocks_complex_to_float_0_0
+  id: blocks_complex_to_float
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [528, 532.0]
+    rotation: 0
+    state: enabled
 - name: blocks_stream_to_vector_0
   id: blocks_stream_to_vector
   parameters:
@@ -294,7 +326,7 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
+    autoscale: 'True'
     average: '1.0'
     axislabels: 'True'
     bw: samp_rate
@@ -377,13 +409,13 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
+    autoscale: 'True'
     axislabels: 'True'
     color1: blue
     color10: dark blue
-    color2: red
-    color3: green
-    color4: black
+    color2: green
+    color3: magenta
+    color4: red
     color5: cyan
     color6: magenta
     color7: yellow
@@ -396,11 +428,11 @@ blocks:
     entags: 'True'
     grid: 'True'
     gui_hint: ''
-    label1: I
+    label1: Transmit I
     label10: Signal 10
-    label2: Q
-    label3: Signal 3
-    label4: Signal 4
+    label2: Transmit Q
+    label3: Receive I
+    label4: Receive Q
     label5: Signal 5
     label6: Signal 6
     label7: Signal 7
@@ -418,7 +450,7 @@ blocks:
     marker8: '-1'
     marker9: '-1'
     name: '"Received Signal"'
-    nconnections: '2'
+    nconnections: '4'
     size: '8192'
     srate: samp_rate
     stemplot: 'False'
@@ -434,11 +466,11 @@ blocks:
     style9: '1'
     tr_chan: '0'
     tr_delay: '0'
-    tr_level: '0.0'
-    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_level: '0'
+    tr_mode: qtgui.TRIG_MODE_AUTO
     tr_slope: qtgui.TRIG_SLOPE_POS
     tr_tag: '""'
-    type: complex
+    type: float
     update_time: '0.10'
     width1: '1'
     width10: '1'
@@ -458,18 +490,22 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [528, 472.0]
+    coordinate: [680, 468.0]
     rotation: 0
     state: true
 
 connections:
 - [analog_sig_source_x_0, '0', blocks_throttle2_0, '0']
+- [blocks_complex_to_float_0, '0', qtgui_time_sink_x_0, '0']
+- [blocks_complex_to_float_0, '1', qtgui_time_sink_x_0, '1']
+- [blocks_complex_to_float_0_0, '0', qtgui_time_sink_x_0, '2']
+- [blocks_complex_to_float_0_0, '1', qtgui_time_sink_x_0, '3']
 - [blocks_stream_to_vector_0, '0', ejfat_e2sar_segmenter_sink_0, '0']
+- [blocks_throttle2_0, '0', blocks_complex_to_float_0, '0']
 - [blocks_throttle2_0, '0', blocks_stream_to_vector_0, '0']
 - [blocks_throttle2_0, '0', qtgui_freq_sink_x_0, '1']
-- [blocks_throttle2_0, '0', qtgui_time_sink_x_0, '1']
+- [blocks_vector_to_stream_0, '0', blocks_complex_to_float_0_0, '0']
 - [blocks_vector_to_stream_0, '0', qtgui_freq_sink_x_0, '0']
-- [blocks_vector_to_stream_0, '0', qtgui_time_sink_x_0, '0']
 - [ejfat_e2sar_reassembler_source_0, '0', blocks_vector_to_stream_0, '0']
 
 metadata:

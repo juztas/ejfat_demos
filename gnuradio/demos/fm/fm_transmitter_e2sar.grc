@@ -120,7 +120,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [720, 188.0]
+    coordinate: [688, 116.0]
     rotation: 0
     state: enabled
 - name: ejfat_e2sar_segmenter_sink_0
@@ -140,7 +140,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [928, 160.0]
+    coordinate: [856, 88.0]
     rotation: 0
     state: enabled
 - name: low_pass_filter_0
@@ -164,7 +164,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [496, 164.0]
+    coordinate: [464, 92.0]
     rotation: 0
     state: enabled
 - name: osmosdr_source_0
@@ -521,7 +521,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [64, 232.0]
+    coordinate: [32, 160.0]
     rotation: 0
     state: enabled
 - name: qtgui_freq_sink_x_0
@@ -602,7 +602,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [496, 276.0]
+    coordinate: [464, 204.0]
     rotation: 0
     state: enabled
 - name: qtgui_waterfall_sink_x_0
@@ -663,7 +663,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [496, 396.0]
+    coordinate: [464, 324.0]
     rotation: 0
     state: enabled
 - name: xmlrpc_server_0

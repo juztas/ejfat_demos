@@ -91,7 +91,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
                 fractional_bw=0)
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
             1024, #size
-            window.WIN_BLACKMAN_hARRIS, #wintype
+            window.WIN_HAMMING, #wintype
             freq, #fc
             samp_rate, #bw
             "", #name
@@ -104,7 +104,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
 
 
 
-        labels = ['', '', '', '', '',
+        labels = ['Pre Filter', '', '', '', '',
                   '', '', '', '', '']
         colors = [0, 0, 0, 0, 0,
                   0, 0, 0, 0, 0]
@@ -130,23 +130,24 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
             freq, #fc
             samp_rate, #bw
             "", #name
-            1,
+            2,
             None # parent
         )
         self.qtgui_freq_sink_x_0.set_update_time(0.10)
-        self.qtgui_freq_sink_x_0.set_y_axis((-140), 10)
+        self.qtgui_freq_sink_x_0.set_y_axis((-140), 0)
         self.qtgui_freq_sink_x_0.set_y_label('Relative Gain', 'dB')
         self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
-        self.qtgui_freq_sink_x_0.enable_autoscale(False)
-        self.qtgui_freq_sink_x_0.enable_grid(False)
-        self.qtgui_freq_sink_x_0.set_fft_average(1.0)
+        self.qtgui_freq_sink_x_0.enable_autoscale(True)
+        self.qtgui_freq_sink_x_0.enable_grid(True)
+        self.qtgui_freq_sink_x_0.set_fft_average(0.2)
         self.qtgui_freq_sink_x_0.enable_axis_labels(True)
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
         self.qtgui_freq_sink_x_0.set_fft_window_normalized(False)
 
+        self.qtgui_freq_sink_x_0.disable_legend()
 
 
-        labels = ['', '', '', '', '',
+        labels = ['Pre Filter', 'Post Filter', '', '', '',
             '', '', '', '', '']
         widths = [1, 1, 1, 1, 1,
             1, 1, 1, 1, 1]
@@ -155,7 +156,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
             1.0, 1.0, 1.0, 1.0, 1.0]
 
-        for i in range(1):
+        for i in range(2):
             if len(labels[i]) == 0:
                 self.qtgui_freq_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
@@ -186,10 +187,18 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
             firdes.low_pass(
                 1,
                 samp_rate,
-                75e3,
-                25e3,
-                window.WIN_HAMMING,
+                85e3,
+                10e3,
+                window.WIN_BLACKMAN,
                 6.76))
+        self.blocks_wavfile_sink_1 = blocks.wavfile_sink(
+            'fm_transceiver.wav',
+            2,
+            audio_rate,
+            blocks.FORMAT_WAV,
+            blocks.FORMAT_PCM_16,
+            False
+            )
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_ff(volume)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(volume)
         self.audio_sink_0 = audio.sink(audio_rate, '', True)
@@ -206,7 +215,10 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
         self.connect((self.analog_wfm_rcv_pll_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.analog_wfm_rcv_pll_0, 1), (self.blocks_multiply_const_vxx_1, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_wavfile_sink_1, 0))
         self.connect((self.blocks_multiply_const_vxx_1, 0), (self.audio_sink_0, 1))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.blocks_wavfile_sink_1, 1))
+        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_0, 1))
         self.connect((self.low_pass_filter_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.osmosdr_source_0, 0), (self.low_pass_filter_0, 0))
         self.connect((self.osmosdr_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
@@ -228,7 +240,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.set_channel_rate(self.samp_rate/5)
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 75e3, 25e3, window.WIN_HAMMING, 6.76))
+        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, 85e3, 10e3, window.WIN_BLACKMAN, 6.76))
         self.osmosdr_source_0.set_sample_rate(self.samp_rate)
         self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
         self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)

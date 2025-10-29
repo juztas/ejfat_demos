@@ -66,7 +66,7 @@ class fm_transmitter_ejfat(gr.top_block, Qt.QWidget):
         # Variables
         ##################################################
         self.samp_rate = samp_rate = 2400000
-        self.freq = freq = 98.5e6
+        self.freq = freq = 106.1e6
         self.ejfat_file = ejfat_file = "/tmp/fm_stream.bin"
 
         ##################################################
@@ -128,6 +128,7 @@ class fm_transmitter_ejfat(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
         self.qtgui_freq_sink_x_0.set_fft_window_normalized(False)
 
+        self.qtgui_freq_sink_x_0.disable_legend()
 
 
         labels = ['', '', '', '', '',

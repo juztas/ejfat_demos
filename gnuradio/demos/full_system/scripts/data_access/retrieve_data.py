@@ -224,7 +224,7 @@ def list_saved_runs(doc_dir='data/documents'):
                 purpose = start.get('purpose', 'N/A')
                 operator = start.get('operator', 'N/A')
 
-                print(f"[{scan_id:3s}] {uid} | {plan:20s} | {operator:10s} | {doc_file.name}")
+                print(f"[{scan_id:3}] {uid} | {plan:20s} | {operator:10s} | {doc_file.name}")
 
                 runs.append({
                     'file': doc_file,

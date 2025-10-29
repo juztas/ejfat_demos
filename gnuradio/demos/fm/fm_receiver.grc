@@ -54,7 +54,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [344, 88.0]
+    coordinate: [328, 16.0]
     rotation: 0
     state: enabled
 - name: channel_width
@@ -120,7 +120,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [608, 12.0]
+    coordinate: [824, 12.0]
     rotation: 0
     state: enabled
 - name: analog_wfm_rcv_pll_0
@@ -133,9 +133,9 @@ blocks:
 
       Outputs: 0=Left, 1=Right'
     deemph_tau: 75e-6
-    quad_rate: channel_rate
     maxoutbuf: '0'
     minoutbuf: '0'
+    quad_rate: channel_rate
   states:
     bus_sink: false
     bus_source: false
@@ -157,7 +157,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1184, 164.0]
+    coordinate: [1016, 92.0]
     rotation: 0
     state: enabled
 - name: blocks_multiply_const_vxx_0
@@ -175,7 +175,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1008, 156.0]
+    coordinate: [824, 148.0]
     rotation: 0
     state: enabled
 - name: blocks_multiply_const_vxx_1
@@ -193,7 +193,29 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1008, 204.0]
+    coordinate: [824, 196.0]
+    rotation: 0
+    state: enabled
+- name: blocks_wavfile_sink_1
+  id: blocks_wavfile_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    append: 'False'
+    bits_per_sample1: FORMAT_PCM_16
+    bits_per_sample2: FORMAT_PCM_16
+    bits_per_sample3: FORMAT_VORBIS
+    bits_per_sample4: FORMAT_PCM_16
+    comment: ''
+    file: fm_transceiver.wav
+    format: FORMAT_WAV
+    nchan: '2'
+    samp_rate: audio_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1016, 216.0]
     rotation: 0
     state: enabled
 - name: low_pass_filter_0
@@ -203,7 +225,7 @@ blocks:
     alias: ''
     beta: '6.76'
     comment: Channel Filter
-    cutoff_freq: 75e3
+    cutoff_freq: 85e3
     decim: '1'
     gain: '1'
     interp: '1'
@@ -211,8 +233,8 @@ blocks:
     minoutbuf: '0'
     samp_rate: samp_rate
     type: fir_filter_ccf
-    width: 25e3
-    win: window.WIN_HAMMING
+    width: 10e3
+    win: window.WIN_BLACKMAN
   states:
     bus_sink: false
     bus_source: false
@@ -592,8 +614,8 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
-    average: '1.0'
+    autoscale: 'True'
+    average: '0.2'
     axislabels: 'True'
     bw: samp_rate
     color1: '"blue"'
@@ -611,12 +633,12 @@ blocks:
     fc: freq
     fftsize: '1024'
     freqhalf: 'True'
-    grid: 'False'
+    grid: 'True'
     gui_hint: ''
     label: Relative Gain
-    label1: ''
+    label1: Pre Filter
     label10: ''
-    label2: ''
+    label2: Post Filter
     label3: ''
     label4: ''
     label5: ''
@@ -624,11 +646,11 @@ blocks:
     label7: ''
     label8: ''
     label9: ''
-    legend: 'True'
+    legend: 'False'
     maxoutbuf: '0'
     minoutbuf: '0'
     name: '""'
-    nconnections: '1'
+    nconnections: '2'
     norm_window: 'False'
     showports: 'True'
     tr_chan: '0'
@@ -649,13 +671,13 @@ blocks:
     width8: '1'
     width9: '1'
     wintype: window.WIN_BLACKMAN_hARRIS
-    ymax: '10'
+    ymax: '0'
     ymin: '-140'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [288, 284.0]
+    coordinate: [456, 284.0]
     rotation: 0
     state: enabled
 - name: qtgui_waterfall_sink_x_0
@@ -693,7 +715,7 @@ blocks:
     gui_hint: ''
     int_max: '10'
     int_min: '-140'
-    label1: ''
+    label1: Pre Filter
     label10: ''
     label2: ''
     label3: ''
@@ -711,12 +733,12 @@ blocks:
     showports: 'True'
     type: complex
     update_time: '0.10'
-    wintype: window.WIN_BLACKMAN_hARRIS
+    wintype: window.WIN_HAMMING
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [288, 420.0]
+    coordinate: [288, 436.0]
     rotation: 0
     state: enabled
 - name: rational_resampler_xxx_0
@@ -744,7 +766,10 @@ connections:
 - [analog_wfm_rcv_pll_0, '0', blocks_multiply_const_vxx_0, '0']
 - [analog_wfm_rcv_pll_0, '1', blocks_multiply_const_vxx_1, '0']
 - [blocks_multiply_const_vxx_0, '0', audio_sink_0, '0']
+- [blocks_multiply_const_vxx_0, '0', blocks_wavfile_sink_1, '0']
 - [blocks_multiply_const_vxx_1, '0', audio_sink_0, '1']
+- [blocks_multiply_const_vxx_1, '0', blocks_wavfile_sink_1, '1']
+- [low_pass_filter_0, '0', qtgui_freq_sink_x_0, '1']
 - [low_pass_filter_0, '0', rational_resampler_xxx_0, '0']
 - [osmosdr_source_0, '0', low_pass_filter_0, '0']
 - [osmosdr_source_0, '0', qtgui_freq_sink_x_0, '0']

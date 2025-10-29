@@ -137,13 +137,14 @@ class fm_receiver_ejfat(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0.set_y_axis((-140), 10)
         self.qtgui_freq_sink_x_0.set_y_label('Relative Gain', 'dB')
         self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
-        self.qtgui_freq_sink_x_0.enable_autoscale(False)
+        self.qtgui_freq_sink_x_0.enable_autoscale(True)
         self.qtgui_freq_sink_x_0.enable_grid(False)
         self.qtgui_freq_sink_x_0.set_fft_average(1.0)
         self.qtgui_freq_sink_x_0.enable_axis_labels(True)
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
         self.qtgui_freq_sink_x_0.set_fft_window_normalized(False)
 
+        self.qtgui_freq_sink_x_0.disable_legend()
 
 
         labels = ['', '', '', '', '',
@@ -166,7 +167,24 @@ class fm_receiver_ejfat(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.ejfat_ejfat_source = ejfat.ejfat_source(filename=ejfat_file, repeat=True)
+        self.ejfat_ejfat_source = ejfat.ejfat_source(
+            filename=ejfat_file,
+            repeat=True,
+            use_ejfat=False,
+            ejfat_uri='',
+            data_id=0,
+            event_src_id=0,
+            cpu_cores='',
+            dpv6=False,
+            connected_socket=True,
+            use_cp=True,
+            sync_period_ms=1000,
+            sync_periods=2,
+            mtu=1500,
+            num_send_sockets=4,
+            snd_socket_buf_size=3145728,
+            rate_gbps=-1.0
+        )
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(volume)
         self.audio_sink_0 = audio.sink(audio_rate, '', True)
         self.analog_wfm_rcv_0 = analog.wfm_rcv(

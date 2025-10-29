@@ -75,11 +75,11 @@ class test_e2sar_loopback(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self.qtgui_time_sink_x_0 = qtgui.time_sink_c(
+        self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
             8192, #size
             samp_rate, #samp_rate
             "Received Signal", #name
-            2, #number of inputs
+            4, #number of inputs
             None # parent
         )
         self.qtgui_time_sink_x_0.set_update_time(0.10)
@@ -88,19 +88,19 @@ class test_e2sar_loopback(gr.top_block, Qt.QWidget):
         self.qtgui_time_sink_x_0.set_y_label('Amplitude', "")
 
         self.qtgui_time_sink_x_0.enable_tags(True)
-        self.qtgui_time_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, "")
-        self.qtgui_time_sink_x_0.enable_autoscale(False)
+        self.qtgui_time_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_AUTO, qtgui.TRIG_SLOPE_POS, 0, 0, 0, "")
+        self.qtgui_time_sink_x_0.enable_autoscale(True)
         self.qtgui_time_sink_x_0.enable_grid(True)
         self.qtgui_time_sink_x_0.enable_axis_labels(True)
         self.qtgui_time_sink_x_0.enable_control_panel(False)
         self.qtgui_time_sink_x_0.enable_stem_plot(False)
 
 
-        labels = ['I', 'Q', 'Signal 3', 'Signal 4', 'Signal 5',
+        labels = ['Transmit I', 'Transmit Q', 'Receive I', 'Receive Q', 'Signal 5',
             'Signal 6', 'Signal 7', 'Signal 8', 'Signal 9', 'Signal 10']
         widths = [1, 1, 1, 1, 1,
             1, 1, 1, 1, 1]
-        colors = ['blue', 'red', 'green', 'black', 'cyan',
+        colors = ['blue', 'green', 'magenta', 'red', 'cyan',
             'magenta', 'yellow', 'dark red', 'dark green', 'dark blue']
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
             1.0, 1.0, 1.0, 1.0, 1.0]
@@ -112,10 +112,7 @@ class test_e2sar_loopback(gr.top_block, Qt.QWidget):
 
         for i in range(4):
             if len(labels[i]) == 0:
-                if (i % 2 == 0):
-                    self.qtgui_time_sink_x_0.set_line_label(i, "Re{{Data {0}}}".format(i/2))
-                else:
-                    self.qtgui_time_sink_x_0.set_line_label(i, "Im{{Data {0}}}".format(i/2))
+                self.qtgui_time_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
                 self.qtgui_time_sink_x_0.set_line_label(i, labels[i])
             self.qtgui_time_sink_x_0.set_line_width(i, widths[i])
@@ -139,7 +136,7 @@ class test_e2sar_loopback(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0.set_y_axis((-140), 10)
         self.qtgui_freq_sink_x_0.set_y_label('Relative Gain', 'dB')
         self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
-        self.qtgui_freq_sink_x_0.enable_autoscale(False)
+        self.qtgui_freq_sink_x_0.enable_autoscale(True)
         self.qtgui_freq_sink_x_0.enable_grid(True)
         self.qtgui_freq_sink_x_0.set_fft_average(1.0)
         self.qtgui_freq_sink_x_0.enable_axis_labels(True)
@@ -195,19 +192,25 @@ class test_e2sar_loopback(gr.top_block, Qt.QWidget):
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vector_size)
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
         self.blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, vector_size)
-        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_COS_WAVE, signal_freq, 1.0, 0, 0)
+        self.blocks_complex_to_float_0_0 = blocks.complex_to_float(1)
+        self.blocks_complex_to_float_0 = blocks.complex_to_float(1)
+        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_COS_WAVE, signal_freq, 0.5, 0.5, 0)
 
 
         ##################################################
         # Connections
         ##################################################
         self.connect((self.analog_sig_source_x_0, 0), (self.blocks_throttle2_0, 0))
+        self.connect((self.blocks_complex_to_float_0, 1), (self.qtgui_time_sink_x_0, 1))
+        self.connect((self.blocks_complex_to_float_0, 0), (self.qtgui_time_sink_x_0, 0))
+        self.connect((self.blocks_complex_to_float_0_0, 1), (self.qtgui_time_sink_x_0, 3))
+        self.connect((self.blocks_complex_to_float_0_0, 0), (self.qtgui_time_sink_x_0, 2))
         self.connect((self.blocks_stream_to_vector_0, 0), (self.ejfat_e2sar_segmenter_sink_0, 0))
+        self.connect((self.blocks_throttle2_0, 0), (self.blocks_complex_to_float_0, 0))
         self.connect((self.blocks_throttle2_0, 0), (self.blocks_stream_to_vector_0, 0))
         self.connect((self.blocks_throttle2_0, 0), (self.qtgui_freq_sink_x_0, 1))
-        self.connect((self.blocks_throttle2_0, 0), (self.qtgui_time_sink_x_0, 1))
+        self.connect((self.blocks_vector_to_stream_0, 0), (self.blocks_complex_to_float_0_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_freq_sink_x_0, 0))
-        self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_time_sink_x_0, 0))
         self.connect((self.ejfat_e2sar_reassembler_source_0, 0), (self.blocks_vector_to_stream_0, 0))
 
 
