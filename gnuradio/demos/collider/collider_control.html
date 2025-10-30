@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Collider Remote Control</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .control-group {
+            margin-bottom: 40px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .control-values {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .noUi-target {
+            height: 10px;
+            border-radius: 5px;
+        }
+
+        .noUi-connect {
+            background: #667eea;
+        }
+
+        .noUi-handle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            top: -8px;
+            right: -12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .noUi-handle:before,
+        .noUi-handle:after {
+            display: none;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-pause {
+            background: #ffd93d;
+            color: #333;
+        }
+
+        .btn-pause:hover {
+            background: #ffc107;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-reset {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #ee5a52;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(238, 90, 82, 0.4);
+        }
+
+        .btn-refresh {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .connection-status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Particle Collider Control</h1>
+        <p class="subtitle">Remote XML-RPC Interface</p>
+
+        <div class="status-panel">
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Time Elapsed</span>
+                    <span class="status-value" id="timeElapsed">0.0s</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Total Particles</span>
+                    <span class="status-value" id="totalParticles">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Active Particles</span>
+                    <span class="status-value" id="activeParticles">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Status</span>
+                    <span class="status-value" id="pausedStatus">Running</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">
+                <span>Speed Range</span>
+                <span class="control-values" id="speedRangeValue">0.50 - 1.00</span>
+            </div>
+            <div id="speedRange"></div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">
+                <span>Interval Range (seconds)</span>
+                <span class="control-values" id="intervalRangeValue">0.5 - 1.0</span>
+            </div>
+            <div id="intervalRange"></div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-pause" id="pauseBtn" onclick="togglePause()">Pause</button>
+            <button class="btn-reset" onclick="resetSimulation()">Reset</button>
+            <button class="btn-refresh" onclick="refreshStatus()">Refresh</button>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="connection-status disconnected" id="connectionStatus">
+            Connecting to server...
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
+    <script>
+        const RPC_URL = 'http://localhost:8000';
+        let isPaused = false;
+        let updateInterval;
+        let speedSlider, intervalSlider;
+
+        // Track when user is actively manipulating sliders
+        let speedSliderActive = false;
+        let intervalSliderActive = false;
+        let lastSpeedChange = 0;
+        let lastIntervalChange = 0;
+        const SLIDER_COOLDOWN = 2000; // Don't auto-update for 2 seconds after user interaction
+
+        // Initialize range sliders
+        function initSliders() {
+            const speedRangeEl = document.getElementById('speedRange');
+            speedSlider = noUiSlider.create(speedRangeEl, {
+                start: [0.5, 1.0],
+                connect: true,
+                range: {
+                    'min': 0.1,
+                    'max': 1.5
+                },
+                step: 0.05,
+                tooltips: [true, true],
+                format: {
+                    to: function(value) { return value.toFixed(2); },
+                    from: function(value) { return Number(value); }
+                }
+            });
+
+            speedSlider.on('start', function() {
+                speedSliderActive = true;
+            });
+
+            speedSlider.on('end', function() {
+                speedSliderActive = false;
+            });
+
+            speedSlider.on('change', function(values) {
+                lastSpeedChange = Date.now();
+                setSpeedMin(parseFloat(values[0]));
+                setSpeedMax(parseFloat(values[1]));
+            });
+
+            speedSlider.on('update', function(values) {
+                document.getElementById('speedRangeValue').textContent =
+                    `${parseFloat(values[0]).toFixed(2)} - ${parseFloat(values[1]).toFixed(2)}`;
+            });
+
+            const intervalRangeEl = document.getElementById('intervalRange');
+            intervalSlider = noUiSlider.create(intervalRangeEl, {
+                start: [0.5, 1.0],
+                connect: true,
+                range: {
+                    'min': 0.1,
+                    'max': 2.0
+                },
+                step: 0.1,
+                tooltips: [true, true],
+                format: {
+                    to: function(value) { return value.toFixed(1); },
+                    from: function(value) { return Number(value); }
+                }
+            });
+
+            intervalSlider.on('start', function() {
+                intervalSliderActive = true;
+            });
+
+            intervalSlider.on('end', function() {
+                intervalSliderActive = false;
+            });
+
+            intervalSlider.on('change', function(values) {
+                lastIntervalChange = Date.now();
+                setIntervalMin(parseFloat(values[0]));
+                setIntervalMax(parseFloat(values[1]));
+            });
+
+            intervalSlider.on('update', function(values) {
+                document.getElementById('intervalRangeValue').textContent =
+                    `${parseFloat(values[0]).toFixed(1)} - ${parseFloat(values[1]).toFixed(1)}`;
+            });
+        }
+
+        // XML-RPC call helper
+        async function xmlrpcCall(method, params = []) {
+            const xmlRequest = `<?xml version="1.0"?>
+<methodCall>
+    <methodName>${method}</methodName>
+    <params>
+        ${params.map(p => `<param><value><double>${p}</double></value></param>`).join('')}
+    </params>
+</methodCall>`;
+
+            try {
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/xml' },
+                    body: xmlRequest
+                });
+
+                const text = await response.text();
+                return parseXMLRPCResponse(text);
+            } catch (error) {
+                console.error('RPC Error:', error);
+                showMessage('Connection error: ' + error.message, 'error');
+                updateConnectionStatus(false);
+                return null;
+            }
+        }
+
+        // Simple XML-RPC response parser
+        function parseXMLRPCResponse(xml) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xml, 'text/xml');
+
+            const fault = doc.querySelector('fault');
+            if (fault) throw new Error('RPC Fault');
+
+            const struct = doc.querySelector('struct');
+            if (struct) {
+                const result = {};
+                const members = struct.querySelectorAll('member');
+                members.forEach(member => {
+                    const name = member.querySelector('name').textContent;
+                    const value = member.querySelector('value');
+
+                    const intVal = value.querySelector('int, i4');
+                    const doubleVal = value.querySelector('double');
+                    const stringVal = value.querySelector('string');
+                    const boolVal = value.querySelector('boolean');
+                    const structVal = value.querySelector('struct');
+
+                    if (intVal) {
+                        result[name] = parseInt(intVal.textContent);
+                    } else if (doubleVal) {
+                        result[name] = parseFloat(doubleVal.textContent);
+                    } else if (stringVal) {
+                        result[name] = stringVal.textContent;
+                    } else if (boolVal) {
+                        result[name] = boolVal.textContent === '1';
+                    } else if (structVal) {
+                        result[name] = parseXMLRPCResponse(value.outerHTML);
+                    }
+                });
+                return result;
+            }
+
+            return null;
+        }
+
+        // Update status display
+        async function updateStatus() {
+            const status = await xmlrpcCall('get_status');
+            if (status) {
+                updateConnectionStatus(true);
+                document.getElementById('timeElapsed').textContent = status.time_elapsed.toFixed(1) + 's';
+                document.getElementById('totalParticles').textContent = status.particle_count;
+                document.getElementById('activeParticles').textContent = status.active_particles;
+                document.getElementById('pausedStatus').textContent = status.paused ? 'Paused' : 'Running';
+
+                isPaused = status.paused;
+                document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
+
+                // Only update sliders if user isn't actively manipulating them
+                const now = Date.now();
+
+                // Update speed slider only if not active and cooldown expired
+                if (!speedSliderActive && (now - lastSpeedChange) > SLIDER_COOLDOWN) {
+                    speedSlider.set([status.speed_min, status.speed_max]);
+                }
+
+                // Update interval slider only if not active and cooldown expired
+                if (!intervalSliderActive && (now - lastIntervalChange) > SLIDER_COOLDOWN) {
+                    intervalSlider.set([status.interval_min, status.interval_max]);
+                }
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.textContent = '✓ Connected to Collider';
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.textContent = '✗ Disconnected from Server';
+            }
+        }
+
+        function showMessage(msg, type = 'success') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = msg;
+            msgEl.className = 'message ' + type;
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Control functions
+        async function setSpeedMin(value) {
+            await xmlrpcCall('set_speed_min', [parseFloat(value)]);
+        }
+
+        async function setSpeedMax(value) {
+            await xmlrpcCall('set_speed_max', [parseFloat(value)]);
+        }
+
+        async function setIntervalMin(value) {
+            await xmlrpcCall('set_interval_min', [parseFloat(value)]);
+        }
+
+        async function setIntervalMax(value) {
+            await xmlrpcCall('set_interval_max', [parseFloat(value)]);
+        }
+
+        async function togglePause() {
+            const method = isPaused ? 'resume' : 'pause';
+            const result = await xmlrpcCall(method);
+            if (result && result.success) {
+                isPaused = result.paused;
+                document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
+                showMessage(isPaused ? 'Simulation paused' : 'Simulation resumed');
+                updateStatus();
+            }
+        }
+
+        async function resetSimulation() {
+            const result = await xmlrpcCall('reset');
+            if (result && result.success) {
+                showMessage('Simulation reset');
+                updateStatus();
+            }
+        }
+
+        async function refreshStatus() {
+            await updateStatus();
+            showMessage('Status refreshed');
+        }
+
+        // Initialize
+        initSliders();
+        updateStatus();
+        updateInterval = setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

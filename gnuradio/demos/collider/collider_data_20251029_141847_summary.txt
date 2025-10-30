@@ -1,0 +1,25 @@
+Particle Collider Simulation Summary
+==================================================
+
+Simulation Start: 2025-10-29T14:18:47.129611
+Simulation End: 2025-10-29T14:56:46.277247
+Total Time: 1267.20 seconds
+Total Particles: 2318
+
+Speed Statistics:
+  Mean: 0.865
+  Std:  0.193
+  Min:  0.500
+  Max:  1.250
+
+Deflection Angle Statistics (degrees):
+  Mean: -0.70
+  Std:  156.43
+  Min:  -269.29
+  Max:  269.52
+
+Particle Lifetime Statistics (seconds):
+  Mean: 2.239
+  Std:  0.761
+  Min:  1.150
+  Max:  5.250

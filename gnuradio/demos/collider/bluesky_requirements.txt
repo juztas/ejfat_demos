@@ -1,0 +1,20 @@
+# Bluesky Control Framework Requirements
+# For automated data acquisition and parameter scans
+
+# Core Bluesky packages
+bluesky>=1.10.0
+ophyd>=1.7.0
+
+# Data persistence
+databroker>=1.2.0
+
+# Visualization (already required by particle_collider.py)
+matplotlib>=3.0.0
+
+# Data analysis
+numpy>=1.20.0
+pandas>=1.3.0
+
+# Optional: For advanced features
+# bluesky-widgets>=0.0.9  # GUI widgets
+# bluesky-queueserver>=0.0.18  # Queue server for remote execution

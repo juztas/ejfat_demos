@@ -1,0 +1,25 @@
+Welcome to the Particle Collider Simulation!
+
+This demonstration models particle collisions and detection with real-time visualization, remote control capabilities, and comprehensive data logging.
+
+On the left, you'll see the main collider visualization. The red cross at the center is our collision target at the origin. The green dot on the left is our particle injection point at negative-one, zero. Every half-second to one second, we fire a new particle toward the center.
+
+Particles travel with randomized speeds between point-five and one-point-zero units per second. When they reach the origin, they scatter at random angles within the pink wedge, spanning from 135 degrees to negative 135 degrees clockwise. The exit velocity is proportional to incoming speed, just like real physics.
+
+Surrounding the collision area is a light green ring, our calorimeter detector. It's divided into 64 equal angular segments by thin radial lines. When particles reach the calorimeter, they stop and fade out. The simulation tracks which segment each particle hits and increments its counter.
+
+On the right is a horizontal bar chart showing real-time hit distribution across all 64 segments. As particles hit segments, their corresponding bars grow longer, letting you see scattering patterns instantly.
+
+At the bottom are two dual-handle range sliders. The first controls particle speed range, the second controls injection interval. Below are three buttons: Pause, Reset, and Save for exporting statistics.
+
+The simulation runs an XML-RPC server on port 8000, enabling remote control from Python scripts or web browsers. Open localhost colon 8001 slash collider underscore control dot html to see a web interface with the same controls.
+
+Everything stays synchronized bidirectionally. Move a slider in the web interface, and the matplotlib window updates automatically, and vice versa. Smart conflict resolution prevents the auto-refresh from interfering when you're actively dragging a slider.
+
+Every particle is logged with injection time, speed, deflection angle, calorimeter segment, and lifetime. Data exports to three files: a CSV for analysis, a JSON with summary statistics, and a human-readable text summary.
+
+The architecture demonstrates advanced concepts: matplotlib visualization with custom range sliders, threaded XML-RPC server for concurrent control, CORS headers for browser access, NumPy arrays for segment tracking, and modular classes for each component.
+
+A complete particle collider simulation with 64-segment calorimeter detection, synchronized local and remote control, and comprehensive logging. All built in Python.
+
+Thank you for watching, and happy colliding!
