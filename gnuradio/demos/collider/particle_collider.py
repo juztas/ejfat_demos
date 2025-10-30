@@ -854,9 +854,9 @@ class ColliderVisualizer:
 
         # Create time axis for 1000 samples
         # In trigger mode: 1000 samples at 10 kHz = 100 ms
-        # In free-running mode: 20 samples at 20 Hz = 1000 ms = 1 second
+        # In free-running mode: 5 samples at 5 Hz = 1000 ms = 1 second
         self.sparkline_time = np.arange(1000) / 10000 * 1000  # milliseconds (for trigger mode)
-        self.sparkline_time_freerun = np.arange(self.collider.calorimeter_daq.free_running_display_samples) * 50  # milliseconds (for free-running: 20 Hz = 50ms per sample)
+        self.sparkline_time_freerun = np.arange(self.collider.calorimeter_daq.free_running_display_samples) * 200  # milliseconds (for free-running: 5 Hz = 200ms per sample)
 
         # Vertical spacing between traces
         self.trace_offset = 1.5
@@ -1031,8 +1031,8 @@ class ColliderVisualizer:
         # val is in seconds, convert to milliseconds
         self.time_span = val * 1000.0
 
-        # Calculate required buffer size for this time span at 20 Hz
-        num_samples = int(self.time_span / 50)  # 50ms per sample at 20 Hz
+        # Calculate required buffer size for this time span at 5 Hz
+        num_samples = int(self.time_span / 200)  # 200ms per sample at 5 Hz
         self.collider.calorimeter_daq.free_running_display_samples = num_samples
 
         # Resize free-running buffer
@@ -1043,7 +1043,7 @@ class ColliderVisualizer:
         self.collider.calorimeter_daq.free_running_sample_count = 0
 
         # Update time axis for new buffer size
-        self.sparkline_time_freerun = np.arange(num_samples) * 50
+        self.sparkline_time_freerun = np.arange(num_samples) * 200
 
         # Update x-axis limits
         label_offset = self.time_span * 0.02  # 2% of span for labels
@@ -1059,8 +1059,8 @@ class ColliderVisualizer:
             # Set default time span to 50 seconds for free-running
             self.time_span = 50000.0  # 50 seconds
 
-            # Calculate required buffer size for this time span at 20 Hz
-            num_samples = int(self.time_span / 50)  # 50ms per sample at 20 Hz
+            # Calculate required buffer size for this time span at 5 Hz
+            num_samples = int(self.time_span / 200)  # 200ms per sample at 5 Hz
             self.collider.calorimeter_daq.free_running_display_samples = num_samples
 
             # Reset free-running buffer with new size (clears old data)
@@ -1072,7 +1072,7 @@ class ColliderVisualizer:
             self.collider.calorimeter_daq.free_running_sample_count = self.collider.calorimeter_daq.free_running_decimation - 1
 
             # Update time axis for new buffer size
-            self.sparkline_time_freerun = np.arange(num_samples) * 50
+            self.sparkline_time_freerun = np.arange(num_samples) * 200
 
             # Immediately clear all sparkline displays to show baseline
             for ch in range(64):
@@ -1094,7 +1094,7 @@ class ColliderVisualizer:
             )
             self.slider_timespan.on_changed(self.update_timespan_freerun)
 
-            print(f"Oscilloscope mode: Free Running (20 Hz update, {self.time_span/1000:.1f}s display)")
+            print(f"Oscilloscope mode: Free Running (5 Hz update, {self.time_span/1000:.1f}s display)")
         else:
             self.button_scope_mode.label.set_text('Trigger Mode')
             # Re-arm all triggers and clear old data

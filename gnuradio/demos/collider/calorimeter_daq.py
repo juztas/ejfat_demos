@@ -103,8 +103,8 @@ class CalorimeterDAQ:
 
         # Free-running mode (continuous display)
         self.free_running = False
-        self.free_running_decimation = 500  # Display at 20 Hz (10000/500)
-        self.free_running_display_samples = 20  # Show 1 second of data at 20 Hz
+        self.free_running_decimation = 2000  # Display at 5 Hz (10000/2000)
+        self.free_running_display_samples = 5  # Show 1 second of data at 5 Hz
         self.free_running_buffer = np.zeros((num_channels, self.free_running_display_samples), dtype=np.float32)
         self.free_running_sample_count = 0
 
@@ -275,7 +275,7 @@ class CalorimeterDAQ:
                             self.trigger_has_data[ch] = True
             else:
                 # Free-running mode - continuously update buffer
-                # Decimate to 20 Hz (every 500th sample)
+                # Decimate to 5 Hz (every 2000th sample)
                 if self.free_running_sample_count % self.free_running_decimation == 0:
                     # Shift buffer right and add new sample at left (newest data at time=0)
                     self.free_running_buffer[:, 1:] = self.free_running_buffer[:, :-1]
