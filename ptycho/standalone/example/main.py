@@ -17,7 +17,12 @@ dataset_path = os.getenv("DATAPATH", os.path.join(basedir, os.path.basename(data
 savefile_path = os.getenv("SAVEPATH", dataset_path.replace(".stxm", "") + ".mat")
 cxi_path = os.getenv("CXIPATH", dataset_path.replace(".stxm", "") + ".cxi")
 
-n_iterations = os.getenv("N_ITERATIONS", 20)
+if os.getenv("PRECREATE_DIRS", "0") == "1":
+    os.makedirs(os.path.dirname(dataset_path), exist_ok=True)
+    os.makedirs(os.path.dirname(savefile_path), exist_ok=True)
+    os.makedirs(os.path.dirname(cxi_path), exist_ok=True)
+
+n_iterations = int(os.getenv("N_ITERATIONS", "20"))
 
 def download_file(url, save_path):
     try:
@@ -99,3 +104,12 @@ if __name__ == "__main__":
 
     ##The results can only be shown after they are gathered, otherwise this will fail.
     show_results(loadmat(savefile_path), basedir, n=440)
+
+
+# Once everything finishes, check if cleanup was requested
+if os.getenv("CLEANUP", "0") == "1":
+    print("Cleaning up downloaded and generated files...")
+    if os.path.exists(dataset_path):
+        os.remove(dataset_path)
+    if os.path.exists(cxi_path):
+        os.remove(cxi_path)

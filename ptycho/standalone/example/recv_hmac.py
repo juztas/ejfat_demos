@@ -28,8 +28,12 @@ basedir = os.getenv("WORKDIR", "/data")
 dataset_path = os.getenv("DATAPATH", os.path.join(basedir, "streamed_dataset.stxm"))
 savefile_path = os.getenv("SAVEPATH", dataset_path.replace(".stxm", "") + ".mat")
 cxi_path = os.getenv("CXIPATH", dataset_path.replace(".stxm", "") + ".cxi")
-n_iterations = os.getenv("N_ITERATIONS", 20)
+n_iterations = int(os.getenv("N_ITERATIONS", "20"))
 
+if os.getenv("PRECREATE_DIRS", "0") == "1":
+    os.makedirs(os.path.dirname(dataset_path), exist_ok=True)
+    os.makedirs(os.path.dirname(savefile_path), exist_ok=True)
+    os.makedirs(os.path.dirname(cxi_path), exist_ok=True)
 
 DP_IPV4_ADDR = os.environ.get("DP_ADDR", "127.0.0.1")
 DP_IPV4_PORT = os.environ.get("DP_PORT", 19522)
