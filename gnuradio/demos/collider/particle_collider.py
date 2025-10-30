@@ -24,6 +24,9 @@ import os
 from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 import threading
 
+# DAQ system
+from calorimeter_daq import CalorimeterDAQ
+
 
 class Particle:
     """Represents a single particle in the collider"""
@@ -332,6 +335,15 @@ class ParticleCollider:
         # Pixel detector tracking
         self.recent_pixel_hits = deque(maxlen=5)  # Keep last 5 pixel hits
 
+        # Initialize Calorimeter DAQ
+        self.calorimeter_daq = CalorimeterDAQ(
+            sample_rate=10000,
+            num_channels=self.num_calorimeter_segments,
+            buffer_duration=10.0,
+            noise_floor_db=-80,
+            filter_cutoff_fraction=0.1
+        )
+
     def _random_interval(self):
         """Generate random injection interval"""
         return np.random.uniform(self.interval_min, self.interval_max)
@@ -381,6 +393,14 @@ class ParticleCollider:
                 # Increment the count for this segment
                 self.calorimeter_counts[particle.calorimeter_segment] += 1
 
+                # Inject pulse into DAQ
+                # Amplitude proportional to particle speed
+                self.calorimeter_daq.inject_pulse(
+                    channel=particle.calorimeter_segment,
+                    time=particle.calorimeter_hit_time,
+                    amplitude=particle.speed
+                )
+
         # Log and remove inactive particles (keep last 20 for visualization)
         active_particles = [p for p in self.particles if p.active]
         inactive_particles = [p for p in self.particles if not p.active]
@@ -401,6 +421,9 @@ class ParticleCollider:
 
         self.particles = active_particles + inactive_particles
 
+        # Update DAQ
+        self.calorimeter_daq.update(dt)
+
     def reset(self):
         """Reset the simulation"""
         self.particles = []
@@ -412,6 +435,7 @@ class ParticleCollider:
         self.recent_pixel_hits.clear()
         if hasattr(self, '_logged_particles'):
             self._logged_particles.clear()
+        self.calorimeter_daq.reset()
         print("Simulation reset")
 
 
@@ -630,15 +654,24 @@ class ColliderVisualizer:
         self.collider = collider
         self.fig = plt.figure(figsize=(14, 10))
 
-        # Create main plot area (collider visualization)
-        self.ax = plt.axes([0.08, 0.30, 0.50, 0.65])
+        # Create bar chart area (calorimeter histogram) - leftmost
+        self.ax_hist = plt.axes([0.02, 0.30, 0.13, 0.65])
 
-        # Create bar chart area (calorimeter histogram)
-        self.ax_hist = plt.axes([0.65, 0.30, 0.32, 0.65])
+        # Create main plot area (collider visualization) - center
+        self.ax = plt.axes([0.20, 0.30, 0.50, 0.65])
+
+        # Create DAQ waterfall display area - rightmost
+        self.ax_daq = plt.axes([0.75, 0.30, 0.22, 0.65])
 
         self.setup_plot()
         self.setup_histogram()
+        self.setup_daq_display()
         self.setup_controls()
+
+        # Create separate figure for sparklines (oscilloscope traces)
+        self.fig_sparklines = plt.figure(figsize=(16, 12))
+        self.fig_sparklines.suptitle('Calorimeter DAQ Channels (0-63)', fontsize=14)
+        self.setup_sparklines()
 
     def setup_plot(self):
         """Setup the plot area"""
@@ -760,7 +793,7 @@ class ColliderVisualizer:
 
         self.ax_hist.set_xlabel('Hit Count')
         self.ax_hist.set_ylabel('Segment Number')
-        self.ax_hist.set_title('Calorimeter Hits (64 Segments)')
+        self.ax_hist.set_title('Calorimeter Hits')
         self.ax_hist.grid(True, alpha=0.3, axis='x')
 
         # Initialize bar chart
@@ -780,65 +813,178 @@ class ColliderVisualizer:
         # Force x-axis to show only integer values
         self.ax_hist.xaxis.set_major_locator(MaxNLocator(integer=True))
 
+    def setup_daq_display(self):
+        """Setup DAQ waterfall display"""
+        self.ax_daq.set_xlabel('Channel (0-63)')
+        self.ax_daq.set_ylabel('Time (rows, 0.1s per row)')
+        self.ax_daq.set_title('Calorimeter Events')
+
+        # Create waterfall image plot
+        # Start with zeros (will be updated from DAQ)
+        waterfall_data = self.collider.calorimeter_daq.waterfall_buffer
+
+        self.daq_image = self.ax_daq.imshow(
+            waterfall_data,
+            aspect='auto',
+            cmap='viridis',
+            interpolation='nearest',
+            origin='lower',  # Bottom row = newest
+            vmin=0.0,  # Fixed color scale minimum
+            vmax=1.5,  # Fixed color scale maximum (saturates above this)
+            extent=[0, 64, 0, 200]  # [left, right, bottom, top]
+        )
+
+        # Add colorbar
+        from matplotlib.colorbar import Colorbar
+        cbar = plt.colorbar(self.daq_image, ax=self.ax_daq, label='Amplitude')
+        cbar.set_label('Amplitude (saturates at 1.5)', rotation=270, labelpad=20)
+
+        # Set x-axis ticks to show channel numbers
+        self.ax_daq.set_xticks([0, 16, 32, 48, 63])
+        self.ax_daq.set_xticklabels(['0', '16', '32', '48', '63'])
+
+        # Set y-axis limits
+        self.ax_daq.set_ylim(0, 200)
+
+    def setup_sparklines(self):
+        """Setup 64-channel stacked oscilloscope display"""
+        # Create single plot for all 64 traces
+        # Leave space on left for vertical sliders
+        self.ax_sparklines = self.fig_sparklines.add_axes([0.15, 0.08, 0.83, 0.88])
+
+        # Create time axis for 1000 samples
+        # In trigger mode: 1000 samples at 10 kHz = 100 ms
+        # In free-running mode: 20 samples at 20 Hz = 1000 ms = 1 second
+        self.sparkline_time = np.arange(1000) / 10000 * 1000  # milliseconds (for trigger mode)
+        self.sparkline_time_freerun = np.arange(self.collider.calorimeter_daq.free_running_display_samples) * 50  # milliseconds (for free-running: 20 Hz = 50ms per sample)
+
+        # Vertical spacing between traces
+        self.trace_offset = 1.5
+
+        # Initialize 64 traces with vertical offset
+        self.sparkline_lines = []
+        self.sparkline_trigger_lines = []
+
+        for ch in range(64):
+            # Vertical offset for this channel
+            offset = ch * self.trace_offset
+
+            # Plot initial empty trace at offset
+            line, = self.ax_sparklines.plot(self.sparkline_time,
+                                           np.zeros(1000) + offset,
+                                           'g-', linewidth=0.5, alpha=0.8)
+            self.sparkline_lines.append(line)
+
+            # Add trigger level line for this channel
+            trigger_line = self.ax_sparklines.axhline(
+                offset + self.collider.calorimeter_daq.trigger_level,
+                color='r', linestyle='--', linewidth=0.5, alpha=0.3
+            )
+            self.sparkline_trigger_lines.append(trigger_line)
+
+            # Add channel label on left side
+            self.ax_sparklines.text(-5, offset + 0.75, f'{ch}',
+                                   fontsize=7, verticalalignment='center',
+                                   color='black', fontweight='bold')
+
+        # Initial time span (default to 1 second = 1000 ms)
+        self.time_span = 1000.0  # milliseconds
+
+        # Set axis limits
+        label_offset = self.time_span * 0.02  # 2% of span for labels
+        self.ax_sparklines.set_xlim(-label_offset, self.time_span)
+        self.ax_sparklines.set_ylim(-1, 64 * self.trace_offset)
+
+        # Labels
+        self.ax_sparklines.set_xlabel('Time (ms)', fontsize=10)
+        self.ax_sparklines.set_ylabel('Channel Number', fontsize=10)
+        self.ax_sparklines.grid(True, alpha=0.2, axis='x')
+
+        # Remove y-ticks (we have channel labels instead)
+        self.ax_sparklines.set_yticks([])
+
+        # Add mode toggle button (trigger vs free-running) - upper right corner, half width
+        ax_mode_button = self.fig_sparklines.add_axes([0.88, 0.94, 0.05, 0.03])
+        from matplotlib.widgets import Button
+        self.button_scope_mode = Button(ax_mode_button, 'Trigger Mode', color='lightgoldenrodyellow', hovercolor='0.975')
+        self.button_scope_mode.on_clicked(self.toggle_scope_mode)
+
+        # Add vertical time span slider on left (range depends on mode: trigger 0.1-1000ms, free-running 100-60000ms)
+        ax_timespan = self.fig_sparklines.add_axes([0.02, 0.15, 0.02, 0.70])
+        self.slider_timespan = Slider(
+            ax_timespan, 'Time\nSpan\n(ms)', 0.1, 1000.0,
+            valinit=self.time_span,
+            valstep=0.1,
+            orientation='vertical'
+        )
+        self.slider_timespan.on_changed(self.update_timespan)
+        self.slider_timespan_ax = ax_timespan  # Keep reference to recreate slider when mode changes
+
+        # Add vertical trigger level slider on left
+        ax_trigger = self.fig_sparklines.add_axes([0.08, 0.15, 0.02, 0.70])
+        self.slider_trigger_level = Slider(
+            ax_trigger, 'Trigger\nLevel', 0.0, 1.5,
+            valinit=self.collider.calorimeter_daq.trigger_level,
+            valstep=0.05,
+            orientation='vertical'
+        )
+        self.slider_trigger_level.on_changed(self.update_trigger_level)
+
     def setup_controls(self):
         """Setup interactive controls"""
         # Control panel area
         control_color = 'lightgoldenrodyellow'
 
-        # Vertical spacing for sliders - match collider subplot width
-        slider_height = 0.03
-        slider_left = 0.08  # Match collider subplot left edge
-        slider_width = 0.50  # Match collider subplot width
+        # Vertical sliders between Hits and Collider plots
+        slider_width = 0.02  # Slider thickness
+        slider_height = 0.65  # Match plot height
+        slider_bottom = 0.30  # Match plot bottom
 
-        # Add bounding box around slider area
-        from matplotlib.patches import Rectangle
-        slider_box = Rectangle((0.06, 0.12), 0.54, 0.13,
-                              fill=True, facecolor='lightgray', alpha=0.2,
-                              edgecolor='gray', linewidth=1, transform=self.fig.transFigure)
-        self.fig.patches.append(slider_box)
-
-        # Speed range slider (combines min and max)
-        ax_speed_range = plt.axes([slider_left, 0.20, slider_width, slider_height])
+        # Speed range slider (vertical, leftmost)
+        ax_speed_range = plt.axes([0.16, slider_bottom, slider_width, slider_height])
         self.slider_speed_range = RangeSlider(
-            ax_speed_range, 'Speed Range', 0.1, 1.5,
+            ax_speed_range, 'Speed\nRange', 0.1, 1.5,
             valinit=(self.collider.speed_min, self.collider.speed_max),
-            valstep=0.05
+            valstep=0.05,
+            orientation='vertical'
         )
         self.slider_speed_range.on_changed(self.update_speed_range)
 
-        # Interval range slider (combines min and max)
-        ax_interval_range = plt.axes([slider_left, 0.14, slider_width, slider_height])
+        # Interval range slider (vertical, rightmost before collider plot)
+        ax_interval_range = plt.axes([0.19, slider_bottom, slider_width, slider_height])
         self.slider_interval_range = RangeSlider(
-            ax_interval_range, 'Interval Range', 0.1, 2.0,
+            ax_interval_range, 'Interval\nRange', 0.1, 2.0,
             valinit=(self.collider.interval_min, self.collider.interval_max),
-            valstep=0.1
+            valstep=0.1,
+            orientation='vertical'
         )
         self.slider_interval_range.on_changed(self.update_interval_range)
 
-        # Buttons (horizontal row)
+        # Buttons (horizontal row) - positioned below simulation plot, left of pixel detector
         button_height = 0.04
         button_width = 0.12
-        button_y = 0.02
+        button_y = 0.19  # Below simulation plot (0.30), above pixel detector (0.14)
+        button_x_start = 0.20  # Aligned with left edge of simulation plot
 
         # Pause/Resume button
-        ax_pause = plt.axes([0.3, button_y, button_width, button_height])
+        ax_pause = plt.axes([button_x_start, button_y, button_width, button_height])
         self.button_pause = Button(ax_pause, 'Pause', color=control_color, hovercolor='0.975')
         self.button_pause.on_clicked(self.toggle_pause)
 
         # Reset button
-        ax_reset = plt.axes([0.44, button_y, button_width, button_height])
+        ax_reset = plt.axes([button_x_start + 0.14, button_y, button_width, button_height])
         self.button_reset = Button(ax_reset, 'Reset', color=control_color, hovercolor='0.975')
         self.button_reset.on_clicked(self.reset_simulation)
 
         # Save summary button (if data logger exists)
         if self.collider.data_logger:
-            ax_save = plt.axes([0.58, button_y, button_width, button_height])
+            ax_save = plt.axes([button_x_start + 0.28, button_y, button_width, button_height])
             self.button_save = Button(ax_save, 'Save', color=control_color, hovercolor='0.975')
             self.button_save.on_clicked(self.save_summary)
 
-        # Pixel detector hits textbox aligned with histogram
+        # Pixel detector hits textbox - right-aligned under Calorimeter Events
         from matplotlib.widgets import TextBox
-        ax_pixel_text = plt.axes([0.65, 0.14, 0.32, 0.09])  # Match histogram x position and width
+        ax_pixel_text = plt.axes([0.75, 0.14, 0.22, 0.09])  # Match waterfall x position and width
         ax_pixel_text.axis('off')
         self.pixel_text = ax_pixel_text.text(
             0.05, 0.95, '',
@@ -862,6 +1008,126 @@ class ColliderVisualizer:
         self.collider.interval_min = interval_min
         self.collider.interval_max = interval_max
         print(f"Interval range: {interval_min:.2f} - {interval_max:.2f}")
+
+    def update_trigger_level(self, val):
+        """Update DAQ trigger level for sparklines"""
+        self.collider.calorimeter_daq.trigger_level = val
+        # Update trigger level lines in all sparklines (offset by channel)
+        for ch, trigger_line in enumerate(self.sparkline_trigger_lines):
+            offset = ch * self.trace_offset
+            trigger_line.set_ydata([offset + val, offset + val])
+        print(f"Trigger level: {val:.2f}")
+
+    def update_timespan(self, val):
+        """Update oscilloscope time span (trigger mode)"""
+        self.time_span = val
+        # Update x-axis limits
+        label_offset = val * 0.02  # 2% of span for labels
+        self.ax_sparklines.set_xlim(-label_offset, val)
+        print(f"Time span: {val:.1f} ms")
+
+    def update_timespan_freerun(self, val):
+        """Update oscilloscope time span (free-running mode)"""
+        # val is in seconds, convert to milliseconds
+        self.time_span = val * 1000.0
+
+        # Calculate required buffer size for this time span at 20 Hz
+        num_samples = int(self.time_span / 50)  # 50ms per sample at 20 Hz
+        self.collider.calorimeter_daq.free_running_display_samples = num_samples
+
+        # Resize free-running buffer
+        self.collider.calorimeter_daq.free_running_buffer = np.zeros(
+            (self.collider.calorimeter_daq.num_channels, num_samples),
+            dtype=np.float32
+        )
+        self.collider.calorimeter_daq.free_running_sample_count = 0
+
+        # Update time axis for new buffer size
+        self.sparkline_time_freerun = np.arange(num_samples) * 50
+
+        # Update x-axis limits
+        label_offset = self.time_span * 0.02  # 2% of span for labels
+        self.ax_sparklines.set_xlim(-label_offset, self.time_span)
+        print(f"Time span: {val:.1f} s ({self.time_span:.0f} ms, {num_samples} samples)")
+
+    def toggle_scope_mode(self, event):
+        """Toggle between trigger mode and free-running mode"""
+        self.collider.calorimeter_daq.free_running = not self.collider.calorimeter_daq.free_running
+        if self.collider.calorimeter_daq.free_running:
+            self.button_scope_mode.label.set_text('Free Running')
+
+            # Set default time span to 50 seconds for free-running
+            self.time_span = 50000.0  # 50 seconds
+
+            # Calculate required buffer size for this time span at 20 Hz
+            num_samples = int(self.time_span / 50)  # 50ms per sample at 20 Hz
+            self.collider.calorimeter_daq.free_running_display_samples = num_samples
+
+            # Reset free-running buffer with new size (clears old data)
+            self.collider.calorimeter_daq.free_running_buffer = np.zeros(
+                (self.collider.calorimeter_daq.num_channels, num_samples),
+                dtype=np.float32
+            )
+            # Start at decimation-1 so next sample goes to index 0 immediately
+            self.collider.calorimeter_daq.free_running_sample_count = self.collider.calorimeter_daq.free_running_decimation - 1
+
+            # Update time axis for new buffer size
+            self.sparkline_time_freerun = np.arange(num_samples) * 50
+
+            # Immediately clear all sparkline displays to show baseline
+            for ch in range(64):
+                offset = ch * self.trace_offset
+                self.sparkline_lines[ch].set_ydata(np.zeros(num_samples) + offset)
+
+            # Adjust x-axis
+            label_offset = self.time_span * 0.02
+            self.ax_sparklines.set_xlim(-label_offset, self.time_span)
+
+            # Recreate vertical time span slider with free-running range (100ms to 60 seconds)
+            self.slider_timespan.disconnect_events()
+            self.slider_timespan_ax.clear()
+            self.slider_timespan = Slider(
+                self.slider_timespan_ax, 'Time\nSpan\n(s)', 0.1, 60.0,
+                valinit=self.time_span / 1000.0,  # Convert to seconds for display
+                valstep=0.1,
+                orientation='vertical'
+            )
+            self.slider_timespan.on_changed(self.update_timespan_freerun)
+
+            print(f"Oscilloscope mode: Free Running (20 Hz update, {self.time_span/1000:.1f}s display)")
+        else:
+            self.button_scope_mode.label.set_text('Trigger Mode')
+            # Re-arm all triggers and clear old data
+            self.collider.calorimeter_daq.trigger_armed.fill(True)
+            self.collider.calorimeter_daq.trigger_capturing.fill(False)
+            self.collider.calorimeter_daq.trigger_has_data.fill(False)
+            self.collider.calorimeter_daq.trigger_samples.fill(0.0)
+            self.collider.calorimeter_daq.trigger_sample_count.fill(0)
+
+            # Restore time span to 1000ms default for trigger mode
+            self.time_span = 1000.0
+
+            # Restore x-axis to current time span setting
+            label_offset = self.time_span * 0.02
+            self.ax_sparklines.set_xlim(-label_offset, self.time_span)
+
+            # Immediately clear all sparkline displays to show baseline
+            for ch in range(64):
+                offset = ch * self.trace_offset
+                self.sparkline_lines[ch].set_ydata(np.zeros(1000) + offset)
+
+            # Recreate vertical time span slider with trigger range (0.1ms to 1000ms)
+            self.slider_timespan.disconnect_events()
+            self.slider_timespan_ax.clear()
+            self.slider_timespan = Slider(
+                self.slider_timespan_ax, 'Time\nSpan\n(ms)', 0.1, 1000.0,
+                valinit=self.time_span,
+                valstep=0.1,
+                orientation='vertical'
+            )
+            self.slider_timespan.on_changed(self.update_timespan)
+
+            print("Oscilloscope mode: Triggered")
 
     def toggle_pause(self, event):
         """Toggle simulation pause state"""
@@ -964,6 +1230,44 @@ class ColliderVisualizer:
             self.slider_interval_range.set_val(desired_interval_range)
             self.slider_interval_range.eventson = True
 
+        # Update DAQ waterfall display
+        # Get the waterfall buffer from DAQ (already decimated to 10 FPS)
+        waterfall_data = self.collider.calorimeter_daq.waterfall_buffer.copy()
+
+        # Clip values to fixed range [0, 1.5] for saturation
+        waterfall_data = np.clip(waterfall_data, 0.0, 1.5)
+
+        # Update the image data
+        self.daq_image.set_data(waterfall_data)
+
+        # Update sparkline oscilloscope traces (stacked with vertical offset)
+        # Amplify pulse for visibility
+        for ch in range(64):
+            offset = ch * self.trace_offset
+            if self.collider.calorimeter_daq.free_running:
+                # Free-running mode - show continuously scrolling data
+                # Use 50x amplification for visibility
+                amplitude_scale = 50.0
+                waveform = (self.collider.calorimeter_daq.free_running_buffer[ch, :] * amplitude_scale) + offset
+                self.sparkline_lines[ch].set_xdata(self.sparkline_time_freerun)
+                self.sparkline_lines[ch].set_ydata(waveform)
+            else:
+                # Triggered mode - use 50x amplification
+                amplitude_scale = 50.0
+                self.sparkline_lines[ch].set_xdata(self.sparkline_time)
+                if self.collider.calorimeter_daq.trigger_has_data[ch]:
+                    # Get captured waveform, amplify by 50x, and add offset
+                    waveform = (self.collider.calorimeter_daq.trigger_samples[ch, :] * amplitude_scale) + offset
+                    # Update trace
+                    self.sparkline_lines[ch].set_ydata(waveform)
+                else:
+                    # No data yet - show baseline at offset
+                    self.sparkline_lines[ch].set_ydata(np.zeros(1000) + offset)
+
+        # Manually trigger redraw of sparklines figure (it's a separate figure with no animation loop)
+        self.fig_sparklines.canvas.draw_idle()
+        self.fig_sparklines.canvas.flush_events()
+
         return tuple(self.particle_markers + self.trail_lines),
 
     def run(self, interval=50):
@@ -1006,6 +1310,12 @@ def main():
     def on_close(event):
         print("\nSaving final summary...")
         data_logger.save_summary(collider)
+
+        # Export DAQ data
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        daq_filename = f"calorimeter_daq_{timestamp}.h5"
+        collider.calorimeter_daq.export_hdf5(daq_filename)
+
         rpc_server.stop()
         print("Simulation ended.")
 
