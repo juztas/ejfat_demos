@@ -2,8 +2,13 @@
 """
 Example Bluesky plans for the Particle Collider
 
-Demonstrates how to use the ParticleColliderDevice with Bluesky
-for automated data acquisition and parameter scans.
+Demonstrates how to use the StreamingColliderDevice with Bluesky
+for automated data acquisition and parameter scans with DAQ streaming.
+
+All examples now use:
+- Persistent Databroker storage (not temporary)
+- Streaming DAQ to disk (creates pixel_detector_*.csv and calorimeter_detector_*.csv)
+- Resource/Datum documents for linking data files to runs
 """
 
 from bluesky import RunEngine
@@ -14,8 +19,15 @@ import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from databroker import Broker
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-from bluesky_collider import create_collider_device
+from bluesky_streaming_collider import create_streaming_collider_device
+
+# Configure Databroker
+# Using 'temp' for temporary in-memory catalog (data persists during Python session)
+# To use persistent storage, configure a catalog in ~/.intake/conf/intake.yaml
+DATABROKER_NAME = 'temp'
+DATA_DIR = Path('./bluesky_daq_data').absolute()
 
 
 def simple_count_example():
@@ -27,14 +39,22 @@ def simple_count_example():
     - Active particles
     - Total particles
     - Current speed and interval settings
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 1: Simple Count - Monitor Particle Production")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe to Databroker
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device (will create DAQ files)
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up live table display
     live_table = LiveTable([
@@ -45,9 +65,13 @@ def simple_count_example():
 
     # Run the plan
     print("\nCollecting 10 data points at 1-second intervals...")
-    RE(count([collider], num=10, delay=1), live_table)
+    print(f"DAQ files will be created in: {DATA_DIR}")
+    uid = RE(count([collider], num=10, delay=1), live_table)
 
     print("\nExample 1 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def speed_scan_example():
@@ -56,14 +80,22 @@ def speed_scan_example():
 
     Scans speed_min from 0.3 to 0.9 in 7 steps, recording particle counts
     at each setting. Useful for understanding how speed affects injection rate.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 2: Speed Scan - Vary Minimum Particle Speed")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up best effort callback (auto-generates plots)
     bec = BestEffortCallback()
@@ -77,6 +109,7 @@ def speed_scan_example():
     # Scan speed_min from 0.3 to 0.9 with delay between points
     print("\nScanning speed_min from 0.3 to 0.9...")
     print("At each point, collecting data (1s delay between changes)...")
+    print(f"DAQ files will be created in: {DATA_DIR}")
 
     # Custom plan with sleep between each scan point
     @bpp.run_decorator()
@@ -88,9 +121,12 @@ def speed_scan_example():
             yield from bps.sleep(1.0)  # Delay to see slider move
             yield from bps.trigger_and_read([collider])
 
-    RE(slow_scan())
+    uid = RE(slow_scan())
 
     print("\nExample 2 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def interval_scan_example():
@@ -98,14 +134,22 @@ def interval_scan_example():
     Example 3: Interval scan - vary injection timing
 
     Scans interval_min to see how injection rate affects particle accumulation.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 3: Interval Scan - Vary Injection Timing")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up live display
     live_table = LiveTable([
@@ -122,6 +166,7 @@ def interval_scan_example():
 
     # Scan interval_min with delay between points
     print("\nScanning interval_min from 0.2 to 1.4 (1s delay between changes)...")
+    print(f"DAQ files will be created in: {DATA_DIR}")
 
     # Custom plan with sleep between each scan point
     @bpp.run_decorator()
@@ -133,9 +178,12 @@ def interval_scan_example():
             yield from bps.sleep(1.0)  # Delay to see slider move
             yield from bps.trigger_and_read([collider])
 
-    RE(slow_interval_scan(), live_table)
+    uid = RE(slow_interval_scan(), live_table)
 
     print("\nExample 3 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def grid_scan_example():
@@ -144,14 +192,22 @@ def grid_scan_example():
 
     Performs a 2D scan varying both speed_min and interval_min,
     creating a parameter space map of particle production.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 4: 2D Grid Scan - Speed vs Interval")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up callbacks
     bec = BestEffortCallback()
@@ -164,6 +220,7 @@ def grid_scan_example():
     # 2D grid scan with delay between points
     print("\nScanning speed_min (0.3-0.9) vs interval_min (0.3-1.2)...")
     print("(1s delay between changes)...")
+    print(f"DAQ files will be created in: {DATA_DIR}")
 
     # Custom 2D grid scan with delays
     @bpp.run_decorator()
@@ -181,9 +238,12 @@ def grid_scan_example():
                 yield from bps.sleep(1.0)  # Delay to see sliders move
                 yield from bps.trigger_and_read([collider])
 
-    RE(slow_grid_scan())
+    uid = RE(slow_grid_scan())
 
     print("\nExample 4 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def custom_plan_with_pause():
@@ -192,35 +252,24 @@ def custom_plan_with_pause():
 
     Demonstrates a custom plan that pauses the simulation,
     changes parameters, resumes, and records data.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 5: Custom Plan - Pause, Configure, Resume")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
 
-    def pause_and_configure():
-        """Custom plan that pauses, configures, resumes"""
-        # Pause simulation
-        yield from bps.mv(collider.pause, True)  # Note: using device method instead
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
-        # Configure parameters
-        print("\nConfiguring parameters while paused...")
-        yield from bps.mv(collider.speed_min, 0.7)
-        yield from bps.mv(collider.speed_max, 1.3)
-        yield from bps.mv(collider.interval_min, 0.3)
-        yield from bps.mv(collider.interval_max, 0.8)
-
-        # Resume simulation
-        yield from bps.mv(collider.resume, True)
-
-        # Collect data
-        print("\nCollecting data with new parameters...")
-        yield from count([collider], num=10, delay=1)
-
-    # Alternative: simpler custom plan using device methods directly
+    # Custom plan using device methods
     def simple_configure_and_run():
         """Simpler approach using device methods"""
         # Pause
@@ -242,9 +291,13 @@ def custom_plan_with_pause():
     live_table = LiveTable([collider.time_elapsed, collider.total_particles])
 
     print("\nRunning custom plan...")
-    RE(simple_configure_and_run(), live_table)
+    print(f"DAQ files will be created in: {DATA_DIR}")
+    uid = RE(simple_configure_and_run(), live_table)
 
     print("\nExample 5 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def timed_acquisition_example():
@@ -253,14 +306,22 @@ def timed_acquisition_example():
 
     Run for a specific duration, recording at regular intervals.
     Useful for long-duration stability measurements.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 6: Timed Acquisition - 30 seconds")
     print("=" * 60)
 
-    # Create RunEngine and device
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up live plotting
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
@@ -282,13 +343,17 @@ def timed_acquisition_example():
 
     # Run for 30 seconds, sampling every 2 seconds
     print("\nAcquiring data for 30 seconds (15 points)...")
-    RE(count([collider], num=15, delay=2), [live_plot1, live_plot2])
+    print(f"DAQ files will be created in: {DATA_DIR}")
+    uid = RE(count([collider], num=15, delay=2), [live_plot1, live_plot2])
 
     plt.tight_layout()
     plt.savefig('collider_timed_acquisition.png')
     print("\nPlot saved to: collider_timed_acquisition.png")
 
     print("\nExample 6 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
 
 
 def databroker_example():
@@ -297,23 +362,26 @@ def databroker_example():
 
     Demonstrates how to use Databroker to save and retrieve
     experimental data for later analysis.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 7: Databroker Integration")
     print("=" * 60)
 
-    # Create temporary databroker
-    db = Broker.named('temp')
+    # Create persistent databroker
+    db = Broker.named(DATABROKER_NAME)
 
     # Create RunEngine and subscribe to databroker
     RE = RunEngine({})
     RE.subscribe(db.insert)
 
-    # Create device
-    collider = create_collider_device()
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Run a scan
     print("\nRunning scan and storing in databroker...")
+    print(f"DAQ files will be created in: {DATA_DIR}")
     collider.speed_max.put(1.2)  # Set max high enough for scan range
 
     # Use slow scan with delays for visible slider movement
@@ -330,8 +398,8 @@ def databroker_example():
 
     # Retrieve and analyze data
     print("\nRetrieving data from databroker...")
-    header = db[uid]
-    table = header.table()
+    run = db[uid]
+    table = run.primary.read()
 
     print("\nData summary:")
     print(table[[
@@ -341,6 +409,12 @@ def databroker_example():
     ]])
 
     print("\nExample 7 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
+    print(f"\nData persists and can be retrieved later with:")
+    print(f"  db = Broker.named('{DATABROKER_NAME}')")
+    print(f"  run = db['{uid}']")
 
 
 def comprehensive_parameter_study():
@@ -349,14 +423,22 @@ def comprehensive_parameter_study():
 
     Performs a systematic study with proper metadata annotation,
     demonstrating best practices for experiment documentation.
+
+    NEW: Uses persistent Databroker and streaming DAQ
     """
     print("\n" + "=" * 60)
     print("Example 8: Comprehensive Parameter Study")
     print("=" * 60)
 
-    # Create RunEngine with metadata
+    # Create persistent Databroker
+    db = Broker.named(DATABROKER_NAME)
+
+    # Create RunEngine and subscribe
     RE = RunEngine({})
-    collider = create_collider_device()
+    RE.subscribe(db.insert)
+
+    # Create streaming device
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up callbacks
     bec = BestEffortCallback()
@@ -381,6 +463,7 @@ def comprehensive_parameter_study():
 
     # Run scan with metadata and delays for visible slider movement
     print("\nRunning parameter study (1s delay between changes)...")
+    print(f"DAQ files will be created in: {DATA_DIR}")
 
     @bpp.run_decorator(md=md)
     def slow_study_scan():
@@ -391,9 +474,16 @@ def comprehensive_parameter_study():
             yield from bps.sleep(1.0)  # Delay to see slider move
             yield from bps.trigger_and_read([collider])
 
-    RE(slow_study_scan())
+    uid = RE(slow_study_scan())
 
     print("\nExample 8 complete!")
+    print(f"\nRun UID: {uid}")
+    print(f"DAQ data saved to: {DATA_DIR}")
+    print(f"Bluesky metadata saved to Databroker: {DATABROKER_NAME}")
+    print(f"\nMetadata included:")
+    print(f"  Purpose: {md['purpose']}")
+    print(f"  Operator: {md['operator']}")
+    print(f"  Notes: {md['notes']}")
 
 
 def main():

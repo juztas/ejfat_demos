@@ -20,8 +20,13 @@ import bluesky.preprocessors as bpp
 from databroker import Broker
 import matplotlib.pyplot as plt
 import pandas as pd
+from pathlib import Path
 
 from bluesky_streaming_collider import create_streaming_collider_device
+
+
+# Standard data directory for all Bluesky DAQ runs
+DATA_DIR = Path('./bluesky_daq_data').absolute()
 
 
 def streaming_simple_run():
@@ -44,7 +49,7 @@ def streaming_simple_run():
 
     # Create RunEngine and device
     RE = RunEngine({})
-    collider = create_streaming_collider_device(data_dir='./streaming_data')
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up live table display
     live_table = LiveTable([
@@ -65,7 +70,7 @@ def streaming_simple_run():
     print("  - Bluesky documents: Control parameters, run metadata, timestamps")
     print("  - Pixel detector CSV: All pixel hits with timestamps")
     print("  - Calorimeter CSV: All calorimeter hits with timestamps")
-    print("\nData files are in: ./streaming_data/")
+    print(f"\nData files are in: {DATA_DIR}/")
 
 
 def streaming_parameter_scan():
@@ -81,7 +86,7 @@ def streaming_parameter_scan():
 
     # Create RunEngine and device
     RE = RunEngine({})
-    collider = create_streaming_collider_device(data_dir='./streaming_data')
+    collider = create_streaming_collider_device(data_dir=str(DATA_DIR))
 
     # Set up callbacks
     bec = BestEffortCallback()

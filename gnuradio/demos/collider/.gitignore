@@ -1,9 +1,15 @@
-# Test data files
+# Bluesky DAQ data directory
+bluesky_daq_data/
+
+# Legacy test data files (no longer used)
 collider_data_*.csv
 collider_data_*.json
 collider_data_*_summary.txt
 *_detector_test_run_*.csv
 test_streaming_data/
+streaming_data/
+test/
+test_streaming/
 
 # macOS system files
 .DS_Store

@@ -169,6 +169,30 @@
             margin-bottom: 30px;
         }
 
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-grid-item {
+            min-width: 0; /* Prevent overflow */
+            min-height: 300px; /* Ensure grid items have height */
+        }
+
+        .chart-grid-item canvas {
+            width: 100% !important;
+            height: 300px !important;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .stat-card {
             background: #f9f9f9;
             padding: 20px;
@@ -214,7 +238,12 @@
 
         canvas {
             max-width: 100%;
-            height: auto !important;
+        }
+
+        /* Chart.js canvases get fixed height */
+        .section > canvas,
+        canvas:not(.chart-grid-item canvas) {
+            height: 300px !important;
         }
 
         .loading {
@@ -548,10 +577,6 @@
                     <h3>Particle Speed Distribution</h3>
                     <canvas id="chart-calo-speed"></canvas>
                 </div>
-                <div class="section">
-                    <h3>Deflection Angle Distribution</h3>
-                    <canvas id="chart-calo-angle"></canvas>
-                </div>
             `;
         }
 
@@ -573,6 +598,107 @@
 
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // Chart.js plugin to draw collider structure background
+        const colliderBackgroundPlugin = {
+            id: 'colliderBackground',
+            beforeDraw: (chart) => {
+                if (!chart.config.options.plugins?.colliderBackground?.enabled) return;
+
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+                const radius = Math.min(chartArea.right - chartArea.left, chartArea.bottom - chartArea.top) / 2;
+
+                ctx.save();
+
+                // Draw collision point (origin)
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 0.04, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw pixel detector ring (radius ~1.8, scaled to ~60% of chart radius)
+                const pixelRadius = radius * 0.60;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, pixelRadius, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw calorimeter detector ring (radius ~2.15, scaled to ~75% of chart radius)
+                const caloRadius = radius * 0.75;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, caloRadius, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'rgba(150, 100, 200, 0.4)';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Draw deflection range wedge (-135° to 135°, 270° total)
+                // Canvas coordinate system: 0° = right (3 o'clock), increases counter-clockwise
+                // Chart.js arranges data: index 0 at top, increases clockwise
+                // Our data rotation: segment 53 (~90° sim) at chart top (0°)
+                //
+                // Simulation angles -135° to 135° need to map to canvas angles
+                // Canvas: 0° = right = East, 90° = up = North, 180° = left = West, 270° = down = South
+                // But canvas arc() uses: 0° = right, increases clockwise (opposite of math convention!)
+
+                // Simulation -135° is at bottom-right in deflection zone
+                // Simulation +135° is at top-right in deflection zone
+                // Canvas equivalent: -135° → -135° + 0° = -135° (or 225°)
+                //                    +135° → +135° + 0° = +135° (or 495° = 135°)
+
+                const startAngle = -135 * Math.PI / 180;  // Bottom-right
+                const endAngle = 135 * Math.PI / 180;      // Top-right
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius * 0.85, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 200, 200, 0.08)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Draw injection path (from left: 180° in chart coordinates)
+                const injectionAngle = 180 * Math.PI / 180; // Left side
+                const injectionX = centerX + Math.cos(injectionAngle) * radius * 0.9;
+                const injectionY = centerY + Math.sin(injectionAngle) * radius * 0.9;
+
+                ctx.beginPath();
+                ctx.moveTo(injectionX, injectionY);
+                ctx.lineTo(centerX, centerY);
+                ctx.strokeStyle = 'rgba(0, 150, 0, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Draw arrowhead for injection (pointing toward center from left)
+                const arrowSize = 8;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX - arrowSize, centerY - arrowSize * 0.6);
+                ctx.lineTo(centerX - arrowSize, centerY + arrowSize * 0.6);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0, 150, 0, 0.4)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        };
+
+        // Register the plugin
+        if (!Chart.registry.plugins.get('colliderBackground')) {
+            Chart.register(colliderBackgroundPlugin);
         }
 
         function renderCharts(run) {
@@ -603,9 +729,14 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
+                        maintainAspectRatio: true,
+                        aspectRatio: 3,
                         scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Hits' } },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Hits' },
+                                ticks: { stepSize: 1, precision: 0 }
+                            },
                             x: { title: { display: true, text: 'Bin' } }
                         }
                     }
@@ -629,18 +760,24 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
+                        maintainAspectRatio: true,
+                        aspectRatio: 3,
                         scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Hits' } },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Hits' },
+                                ticks: { stepSize: 1, precision: 0 }
+                            },
                             x: { title: { display: true, text: 'Pixel Bin' } }
                         }
                     }
                 });
             }
 
-            // Calorimeter segments
+            // Calorimeter segments (bar chart)
             if (document.getElementById('chart-calo-segments')) {
                 const ctx = document.getElementById('chart-calo-segments').getContext('2d');
+
                 charts.caloSegments = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -691,32 +828,6 @@
                 });
             }
 
-            // Angle distribution
-            if (document.getElementById('chart-calo-angle')) {
-                const ctx = document.getElementById('chart-calo-angle').getContext('2d');
-                const angleData = run.calorimeter_stats.angle_histogram;
-                charts.caloAngle = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: angleData.bins.slice(0, -1).map(b => b.toFixed(1) + '°'),
-                        datasets: [{
-                            label: 'Particle Count',
-                            data: angleData.counts,
-                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                            borderColor: 'rgb(75, 192, 192)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
-                            x: { title: { display: true, text: 'Deflection Angle' } }
-                        }
-                    }
-                });
-            }
         }
 
         async function loadRawData(detector) {

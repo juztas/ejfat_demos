@@ -387,7 +387,7 @@ if __name__ == '__main__':
     print("=" * 60)
 
     # Create device
-    collider = create_streaming_collider_device(data_dir='./test_daq_data')
+    collider = create_streaming_collider_device(data_dir='./bluesky_daq_data')
 
     print("\nReading initial values...")
     print(f"Speed range: {collider.speed_min.get():.2f} - {collider.speed_max.get():.2f}")
