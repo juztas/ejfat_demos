@@ -26,6 +26,7 @@ import threading
 
 # DAQ system
 from calorimeter_daq import CalorimeterDAQ
+from streaming_daq_logger import StreamingDAQManager
 
 
 class Particle:
@@ -344,6 +345,10 @@ class ParticleCollider:
             filter_cutoff_fraction=0.1
         )
 
+        # Streaming DAQ manager (created when run starts)
+        self.streaming_daq = None
+        self.daq_run_active = False
+
     def _random_interval(self):
         """Generate random injection interval"""
         return np.random.uniform(self.interval_min, self.interval_max)
@@ -388,6 +393,15 @@ class ParticleCollider:
                     'particle_id': particle.particle_id
                 })
 
+                # Log to streaming DAQ if active
+                if self.daq_run_active and self.streaming_daq:
+                    self.streaming_daq.log_pixel_hit(
+                        particle_id=particle.particle_id,
+                        pixel_number=particle.pixel_number,
+                        hit_time=particle.pixel_hit_time,
+                        simulation_time=self.time_elapsed
+                    )
+
             # Check if particle just hit the calorimeter
             if particle.hit_calorimeter and was_not_hit_calorimeter and particle.calorimeter_segment is not None:
                 # Increment the count for this segment
@@ -400,6 +414,17 @@ class ParticleCollider:
                     time=particle.calorimeter_hit_time,
                     amplitude=particle.speed
                 )
+
+                # Log to streaming DAQ if active
+                if self.daq_run_active and self.streaming_daq:
+                    self.streaming_daq.log_calorimeter_hit(
+                        particle_id=particle.particle_id,
+                        segment_number=particle.calorimeter_segment,
+                        hit_time=particle.calorimeter_hit_time,
+                        particle_speed=particle.speed,
+                        deflection_angle=particle.deflection_angle if particle.deflection_angle is not None else 0.0,
+                        simulation_time=self.time_elapsed
+                    )
 
         # Log and remove inactive particles (keep last 20 for visualization)
         active_particles = [p for p in self.particles if p.active]
@@ -485,6 +510,12 @@ class ColliderRPCServer:
         self.server.register_function(self.reset, 'reset')
         self.server.register_function(self.get_status, 'get_status')
         self.server.register_function(self.get_statistics, 'get_statistics')
+
+        # DAQ run control methods
+        self.server.register_function(self.start_daq_run, 'start_daq_run')
+        self.server.register_function(self.stop_daq_run, 'stop_daq_run')
+        self.server.register_function(self.get_daq_status, 'get_daq_status')
+        self.server.register_function(self.get_daq_file_paths, 'get_daq_file_paths')
 
         # Start server in background thread
         self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -645,6 +676,129 @@ class ColliderRPCServer:
             }
 
         return stats
+
+    def start_daq_run(self, run_id, data_dir='.'):
+        """
+        Start a new DAQ run with streaming data logging
+
+        Parameters:
+        -----------
+        run_id : str
+            Unique identifier for this run (e.g., Bluesky run UID)
+        data_dir : str
+            Directory for data files (default: current directory)
+
+        Returns:
+        --------
+        dict : {'success': bool, 'run_id': str, 'files': dict}
+        """
+        try:
+            # Stop any existing DAQ run
+            if self.collider.daq_run_active:
+                self.stop_daq_run()
+
+            # Create new streaming DAQ manager
+            self.collider.streaming_daq = StreamingDAQManager(
+                run_id=run_id,
+                data_dir=data_dir
+            )
+            self.collider.daq_run_active = True
+
+            file_paths = self.collider.streaming_daq.get_file_paths()
+
+            print(f"[XML-RPC] Started DAQ run: {run_id}")
+            print(f"  Pixel file: {file_paths['pixel']}")
+            print(f"  Calorimeter file: {file_paths['calorimeter']}")
+
+            return {
+                'success': True,
+                'run_id': run_id,
+                'files': file_paths
+            }
+
+        except Exception as e:
+            print(f"Error starting DAQ run: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def stop_daq_run(self):
+        """
+        Stop the current DAQ run and close data files
+
+        Returns:
+        --------
+        dict : {'success': bool, 'statistics': dict}
+        """
+        try:
+            if not self.collider.daq_run_active:
+                return {
+                    'success': False,
+                    'error': 'No DAQ run is active'
+                }
+
+            # Get statistics before closing
+            stats = self.collider.streaming_daq.get_statistics()
+
+            # Close the DAQ
+            self.collider.streaming_daq.close()
+            self.collider.daq_run_active = False
+            self.collider.streaming_daq = None
+
+            print(f"[XML-RPC] Stopped DAQ run")
+
+            return {
+                'success': True,
+                'statistics': stats
+            }
+
+        except Exception as e:
+            print(f"Error stopping DAQ run: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def get_daq_status(self):
+        """
+        Get current DAQ run status
+
+        Returns:
+        --------
+        dict : {'active': bool, 'run_id': str, 'statistics': dict}
+        """
+        if not self.collider.daq_run_active or not self.collider.streaming_daq:
+            return {
+                'active': False,
+                'run_id': None,
+                'statistics': {}
+            }
+
+        return {
+            'active': True,
+            'run_id': self.collider.streaming_daq.run_id,
+            'statistics': self.collider.streaming_daq.get_statistics()
+        }
+
+    def get_daq_file_paths(self):
+        """
+        Get file paths for current DAQ run
+
+        Returns:
+        --------
+        dict : {'success': bool, 'files': dict} or error dict
+        """
+        if not self.collider.daq_run_active or not self.collider.streaming_daq:
+            return {
+                'success': False,
+                'error': 'No DAQ run is active'
+            }
+
+        return {
+            'success': True,
+            'files': self.collider.streaming_daq.get_file_paths()
+        }
 
 
 class ColliderVisualizer:
