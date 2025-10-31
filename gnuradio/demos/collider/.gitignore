@@ -1,0 +1,9 @@
+# Test data files
+collider_data_*.csv
+collider_data_*.json
+collider_data_*_summary.txt
+*_detector_test_run_*.csv
+test_streaming_data/
+
+# macOS system files
+.DS_Store
