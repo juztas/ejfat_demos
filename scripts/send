@@ -223,6 +223,9 @@ EOF
 echo "========================================================================"
 echo "EJFAT Sender - Starting"
 echo "========================================================================"
+if [ -n "$RUN_ID" ]; then
+    echo "Run ID:             $RUN_ID"
+fi
 echo "Sender IP:          $MY_IP"
 echo "IP Version:         IPv$IP_VERSION"
 echo "Work Directory:     $WORK_DIR"

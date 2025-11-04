@@ -26,6 +26,7 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
     data = {
         'file': log_path.name,
         'type': 'transmitter',
+        'run_id': None,
         'config_file': None,
         'sender_ip': None,
         'ip_version': None,
@@ -44,6 +45,10 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
     }
 
     # Extract configuration section
+    run_id_match = re.search(r'Run ID:\s*(.+)', content)
+    if run_id_match:
+        data['run_id'] = run_id_match.group(1).strip()
+
     config_match = re.search(r'Config file:\s*(.+)', content)
     if config_match:
         data['config_file'] = config_match.group(1).strip()
@@ -116,6 +121,7 @@ def parse_rx_log(log_path: Path) -> Optional[Dict]:
     data = {
         'file': log_path.name,
         'type': 'receiver',
+        'run_id': None,
         'config_file': None,
         'receiver_ip': None,
         'ip_version': None,
@@ -142,6 +148,10 @@ def parse_rx_log(log_path: Path) -> Optional[Dict]:
     }
 
     # Extract configuration section
+    run_id_match = re.search(r'Run ID:\s*(.+)', content)
+    if run_id_match:
+        data['run_id'] = run_id_match.group(1).strip()
+
     config_match = re.search(r'Config file:\s*(.+)', content)
     if config_match:
         data['config_file'] = config_match.group(1).strip()
@@ -248,6 +258,9 @@ def print_tx_summary(tx_data: Dict):
     print_separator()
     print(f"Log File:            {tx_data['file']}")
 
+    if tx_data['run_id']:
+        print(f"Run ID:              {tx_data['run_id']}")
+
     if tx_data['config_file']:
         print(f"Config File:         {tx_data['config_file']}")
 
@@ -294,6 +307,9 @@ def print_rx_summary(rx_data: Dict):
     print(f"\n{'RECEIVER':^80}")
     print_separator()
     print(f"Log File:            {rx_data['file']}")
+
+    if rx_data['run_id']:
+        print(f"Run ID:              {rx_data['run_id']}")
 
     if rx_data['config_file']:
         print(f"Config File:         {rx_data['config_file']}")
@@ -402,15 +418,19 @@ def main():
         print(f"{'SUMMARY':^80}")
         print_separator('=', 80)
 
-        # Calculate totals
+        # Calculate totals and collect run IDs
         total_tx_frames = 0
         total_tx_errors = 0
+        run_ids = set()
         for tx_file in tx_files:
             tx_data = parse_tx_log(tx_file)
-            if tx_data and tx_data['frames_sent'] is not None:
-                total_tx_frames += tx_data['frames_sent']
-            if tx_data and tx_data['errors'] is not None:
-                total_tx_errors += tx_data['errors']
+            if tx_data:
+                if tx_data['frames_sent'] is not None:
+                    total_tx_frames += tx_data['frames_sent']
+                if tx_data['errors'] is not None:
+                    total_tx_errors += tx_data['errors']
+                if tx_data['run_id']:
+                    run_ids.add(tx_data['run_id'])
 
         total_rx_events = 0
         total_rx_lost = 0
@@ -427,7 +447,15 @@ def main():
                     total_rx_packets += rx_data['total_packets']
                 if rx_data['hostname']:
                     rx_nodes.append(rx_data['hostname'])
+                if rx_data['run_id']:
+                    run_ids.add(rx_data['run_id'])
 
+        print()
+        # Display Run ID if all logs have the same one
+        if len(run_ids) == 1:
+            print(f"Run ID: {list(run_ids)[0]}")
+        elif len(run_ids) > 1:
+            print(f"Run IDs: {', '.join(sorted(run_ids))} (multiple runs detected)")
         print()
         print(f"Receiver Nodes: {', '.join(rx_nodes) if rx_nodes else 'N/A'}")
         print()

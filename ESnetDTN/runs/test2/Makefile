@@ -172,6 +172,9 @@ receive:
 	@echo "Receiver Config:     $(RECEIVER_CONFIG)"
 	@echo "Log Directory:       $(RECEIVER_LOG_DIR)"
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
+	@if [ -n "$(RUN_ID)" ]; then \
+		echo "Run ID:              $(RUN_ID)"; \
+	fi
 	@echo "========================================================================"
 	@echo ""
 	@if [ ! -f INSTANCE_URI ]; then \
@@ -203,6 +206,7 @@ receive:
 			source INSTANCE_URI && \
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
+			export RUN_ID=\"$(RUN_ID)\" && \
 			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
@@ -223,6 +227,9 @@ send:
 	@echo "Sender Config:       $(SENDER_CONFIG)"
 	@echo "Log Directory:       $(SENDER_LOG_DIR)"
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
+	@if [ -n "$(RUN_ID)" ]; then \
+		echo "Run ID:              $(RUN_ID)"; \
+	fi
 	@echo "========================================================================"
 	@echo ""
 	@if [ ! -f INSTANCE_URI ]; then \
@@ -257,6 +264,7 @@ send:
 			source INSTANCE_URI && \
 			mkdir -p $(SENDER_LOG_DIR) && \
 			export WORK_DIR=$(SENDER_LOG_DIR) && \
+			export RUN_ID=\"$(RUN_ID)\" && \
 			nohup $(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Sender started in background (PID: \$$!)\"'"; \
 		echo ""; \
@@ -274,62 +282,69 @@ run:
 	@echo "Running Complete EJFAT Workflow"
 	@echo "========================================================================"
 	@echo ""
-	@echo "Step 1: Reserving load balancer..."
-	@echo "------------------------------------------------------------------------"
-	@$(MAKE) reserve
-	@echo ""
-	@echo "========================================================================"
-	@echo "Load Balancer Summary"
-	@echo "========================================================================"
-	@if [ -f INSTANCE_URI ]; then \
+	@RUN_ID=$$(date +"%Y%m%d_%H%M%S"); \
+	export RUN_ID; \
+	echo "Run ID: $$RUN_ID"; \
+	echo "$$RUN_ID" > RUN_ID; \
+	echo ""; \
+	echo "Step 1: Reserving load balancer..."; \
+	echo "------------------------------------------------------------------------"; \
+	$(MAKE) reserve; \
+	export RUN_ID=$$RUN_ID; \
+	echo ""; \
+	echo "========================================================================"; \
+	echo "Load Balancer Summary"; \
+	echo "========================================================================"; \
+	if [ -f INSTANCE_URI ]; then \
 		cat INSTANCE_URI; \
 	else \
 		echo "Error: INSTANCE_URI not found"; \
 		exit 1; \
-	fi
-	@echo "========================================================================"
-	@echo ""
-	@echo "Waiting 5 seconds before starting receivers..."
-	@sleep 5
-	@echo ""
-	@echo "Step 2: Starting receivers on all DTN nodes..."
-	@echo "------------------------------------------------------------------------"
-	@$(MAKE) receive
-	@echo ""
-	@echo "Waiting 5 seconds for receivers to initialize..."
-	@sleep 5
-	@echo ""
-	@echo "Step 3: Starting sender..."
-	@echo "------------------------------------------------------------------------"
-	@$(MAKE) send
-	@echo ""
-	@echo "========================================================================"
-	@echo "Workflow Started Successfully!"
-	@echo "========================================================================"
-	@echo ""
-	@echo "Receivers running on: $(RECEIVERS_LIST)"
-	@echo "Senders running on:   $(SENDERS_LIST)"
-	@echo ""
-	@echo "Remote log directories:"
-	@echo "  Receiver logs: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/"
-	@echo "  Sender logs:   $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/"
-	@echo ""
-	@echo "========================================================================"
-	@echo "NEXT STEPS:"
-	@echo "========================================================================"
-	@echo ""
-	@echo "1. Monitor the test progress on remote nodes (optional)"
-	@echo "   ssh <node> 'tail -f $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log'"
-	@echo ""
-	@echo "2. Wait for the test to complete"
-	@echo "   - Receivers will run for the configured duration (rx_duration)"
-	@echo "   - Sender will complete when all frames are sent"
-	@echo ""
-	@echo "3. Retrieve logs when ready:"
-	@echo "   make retrieve-logs"
-	@echo ""
-	@echo "========================================================================"
-	@echo ""
+	fi; \
+	echo "========================================================================"; \
+	echo ""; \
+	echo "Waiting 5 seconds before starting receivers..."; \
+	sleep 5; \
+	echo ""; \
+	echo "Step 2: Starting receivers on all DTN nodes..."; \
+	echo "------------------------------------------------------------------------"; \
+	$(MAKE) receive RUN_ID=$$RUN_ID; \
+	echo ""; \
+	echo "Waiting 5 seconds for receivers to initialize..."; \
+	sleep 5; \
+	echo ""; \
+	echo "Step 3: Starting sender..."; \
+	echo "------------------------------------------------------------------------"; \
+	$(MAKE) send RUN_ID=$$RUN_ID; \
+	echo ""; \
+	echo "========================================================================"; \
+	echo "Workflow Started Successfully!"; \
+	echo "========================================================================"; \
+	echo ""; \
+	echo "Run ID:              $$RUN_ID"; \
+	echo "Receivers running on: $(RECEIVERS_LIST)"; \
+	echo "Senders running on:   $(SENDERS_LIST)"; \
+	echo ""; \
+	echo "Remote log directories:"; \
+	echo "  Receiver logs: $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/"; \
+	echo "  Sender logs:   $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/"; \
+	echo ""; \
+	echo "========================================================================"; \
+	echo "NEXT STEPS:"; \
+	echo "========================================================================"; \
+	echo ""; \
+	echo "1. Monitor the test progress on remote nodes (optional)"; \
+	echo "   ssh <node> 'tail -f $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_*.log'"; \
+	echo ""; \
+	echo "2. Wait for the test to complete"; \
+	echo "   - Receivers will run for the configured duration (rx_duration)"; \
+	echo "   - Sender will complete when all frames are sent"; \
+	echo ""; \
+	echo "3. Retrieve logs when ready:"; \
+	echo "   make retrieve-logs"; \
+	echo ""; \
+	echo "========================================================================"; \
+	echo ""
 
 tcpdump-commands:
 	@echo "========================================================================"
