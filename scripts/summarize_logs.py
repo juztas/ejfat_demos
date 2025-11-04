@@ -14,6 +14,12 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
 
 def parse_tx_log(log_path: Path) -> Optional[Dict]:
     """Parse a transmitter log file and extract key information."""
@@ -371,6 +377,97 @@ def print_rx_summary(rx_data: Dict):
         print(f"  Total Packets:     {rx_data['total_packets']:,}")
 
 
+def create_tx_dataframe(tx_files: List[Path]) -> Optional[pd.DataFrame]:
+    """Create a DataFrame from transmitter log data."""
+    if not PANDAS_AVAILABLE or not tx_files:
+        return None
+
+    data_dict = {}
+
+    for tx_file in tx_files:
+        tx_data = parse_tx_log(tx_file)
+        if not tx_data:
+            continue
+
+        col_name = tx_data['file']
+
+        # Build column data
+        column_data = {
+            'Run ID': tx_data.get('run_id', 'N/A'),
+            'Sender IP': tx_data.get('sender_ip', 'N/A'),
+            'IP Version': tx_data.get('ip_version', 'N/A'),
+            'TX Rate': tx_data.get('tx_rate', 'N/A'),
+            'TX Length': tx_data.get('tx_length', 'N/A'),
+            'Frames (target)': f"{tx_data['frames']:,}" if tx_data.get('frames') is not None else 'N/A',
+            'Send Sockets': tx_data.get('send_sockets', 'N/A'),
+            'Data ID': tx_data.get('data_id', 'N/A'),
+            'Control Plane': tx_data.get('use_control_plane', 'N/A'),
+            'MTU': tx_data.get('mtu', 'N/A'),
+            'Frames Sent': f"{tx_data['frames_sent']:,}" if tx_data.get('frames_sent') is not None else 'N/A',
+            'Errors': tx_data.get('errors', 'N/A'),
+            'Elapsed Time (sec)': f"{tx_data['elapsed_usecs']/1_000_000:.3f}" if tx_data.get('elapsed_usecs') is not None else 'N/A',
+            'Throughput (Gbps)': f"{tx_data['throughput_gbps']:.4f}" if tx_data.get('throughput_gbps') is not None else 'N/A',
+            'Goodput (Gbps)': f"{tx_data['goodput_gbps']:.4f}" if tx_data.get('goodput_gbps') is not None else 'N/A',
+        }
+
+        data_dict[col_name] = column_data
+
+    if not data_dict:
+        return None
+
+    df = pd.DataFrame(data_dict)
+    return df
+
+
+def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
+    """Create a DataFrame from receiver log data."""
+    if not PANDAS_AVAILABLE or not rx_files:
+        return None
+
+    data_dict = {}
+
+    for rx_file in rx_files:
+        rx_data = parse_rx_log(rx_file)
+        if not rx_data:
+            continue
+
+        col_name = rx_data['file']
+
+        # Build column data
+        column_data = {
+            'Run ID': rx_data.get('run_id', 'N/A'),
+            'Hostname': rx_data.get('hostname', 'N/A'),
+            'Receiver IP': rx_data.get('receiver_ip', 'N/A'),
+            'IP Version': rx_data.get('ip_version', 'N/A'),
+            'Interface': rx_data.get('interface', 'N/A'),
+            'Data Port': rx_data.get('data_port', 'N/A'),
+            'Monitor Ports': rx_data.get('monitor_ports', 'N/A'),
+            'RX Duration': rx_data.get('rx_duration', 'N/A'),
+            'RX Buffer Size': rx_data.get('rx_buffer_size', 'N/A'),
+            'RX Timeout': rx_data.get('rx_timeout', 'N/A'),
+            'RX Cores': rx_data.get('rx_cores', 'N/A'),
+            'RX Dequeue': rx_data.get('rx_dequeue', 'N/A'),
+            'Monitor Interval': rx_data.get('monitor_interval', 'N/A'),
+            'Control Plane': rx_data.get('use_control_plane', 'N/A'),
+            'RX Index': rx_data.get('rx_index', 'N/A'),
+            'Events Received': f"{rx_data['events_received']:,}" if rx_data.get('events_received') is not None else 'N/A',
+            'Events Mangled': f"{rx_data['events_mangled']:,}" if rx_data.get('events_mangled') is not None else 'N/A',
+            'Events Lost (Reassembly)': f"{rx_data['events_lost_reassembly']:,}" if rx_data.get('events_lost_reassembly') is not None else 'N/A',
+            'Events Lost (Enqueue)': f"{rx_data['events_lost_enqueue']:,}" if rx_data.get('events_lost_enqueue') is not None else 'N/A',
+            'Data Errors': f"{rx_data['data_errors']:,}" if rx_data.get('data_errors') is not None else 'N/A',
+            'gRPC Errors': f"{rx_data['grpc_errors']:,}" if rx_data.get('grpc_errors') is not None else 'N/A',
+            'Total Packets': f"{rx_data['total_packets']:,}" if rx_data.get('total_packets') is not None else 'N/A',
+        }
+
+        data_dict[col_name] = column_data
+
+    if not data_dict:
+        return None
+
+    df = pd.DataFrame(data_dict)
+    return df
+
+
 def main():
     """Main function to summarize all logs."""
     # Determine the log directory
@@ -476,6 +573,49 @@ def main():
 
     print()
     print_separator('=', 80)
+
+    # Print DataFrames for side-by-side comparison
+    if PANDAS_AVAILABLE:
+        # Create transmitter comparison DataFrame
+        if tx_files:
+            print()
+            print(f"{'TRANSMITTER COMPARISON':^80}")
+            print_separator('=', 80)
+            tx_df = create_tx_dataframe(tx_files)
+            if tx_df is not None:
+                # Configure pandas display options for better formatting
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.width', None)
+                pd.set_option('display.max_colwidth', None)
+                print(tx_df.to_string())
+            else:
+                print("No transmitter data available for comparison")
+            print()
+            print_separator('=', 80)
+
+        # Create receiver comparison DataFrame
+        if rx_files:
+            print()
+            print(f"{'RECEIVER COMPARISON':^80}")
+            print_separator('=', 80)
+            rx_df = create_rx_dataframe(rx_files)
+            if rx_df is not None:
+                # Configure pandas display options for better formatting
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.width', None)
+                pd.set_option('display.max_colwidth', None)
+                print(rx_df.to_string())
+            else:
+                print("No receiver data available for comparison")
+            print()
+            print_separator('=', 80)
+    else:
+        print()
+        print("Note: Install pandas for side-by-side comparison tables")
+        print("      pip install pandas")
+        print()
+        print_separator('=', 80)
+
     print()
 
 
