@@ -43,7 +43,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs
+.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -62,6 +62,7 @@ help:
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
+	@echo "  summarize-logs    Summarize all tx and rx logs from run_output directory"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo ""
 	@echo "CONFIGURATION:"
@@ -96,6 +97,7 @@ help:
 	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
 	@echo "  make retrieve-logs"
+	@echo "  make summarize-logs"
 	@echo "  make tcpdump-commands"
 	@echo ""
 	@echo "========================================================================"
@@ -414,3 +416,18 @@ retrieve-logs:
 	@echo "  Config files: $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_*.ini $(SENDER_LOG_DIR)/segmenter_config_*.ini 2>/dev/null | wc -l) files"
 	@echo "========================================================================"
 	@echo ""
+
+summarize-logs:
+	@echo "========================================================================"
+	@echo "Summarizing EJFAT Logs"
+	@echo "========================================================================"
+	@if [ ! -d $(RECEIVER_LOG_DIR) ]; then \
+		echo "Error: Log directory '$(RECEIVER_LOG_DIR)' does not exist."; \
+		echo "Please run 'make retrieve-logs' first to fetch logs from remote nodes."; \
+		exit 1; \
+	fi
+	@if [ ! -f $(SCRIPT_DIR)/summarize_logs.py ]; then \
+		echo "Error: summarize_logs.py script not found in $(SCRIPT_DIR)."; \
+		exit 1; \
+	fi
+	@python3 $(SCRIPT_DIR)/summarize_logs.py $(RECEIVER_LOG_DIR)
