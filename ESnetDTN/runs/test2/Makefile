@@ -199,17 +199,22 @@ receive:
 	@echo "Creating log directory if needed..."
 	@mkdir -p $(RECEIVER_LOG_DIR)
 	@echo ""
+	@echo "Archiving receiver config to local run_output..."
+	@cp $(RECEIVER_CONFIG) $(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG).archive
+	@echo "  ✓ $(RECEIVER_CONFIG) saved to $(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG).archive"
+	@echo ""
 	@echo "Starting receivers on all receiver nodes..."
 	@i=0; \
 	for node in $(RECEIVERS_LIST); do \
 		log_file="rx_$$i.log"; \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting receiver $$i on $$node..."; \
 		echo "  Log file: $(RECEIVER_LOG_DIR)/$$log_file"; \
 		echo "  RX Index: $$i"; \
 		echo "  Copying config files to $$node..."; \
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
-		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG); \
+		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
 		echo "  Starting receiver in background..."; \
 		ssh -t $$node bash -i -c "'conda activate e2sar && \
 			cd $(REMOTE_WORK_DIR) && \
@@ -217,7 +222,7 @@ receive:
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
-			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_CONFIG) > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
@@ -254,20 +259,25 @@ send:
 	@echo "Creating log directory if needed..."
 	@mkdir -p $(SENDER_LOG_DIR)
 	@echo ""
+	@echo "Archiving sender config to local run_output..."
+	@cp $(SENDER_CONFIG) $(SENDER_LOG_DIR)/$(SENDER_CONFIG).archive
+	@echo "  ✓ $(SENDER_CONFIG) saved to $(SENDER_LOG_DIR)/$(SENDER_CONFIG).archive"
+	@echo ""
 	@echo "Starting senders on all sender nodes..."
 	@i=0; \
 	for node in $(SENDERS_LIST); do \
 		log_file="tx_$$i.log"; \
 		data_id=$$((100 + i)); \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting sender $$i on $$node..."; \
 		echo "  Log file: $(SENDER_LOG_DIR)/$$log_file"; \
 		echo "  Data ID:  $$data_id"; \
 		echo "  Copying config files to $$node..."; \
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
-		scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i; \
+		scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname; \
 		echo "  Modifying config to set data_id: $$data_id"; \
-		ssh $$node "sed 's/^# data_id:.*/data_id: $$data_id/' $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i > $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i.tmp && mv $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i.tmp $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i"; \
+		ssh $$node "sed 's/^# data_id:.*/data_id: $$data_id/' $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp && mv $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname"; \
 		echo "  Starting sender in background..."; \
 		ssh -t $$node bash -i -c "'conda activate e2sar && \
 			cd $(REMOTE_WORK_DIR) && \
@@ -275,7 +285,7 @@ send:
 			mkdir -p $(SENDER_LOG_DIR) && \
 			export WORK_DIR=$(SENDER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
-			nohup $(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_CONFIG)_$$i > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Sender started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
@@ -407,10 +417,13 @@ retrieve-logs:
 		i=$$((i+1)); \
 		echo ""; \
 	done
-	@echo "Fetching segmenter and reassembler config files..."
+	@echo "Fetching YAML and INI config files..."
 	@i=0; \
 	for node in $(SENDERS_LIST); do \
 		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname ./$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname 2>/dev/null && \
+			echo "  ✓ $(SENDER_CONFIG)_$$hostname retrieved from $$node" || \
+			echo "  ✗ $(SENDER_CONFIG)_$$hostname not found on $$node"; \
 		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/segmenter_config.ini ./$(SENDER_LOG_DIR)/segmenter_config_$$hostname.ini 2>/dev/null && \
 			echo "  ✓ segmenter_config.ini retrieved from $$node" || \
 			echo "  ✗ segmenter_config.ini not found on $$node"; \
@@ -419,6 +432,9 @@ retrieve-logs:
 	@i=0; \
 	for node in $(RECEIVERS_LIST); do \
 		hostname=$$(echo $$node | cut -d'-' -f1); \
+		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname ./$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname 2>/dev/null && \
+			echo "  ✓ $(RECEIVER_CONFIG)_$$hostname retrieved from $$node" || \
+			echo "  ✗ $(RECEIVER_CONFIG)_$$hostname not found on $$node"; \
 		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/reassembler_config.ini ./$(RECEIVER_LOG_DIR)/reassembler_config_$$hostname.ini 2>/dev/null && \
 			echo "  ✓ reassembler_config.ini retrieved from $$node" || \
 			echo "  ✗ reassembler_config.ini not found on $$node"; \
@@ -434,11 +450,13 @@ retrieve-logs:
 	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.pcap $(RECEIVER_LOG_DIR)/*.csv $(SENDER_LOG_DIR)/*.log 2>/dev/null | awk '{printf "  %s %s %s\n", $$5, $$9, ""}'
 	@echo ""
 	@echo "Summary:"
-	@echo "  RX logs:      $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
-	@echo "  TX logs:      $$(ls -1 $(SENDER_LOG_DIR)/tx_*.log 2>/dev/null | wc -l) files"
-	@echo "  CSV files:    $$(ls -1 $(RECEIVER_LOG_DIR)/*.csv 2>/dev/null | wc -l) files"
-	@echo "  PCAP files:   $$(ls -1 $(RECEIVER_LOG_DIR)/*.pcap 2>/dev/null | wc -l) files"
-	@echo "  Config files: $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_*.ini $(SENDER_LOG_DIR)/segmenter_config_*.ini 2>/dev/null | wc -l) files"
+	@echo "  RX logs:        $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
+	@echo "  TX logs:        $$(ls -1 $(SENDER_LOG_DIR)/tx_*.log 2>/dev/null | wc -l) files"
+	@echo "  CSV files:      $$(ls -1 $(RECEIVER_LOG_DIR)/*.csv 2>/dev/null | wc -l) files"
+	@echo "  PCAP files:     $$(ls -1 $(RECEIVER_LOG_DIR)/*.pcap 2>/dev/null | wc -l) files"
+	@echo "  YAML configs:   $$(ls -1 $(RECEIVER_LOG_DIR)/*_config_*.yaml $(SENDER_LOG_DIR)/*_config_*.yaml 2>/dev/null | wc -l) files"
+	@echo "  INI configs:    $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_*.ini $(SENDER_LOG_DIR)/segmenter_config_*.ini 2>/dev/null | wc -l) files"
+	@echo "  Archive YAMLs:  $$(ls -1 $(RECEIVER_LOG_DIR)/*.archive $(SENDER_LOG_DIR)/*.archive 2>/dev/null | wc -l) files"
 	@echo "========================================================================"
 	@echo ""
 
