@@ -6,12 +6,20 @@
 #
 #------------------------------------------------------------------------------------------------
 
+# Available DTN hosts
+HOSTS := cern773-dtn1-mgt.es.net \
+         denv-dtn1-mgt.es.net \
+         hous-dtn1-mgt.es.net \
+         star-dtn1-mgt.es.net \
+         sunn-dtn1-mgt.es.net \
+         wash-dtn1-mgt.es.net
+
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net
+SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
 
 # List of DTN nodes for receivers (in priority order)
-#RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
-RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
+RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+# RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -73,6 +81,8 @@ help:
 	@echo "  REMOTE_WORK_DIR:  $(REMOTE_WORK_DIR)"
 	@echo ""
 	@echo "VARIABLES:"
+	@echo "  HOSTS             Available DTN hosts (reference list)"
+	@echo "                    $(HOSTS)"
 	@echo "  SENDERS_LIST      Space-separated list of DTN nodes for senders"
 	@echo "                    (default: $(SENDERS_LIST))"
 	@echo "  RECEIVERS_LIST    Space-separated list of DTN nodes for receivers"
