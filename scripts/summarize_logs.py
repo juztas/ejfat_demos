@@ -34,6 +34,7 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
         'type': 'transmitter',
         'run_id': None,
         'config_file': None,
+        'hostname': None,
         'sender_ip': None,
         'ip_version': None,
         'tx_rate': None,
@@ -58,6 +59,10 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
     config_match = re.search(r'Config file:\s*(.+)', content)
     if config_match:
         data['config_file'] = config_match.group(1).strip()
+
+    hostname_match = re.search(r'Hostname:\s*(.+)', content)
+    if hostname_match:
+        data['hostname'] = hostname_match.group(1).strip()
 
     sender_ip_match = re.search(r'Sender IP:\s*(.+)', content)
     if sender_ip_match:
@@ -294,6 +299,9 @@ def print_tx_summary(tx_data: Dict):
     if tx_data['config_file']:
         print(f"Config File:         {tx_data['config_file']}")
 
+    if tx_data['hostname']:
+        print(f"Hostname:            {tx_data['hostname']}")
+
     print()
     print("Configuration:")
     print_separator('-')
@@ -418,6 +426,7 @@ def create_tx_dataframe(tx_files: List[Path]) -> Optional[pd.DataFrame]:
         # Build column data
         column_data = {
             'Run ID': tx_data.get('run_id', 'N/A'),
+            'Hostname': tx_data.get('hostname', 'N/A'),
             'Sender IP': tx_data.get('sender_ip', 'N/A'),
             'IP Version': tx_data.get('ip_version', 'N/A'),
             'TX Rate': tx_data.get('tx_rate', 'N/A'),
