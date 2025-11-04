@@ -450,6 +450,20 @@ def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
 
     data_dict = {}
 
+    # Track totals for summable fields
+    totals = {
+        'Events Received': 0,
+        'Events Mangled': 0,
+        'Events Lost (Reassembly)': 0,
+        'Events Lost (Enqueue)': 0,
+        'Data Errors': 0,
+        'gRPC Errors': 0,
+        'Total Packets': 0,
+    }
+
+    # Track which fields have valid data (not all N/A)
+    has_data = {key: False for key in totals.keys()}
+
     for rx_file in rx_files:
         rx_data = parse_rx_log(rx_file)
         if not rx_data:
@@ -483,10 +497,61 @@ def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
             'Total Packets': f"{rx_data['total_packets']:,}" if rx_data.get('total_packets') is not None else 'N/A',
         }
 
+        # Accumulate totals
+        if rx_data.get('events_received') is not None:
+            totals['Events Received'] += rx_data['events_received']
+            has_data['Events Received'] = True
+        if rx_data.get('events_mangled') is not None:
+            totals['Events Mangled'] += rx_data['events_mangled']
+            has_data['Events Mangled'] = True
+        if rx_data.get('events_lost_reassembly') is not None:
+            totals['Events Lost (Reassembly)'] += rx_data['events_lost_reassembly']
+            has_data['Events Lost (Reassembly)'] = True
+        if rx_data.get('events_lost_enqueue') is not None:
+            totals['Events Lost (Enqueue)'] += rx_data['events_lost_enqueue']
+            has_data['Events Lost (Enqueue)'] = True
+        if rx_data.get('data_errors') is not None:
+            totals['Data Errors'] += rx_data['data_errors']
+            has_data['Data Errors'] = True
+        if rx_data.get('grpc_errors') is not None:
+            totals['gRPC Errors'] += rx_data['grpc_errors']
+            has_data['gRPC Errors'] = True
+        if rx_data.get('total_packets') is not None:
+            totals['Total Packets'] += rx_data['total_packets']
+            has_data['Total Packets'] = True
+
         data_dict[col_name] = column_data
 
     if not data_dict:
         return None
+
+    # Add TOTAL column
+    total_column = {
+        'Run ID': '',
+        'Hostname': '',
+        'Receiver IP': '',
+        'IP Version': '',
+        'Interface': '',
+        'Data Port': '',
+        'Monitor Ports': '',
+        'RX Duration': '',
+        'RX Buffer Size': '',
+        'RX Timeout': '',
+        'RX Cores': '',
+        'RX Dequeue': '',
+        'Monitor Interval': '',
+        'Control Plane': '',
+        'RX Index': '',
+        'Events Received': f"{totals['Events Received']:,}" if has_data['Events Received'] else 'N/A',
+        'Events Mangled': f"{totals['Events Mangled']:,}" if has_data['Events Mangled'] else 'N/A',
+        'Events Lost (Reassembly)': f"{totals['Events Lost (Reassembly)']:,}" if has_data['Events Lost (Reassembly)'] else 'N/A',
+        'Events Lost (Enqueue)': f"{totals['Events Lost (Enqueue)']:,}" if has_data['Events Lost (Enqueue)'] else 'N/A',
+        'Data Errors': f"{totals['Data Errors']:,}" if has_data['Data Errors'] else 'N/A',
+        'gRPC Errors': f"{totals['gRPC Errors']:,}" if has_data['gRPC Errors'] else 'N/A',
+        'Total Packets': f"{totals['Total Packets']:,}" if has_data['Total Packets'] else 'N/A',
+    }
+
+    data_dict['TOTAL'] = total_column
 
     df = pd.DataFrame(data_dict)
     return df
