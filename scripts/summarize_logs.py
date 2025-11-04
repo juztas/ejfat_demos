@@ -20,6 +20,12 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+try:
+    import configparser
+    CONFIGPARSER_AVAILABLE = True
+except ImportError:
+    CONFIGPARSER_AVAILABLE = False
+
 
 def parse_tx_log(log_path: Path) -> Optional[Dict]:
     """Parse a transmitter log file and extract key information."""
@@ -566,6 +572,70 @@ def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
     return df
 
 
+def parse_ini_file(ini_path: Path) -> Dict[str, str]:
+    """Parse an INI file and return a flat dictionary of all settings."""
+    if not CONFIGPARSER_AVAILABLE:
+        return {}
+
+    config = configparser.ConfigParser()
+    try:
+        config.read(ini_path)
+    except Exception as e:
+        return {}
+
+    # Flatten the config into a single dict with section.key format
+    flat_dict = {}
+    for section in config.sections():
+        for key in config[section]:
+            flat_key = f"[{section}] {key}"
+            flat_dict[flat_key] = config[section][key]
+
+    return flat_dict
+
+
+def compare_ini_files(log_dir: Path, file_pattern: str) -> Optional[pd.DataFrame]:
+    """Compare INI files and create a DataFrame showing differences."""
+    if not PANDAS_AVAILABLE or not CONFIGPARSER_AVAILABLE:
+        return None
+
+    # Find all matching .ini files
+    ini_files = sorted(log_dir.glob(file_pattern))
+    if not ini_files:
+        return None
+
+    # Parse all INI files
+    all_configs = {}
+    for ini_file in ini_files:
+        # Extract hostname from filename (e.g., "wash" from "segmenter_config_wash.ini")
+        hostname = ini_file.stem.split('_')[-1]  # Get last part after splitting by underscore
+        all_configs[hostname] = parse_ini_file(ini_file)
+
+    if not all_configs:
+        return None
+
+    # Get all unique keys across all configs
+    all_keys = set()
+    for config in all_configs.values():
+        all_keys.update(config.keys())
+
+    all_keys = sorted(all_keys)
+
+    # Build DataFrame
+    data_dict = {}
+    for hostname, config in all_configs.items():
+        column_data = {}
+        for key in all_keys:
+            column_data[key] = config.get(key, 'N/A')
+        data_dict[hostname] = column_data
+
+    df = pd.DataFrame(data_dict)
+
+    # Identify rows where values differ across columns
+    df['DIFFERS'] = df.apply(lambda row: '***' if len(set(row.dropna())) > 1 else '', axis=1)
+
+    return df
+
+
 def main():
     """Main function to summarize all logs."""
     # Determine the log directory
@@ -707,6 +777,50 @@ def main():
                 print("No receiver data available for comparison")
             print()
             print_separator('=', 80)
+
+        # Compare segmenter config files
+        print()
+        print(f"{'SEGMENTER CONFIG COMPARISON':^80}")
+        print_separator('=', 80)
+        segmenter_df = compare_ini_files(log_dir, 'segmenter_config_*.ini')
+        if segmenter_df is not None:
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.width', None)
+            pd.set_option('display.max_colwidth', None)
+            print(segmenter_df.to_string())
+            print()
+            # Show only differing rows
+            diff_rows = segmenter_df[segmenter_df['DIFFERS'] == '***']
+            if not diff_rows.empty:
+                print()
+                print("DIFFERENCES FOUND (*** marked):")
+                print(diff_rows.to_string())
+        else:
+            print("No segmenter config files found for comparison")
+        print()
+        print_separator('=', 80)
+
+        # Compare reassembler config files
+        print()
+        print(f"{'REASSEMBLER CONFIG COMPARISON':^80}")
+        print_separator('=', 80)
+        reassembler_df = compare_ini_files(log_dir, 'reassembler_config_*.ini')
+        if reassembler_df is not None:
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.width', None)
+            pd.set_option('display.max_colwidth', None)
+            print(reassembler_df.to_string())
+            print()
+            # Show only differing rows
+            diff_rows = reassembler_df[reassembler_df['DIFFERS'] == '***']
+            if not diff_rows.empty:
+                print()
+                print("DIFFERENCES FOUND (*** marked):")
+                print(diff_rows.to_string())
+        else:
+            print("No reassembler config files found for comparison")
+        print()
+        print_separator('=', 80)
     else:
         print()
         print("Note: Install pandas for side-by-side comparison tables")
