@@ -220,23 +220,47 @@ def parse_rx_log(log_path: Path) -> Optional[Dict]:
         data['hostname'] = hostname_match.group(1).strip()
 
     # Extract final statistics (look for the last occurrence before "Stopping threads")
-    # Find all Stats blocks and get the last complete one
-    stats_pattern = r'Stats:\s+Events Received:\s*([\d,]+)\s+Events Mangled:\s*([\d,]+)\s+Events Lost in reassembly:\s*([\d,]+)\s+Events Lost in enqueue:\s*([\d,]+)\s+Data Errors:\s*([\d,]+)\s+gRPC Errors:\s*([\d,]+)'
-    stats_matches = list(re.finditer(stats_pattern, content))
-    if stats_matches:
-        # Get the last stats block before "Stopping threads"
-        stopping_pos = content.find('Stopping threads')
-        if stopping_pos != -1:
-            # Find the last stats block before stopping
-            for match in reversed(stats_matches):
-                if match.start() < stopping_pos:
-                    data['events_received'] = int(match.group(1).replace(',', ''))
-                    data['events_mangled'] = int(match.group(2).replace(',', ''))
-                    data['events_lost_reassembly'] = int(match.group(3).replace(',', ''))
-                    data['events_lost_enqueue'] = int(match.group(4).replace(',', ''))
-                    data['data_errors'] = int(match.group(5).replace(',', ''))
-                    data['grpc_errors'] = int(match.group(6).replace(',', ''))
-                    break
+    # Stats are on separate lines, so we need to find the last Stats: block
+    stopping_pos = content.find('Stopping threads')
+    if stopping_pos != -1:
+        # Get content before "Stopping threads"
+        content_before_stop = content[:stopping_pos]
+    else:
+        content_before_stop = content
+
+    # Find all "Stats:" markers
+    stats_positions = [m.start() for m in re.finditer(r'^Stats:', content_before_stop, re.MULTILINE)]
+
+    if stats_positions:
+        # Get the last Stats block
+        last_stats_pos = stats_positions[-1]
+        # Extract a chunk after the last Stats: (next 500 chars should be enough)
+        stats_chunk = content_before_stop[last_stats_pos:last_stats_pos+500]
+
+        # Parse individual fields from the stats block
+        events_received_match = re.search(r'Events Received:\s*([\d,]+)', stats_chunk)
+        if events_received_match:
+            data['events_received'] = int(events_received_match.group(1).replace(',', ''))
+
+        events_mangled_match = re.search(r'Events Mangled:\s*([\d,]+)', stats_chunk)
+        if events_mangled_match:
+            data['events_mangled'] = int(events_mangled_match.group(1).replace(',', ''))
+
+        events_lost_reassembly_match = re.search(r'Events Lost in reassembly:\s*([\d,]+)', stats_chunk)
+        if events_lost_reassembly_match:
+            data['events_lost_reassembly'] = int(events_lost_reassembly_match.group(1).replace(',', ''))
+
+        events_lost_enqueue_match = re.search(r'Events Lost in enqueue:\s*([\d,]+)', stats_chunk)
+        if events_lost_enqueue_match:
+            data['events_lost_enqueue'] = int(events_lost_enqueue_match.group(1).replace(',', ''))
+
+        data_errors_match = re.search(r'Data Errors:\s*([\d,]+)', stats_chunk)
+        if data_errors_match:
+            data['data_errors'] = int(data_errors_match.group(1).replace(',', ''))
+
+        grpc_errors_match = re.search(r'gRPC Errors:\s*([\d,]+)', stats_chunk)
+        if grpc_errors_match:
+            data['grpc_errors'] = int(grpc_errors_match.group(1).replace(',', ''))
 
     # Extract port statistics
     port_stats_match = re.search(r'Port Stats:.*?Port:\s*([\d,]+)\s+Received:\s*([\d,]+)', content, re.DOTALL)
