@@ -51,7 +51,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs
+.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs sync-scripts
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -71,6 +71,7 @@ help:
 	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
 	@echo "  summarize-logs    Summarize all tx and rx logs from run_output directory"
+	@echo "  sync-scripts      Update scripts on all nodes via git pull"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo ""
 	@echo "CONFIGURATION:"
@@ -108,6 +109,7 @@ help:
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
 	@echo "  make retrieve-logs"
 	@echo "  make summarize-logs"
+	@echo "  make sync-scripts"
 	@echo "  make tcpdump-commands"
 	@echo ""
 	@echo "========================================================================"
@@ -474,3 +476,39 @@ summarize-logs:
 		exit 1; \
 	fi
 	@python3 $(SCRIPT_DIR)/summarize_logs.py $(RECEIVER_LOG_DIR)
+
+sync-scripts:
+	@echo "========================================================================"
+	@echo "Syncing Scripts on Remote Nodes"
+	@echo "========================================================================"
+	@echo "This will run 'git pull' in ~/ejfat_demos on all nodes"
+	@echo ""
+	@echo "Nodes to update:"
+	@all_nodes=""; \
+	for node in $(SENDERS_LIST) $(RECEIVERS_LIST); do \
+		if ! echo "$$all_nodes" | grep -q "$$node"; then \
+			all_nodes="$$all_nodes $$node"; \
+		fi; \
+	done; \
+	for node in $$all_nodes; do \
+		echo "  - $$node"; \
+	done
+	@echo ""
+	@all_nodes=""; \
+	for node in $(SENDERS_LIST) $(RECEIVERS_LIST); do \
+		if ! echo "$$all_nodes" | grep -q "$$node"; then \
+			all_nodes="$$all_nodes $$node"; \
+		fi; \
+	done; \
+	for node in $$all_nodes; do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Updating $$node..."; \
+		ssh $$node "cd ~/ejfat_demos && git pull" && \
+			echo "  ✓ Successfully updated $$node" || \
+			echo "  ✗ Failed to update $$node"; \
+		echo ""; \
+	done
+	@echo "========================================================================"
+	@echo "Script Sync Complete!"
+	@echo "========================================================================"
+	@echo ""
