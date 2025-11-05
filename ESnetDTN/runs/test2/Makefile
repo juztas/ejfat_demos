@@ -41,6 +41,7 @@ IP_VERSION ?= 6
 # Receiver configuration
 RECEIVER_CONFIG ?= receiver_config.yaml
 RECEIVER_LOG_DIR ?= run_output
+SAVE_FULL_RX_LOG ?= false
 
 # Sender configuration
 SENDER_CONFIG ?= sender_config.yaml
@@ -98,6 +99,7 @@ help:
 	@echo "  IP_VERSION        IP version: 4 or 6 (default: $(IP_VERSION))"
 	@echo "  RECEIVER_CONFIG   Receiver config file (default: $(RECEIVER_CONFIG))"
 	@echo "  RECEIVER_LOG_DIR  Receiver log directory (default: $(RECEIVER_LOG_DIR))"
+	@echo "  SAVE_FULL_RX_LOG  Save complete rx_*.log files: true or false (default: $(SAVE_FULL_RX_LOG))"
 	@echo "  SENDER_CONFIG     Sender config file (default: $(SENDER_CONFIG))"
 	@echo "  SENDER_LOG_DIR    Sender log directory (default: $(SENDER_LOG_DIR))"
 	@echo ""
@@ -108,6 +110,7 @@ help:
 	@echo "  make free IP_VERSION=4"
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
+	@echo "  make receive SAVE_FULL_RX_LOG=true"
 	@echo "  make send"
 	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
@@ -189,6 +192,7 @@ receive:
 	@echo "Receiver Nodes:      $(RECEIVERS_LIST)"
 	@echo "Receiver Config:     $(RECEIVER_CONFIG)"
 	@echo "Log Directory:       $(RECEIVER_LOG_DIR)"
+	@echo "Save Full RX Logs:   $(SAVE_FULL_RX_LOG)"
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
 	@if [ -n "$(RUN_ID)" ]; then \
 		echo "Run ID:              $(RUN_ID)"; \
@@ -226,13 +230,18 @@ receive:
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
 		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
 		echo "  Starting receiver in background..."; \
+		if [ "$(SAVE_FULL_RX_LOG)" = "true" ]; then \
+			SAVE_FLAG="--save-full-log"; \
+		else \
+			SAVE_FLAG=""; \
+		fi; \
 		ssh -t $$node bash -i -c "'conda activate e2sar && \
 			cd $(REMOTE_WORK_DIR) && \
 			source INSTANCE_URI && \
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
-			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/receive --rx-index $$i $$SAVE_FLAG $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
