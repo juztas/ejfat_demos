@@ -15,11 +15,13 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
+# SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
+SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
-RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
+# RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
+RECEIVERS_LIST ?= $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -214,6 +216,8 @@ receive:
 		echo "Starting receiver $$i on $$node..."; \
 		echo "  Log file: $(RECEIVER_LOG_DIR)/$$log_file"; \
 		echo "  RX Index: $$i"; \
+		echo "  Creating remote directories..."; \
+		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)"; \
 		echo "  Copying config files to $$node..."; \
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
 		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
@@ -275,6 +279,8 @@ send:
 		echo "Starting sender $$i on $$node..."; \
 		echo "  Log file: $(SENDER_LOG_DIR)/$$log_file"; \
 		echo "  Data ID:  $$data_id"; \
+		echo "  Creating remote directories..."; \
+		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)"; \
 		echo "  Copying config files to $$node..."; \
 		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
 		scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname; \
