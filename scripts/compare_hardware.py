@@ -375,6 +375,15 @@ def print_differences_pages(df: pd.DataFrame, max_width: int = 160):
         print_separator('=', max_width)
 
 
+def save_dataframe_to_csv(df: pd.DataFrame, output_path: Path, name: str):
+    """Save a DataFrame to CSV file."""
+    try:
+        df.to_csv(output_path)
+        print(f"Saved {name} to: {output_path}")
+    except Exception as e:
+        print(f"Error saving {name} to CSV: {e}")
+
+
 def main():
     """Main function to compare hardware across all nodes."""
     # Determine the log directory
@@ -416,6 +425,9 @@ def main():
         print_separator('=', max_width)
         sys.exit(1)
 
+    # Track CSV files that were created
+    csv_files = []
+
     # CPU Comparison
     if lscpu_files:
         df = create_comparison_dataframe(log_dir)
@@ -427,6 +439,11 @@ def main():
             print()
             print_dataframe_pages(df, max_width)
             print_differences_pages(df, max_width)
+
+            # Save to CSV
+            csv_path = log_dir / 'hardware_comparison_cpu.csv'
+            save_dataframe_to_csv(df, csv_path, 'CPU comparison')
+            csv_files.append(csv_path)
 
     # Memory Comparison
     if meminfo_files:
@@ -440,6 +457,11 @@ def main():
             print_dataframe_pages(mem_df, max_width)
             print_differences_pages(mem_df, max_width)
 
+            # Save to CSV
+            csv_path = log_dir / 'hardware_comparison_memory.csv'
+            save_dataframe_to_csv(mem_df, csv_path, 'Memory comparison')
+            csv_files.append(csv_path)
+
     # Socket Buffer Comparison
     if sysctl_files:
         sysctl_df = create_sysctl_comparison_dataframe(log_dir)
@@ -451,6 +473,22 @@ def main():
             print()
             print_dataframe_pages(sysctl_df, max_width)
             print_differences_pages(sysctl_df, max_width)
+
+            # Save to CSV
+            csv_path = log_dir / 'hardware_comparison_sysctl.csv'
+            save_dataframe_to_csv(sysctl_df, csv_path, 'Sysctl comparison')
+            csv_files.append(csv_path)
+
+    # Print summary of CSV files created
+    if csv_files:
+        print()
+        print_separator('=', max_width)
+        print(f"{'CSV FILES CREATED':^{max_width}}")
+        print_separator('=', max_width)
+        for csv_file in csv_files:
+            print(f"  {csv_file}")
+        print()
+        print_separator('=', max_width)
 
     print()
 

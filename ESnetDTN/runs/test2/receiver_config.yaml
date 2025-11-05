@@ -49,7 +49,7 @@ rx_timeout: 7000
 
 # Number of CPU cores to use
 # Default: 1
-rx_cores: 1
+rx_cores: 8
 
 # Dequeue parameter
 # Default: 16
@@ -69,7 +69,7 @@ log_dir: ./
 
 # Port range to monitor (format: start-end)
 # Default: 10000-10015
-monitor_ports: 10000-10015
+monitor_ports: 10000-10007
 
 # Monitoring interval (in seconds)
 # Default: 0.1
