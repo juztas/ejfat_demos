@@ -683,6 +683,38 @@ def compare_ini_files(log_dir: Path, file_pattern: str) -> Optional[pd.DataFrame
     return df
 
 
+def parse_instance_uri(log_dir: Path) -> Optional[str]:
+    """Parse the INSTANCE_URI file to extract load balancer information."""
+    # Check in the parent directory (where INSTANCE_URI is typically stored)
+    instance_uri_file = log_dir.parent / 'INSTANCE_URI'
+
+    if not instance_uri_file.exists():
+        # Also check in the log directory itself
+        instance_uri_file = log_dir / 'INSTANCE_URI'
+
+    if not instance_uri_file.exists():
+        return None
+
+    try:
+        with open(instance_uri_file, 'r') as f:
+            content = f.read()
+
+        # Extract the URI from export statement
+        # Format: export EJFAT_URI='ejfats://...@host:port/...'
+        match = re.search(r"ejfats?://[^@]+@([^:/]+)", content)
+        if match:
+            return match.group(1)
+
+        # Also try to extract data plane IPs
+        data_ips = re.findall(r'data=([^&\'"]+)', content)
+        if data_ips:
+            return match.group(1) if match else None
+    except Exception as e:
+        return None
+
+    return None
+
+
 def main():
     """Main function to summarize all logs."""
     # Determine the log directory
@@ -703,6 +735,9 @@ def main():
         print(f"No tx_*.log or rx_*.log files found in {log_dir}")
         sys.exit(1)
 
+    # Parse load balancer info
+    lb_host = parse_instance_uri(log_dir)
+
     print()
     print_separator('=', 80)
     print(f"{'EJFAT LOG SUMMARY':^80}")
@@ -710,6 +745,8 @@ def main():
     print(f"Log Directory: {log_dir.resolve()}")
     print(f"Transmitter Logs Found: {len(tx_files)}")
     print(f"Receiver Logs Found: {len(rx_files)}")
+    if lb_host:
+        print(f"Load Balancer: {lb_host}")
 
     # Parse and display transmitter logs
     for tx_file in tx_files:
@@ -791,41 +828,7 @@ def main():
 
     # Print DataFrames for side-by-side comparison
     if PANDAS_AVAILABLE:
-        # Create transmitter comparison DataFrame
-        if tx_files:
-            print()
-            print(f"{'TRANSMITTER COMPARISON':^80}")
-            print_separator('=', 80)
-            tx_df = create_tx_dataframe(tx_files)
-            if tx_df is not None:
-                # Configure pandas display options for better formatting
-                pd.set_option('display.max_columns', None)
-                pd.set_option('display.width', None)
-                pd.set_option('display.max_colwidth', None)
-                print(tx_df.to_string())
-            else:
-                print("No transmitter data available for comparison")
-            print()
-            print_separator('=', 80)
-
-        # Create receiver comparison DataFrame
-        if rx_files:
-            print()
-            print(f"{'RECEIVER COMPARISON':^80}")
-            print_separator('=', 80)
-            rx_df = create_rx_dataframe(rx_files)
-            if rx_df is not None:
-                # Configure pandas display options for better formatting
-                pd.set_option('display.max_columns', None)
-                pd.set_option('display.width', None)
-                pd.set_option('display.max_colwidth', None)
-                print(rx_df.to_string())
-            else:
-                print("No receiver data available for comparison")
-            print()
-            print_separator('=', 80)
-
-        # Compare segmenter config files
+        # Compare segmenter config files FIRST
         print()
         print(f"{'SEGMENTER CONFIG COMPARISON':^80}")
         print_separator('=', 80)
@@ -847,7 +850,7 @@ def main():
         print()
         print_separator('=', 80)
 
-        # Compare reassembler config files
+        # Compare reassembler config files SECOND
         print()
         print(f"{'REASSEMBLER CONFIG COMPARISON':^80}")
         print_separator('=', 80)
@@ -868,6 +871,40 @@ def main():
             print("No reassembler config files found for comparison")
         print()
         print_separator('=', 80)
+
+        # Create transmitter comparison DataFrame THIRD
+        if tx_files:
+            print()
+            print(f"{'TRANSMITTER COMPARISON':^80}")
+            print_separator('=', 80)
+            tx_df = create_tx_dataframe(tx_files)
+            if tx_df is not None:
+                # Configure pandas display options for better formatting
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.width', None)
+                pd.set_option('display.max_colwidth', None)
+                print(tx_df.to_string())
+            else:
+                print("No transmitter data available for comparison")
+            print()
+            print_separator('=', 80)
+
+        # Create receiver comparison DataFrame FOURTH
+        if rx_files:
+            print()
+            print(f"{'RECEIVER COMPARISON':^80}")
+            print_separator('=', 80)
+            rx_df = create_rx_dataframe(rx_files)
+            if rx_df is not None:
+                # Configure pandas display options for better formatting
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.width', None)
+                pd.set_option('display.max_colwidth', None)
+                print(rx_df.to_string())
+            else:
+                print("No receiver data available for comparison")
+            print()
+            print_separator('=', 80)
     else:
         print()
         print("Note: Install pandas for side-by-side comparison tables")
