@@ -169,7 +169,8 @@ REASSEM_DATA_PORT_BASE="${REASSEM_DATA_PORT_BASE:-10000}"
 # Calculate unique port for this receiver instance based on RX_INDEX and number of threads
 # Port = BASE_PORT + (RX_INDEX * RX_THREADS)
 # This ensures non-overlapping port ranges for multiple receivers on same host
-REASSEM_DATA_PORT=$((REASSEM_DATA_PORT_BASE + (RX_INDEX * RX_THREADS)))
+PORT_OFFSET=$((RX_INDEX * RX_THREADS))
+REASSEM_DATA_PORT=$((REASSEM_DATA_PORT_BASE + PORT_OFFSET))
 
 # Calculate monitor port range to match the receiver's port range
 # Monitor ports should cover: REASSEM_DATA_PORT to (REASSEM_DATA_PORT + RX_THREADS - 1)
@@ -320,8 +321,8 @@ echo "IP Version:         IPv$IP_VERSION"
 echo "Interface:          $MY_INTERFACE"
 echo "Work Directory:     $WORK_DIR"
 echo "Log Directory:      $LOG_DIR"
-echo "Data Port:          $REASSEM_DATA_PORT (base: $REASSEM_DATA_PORT_BASE + offset: $((RX_INDEX * RX_THREADS)))"
-echo "Monitor Ports:      $MONITOR_PORTS"
+echo "Data Port:          $REASSEM_DATA_PORT (base: $REASSEM_DATA_PORT_BASE + RX_INDEX($RX_INDEX) * RX_THREADS($RX_THREADS) = $PORT_OFFSET)"
+echo "Monitor Ports:      $MONITOR_PORTS ($RX_THREADS ports)"
 echo "RX Duration:        $RX_DURATION sec"
 echo "RX Buffer Size:     $RX_BUFSIZE bytes"
 echo "RX Timeout:         $RX_TIMEOUT ms"
