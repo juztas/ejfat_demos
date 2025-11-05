@@ -422,6 +422,17 @@ def create_tx_dataframe(tx_files: List[Path]) -> Optional[pd.DataFrame]:
 
     data_dict = {}
 
+    # Track totals for summable fields
+    totals = {
+        'Frames Sent': 0,
+        'Errors': 0,
+        'Throughput (Gbps)': 0.0,
+        'Goodput (Gbps)': 0.0,
+    }
+
+    # Track which fields have valid data (not all N/A)
+    has_data = {key: False for key in totals.keys()}
+
     for tx_file in tx_files:
         tx_data = parse_tx_log(tx_file)
         if not tx_data:
@@ -449,10 +460,46 @@ def create_tx_dataframe(tx_files: List[Path]) -> Optional[pd.DataFrame]:
             'Goodput (Gbps)': f"{tx_data['goodput_gbps']:.4f}" if tx_data.get('goodput_gbps') is not None else 'N/A',
         }
 
+        # Accumulate totals
+        if tx_data.get('frames_sent') is not None:
+            totals['Frames Sent'] += tx_data['frames_sent']
+            has_data['Frames Sent'] = True
+        if tx_data.get('errors') is not None:
+            totals['Errors'] += tx_data['errors']
+            has_data['Errors'] = True
+        if tx_data.get('throughput_gbps') is not None:
+            totals['Throughput (Gbps)'] += tx_data['throughput_gbps']
+            has_data['Throughput (Gbps)'] = True
+        if tx_data.get('goodput_gbps') is not None:
+            totals['Goodput (Gbps)'] += tx_data['goodput_gbps']
+            has_data['Goodput (Gbps)'] = True
+
         data_dict[col_name] = column_data
 
     if not data_dict:
         return None
+
+    # Add TOTAL column
+    total_column = {
+        'Run ID': '',
+        'Hostname': '',
+        'Sender IP': '',
+        'IP Version': '',
+        'TX Rate': '',
+        'TX Length': '',
+        'Frames (target)': '',
+        'Send Sockets': '',
+        'Data ID': '',
+        'Control Plane': '',
+        'MTU': '',
+        'Frames Sent': f"{totals['Frames Sent']:,}" if has_data['Frames Sent'] else 'N/A',
+        'Errors': totals['Errors'] if has_data['Errors'] else 'N/A',
+        'Elapsed Time (sec)': '',
+        'Throughput (Gbps)': f"{totals['Throughput (Gbps)']:.4f}" if has_data['Throughput (Gbps)'] else 'N/A',
+        'Goodput (Gbps)': f"{totals['Goodput (Gbps)']:.4f}" if has_data['Goodput (Gbps)'] else 'N/A',
+    }
+
+    data_dict['TOTAL'] = total_column
 
     df = pd.DataFrame(data_dict)
     return df
