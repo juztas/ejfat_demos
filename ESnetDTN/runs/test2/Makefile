@@ -53,7 +53,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs sync-scripts survey-hardware
+.PHONY: help reserve free receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -71,7 +71,7 @@ help:
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send"
-	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
+	@echo "  get-logs          Retrieve all logs and pcap files from remote nodes"
 	@echo "  summarize-logs    Summarize all tx and rx logs from run_output directory"
 	@echo "  sync-scripts      Update scripts on all nodes via git pull"
 	@echo "  survey-hardware   Compare CPU hardware across all DTN nodes using lscpu"
@@ -110,7 +110,7 @@ help:
 	@echo "  make send"
 	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
-	@echo "  make retrieve-logs"
+	@echo "  make get-logs"
 	@echo "  make summarize-logs"
 	@echo "  make sync-scripts"
 	@echo "  make survey-hardware"
@@ -372,7 +372,7 @@ run:
 	echo "   - Sender will complete when all frames are sent"; \
 	echo ""; \
 	echo "3. Retrieve logs when ready:"; \
-	echo "   make retrieve-logs"; \
+	echo "   make get-logs"; \
 	echo ""; \
 	echo "========================================================================"; \
 	echo ""
@@ -392,7 +392,7 @@ tcpdump-commands:
 	fi
 	@$(SCRIPT_DIR)/generate_tcpdump_commands.sh $(RECEIVER_CONFIG) INSTANCE_URI $(RECEIVERS_LIST)
 
-retrieve-logs:
+get-logs:
 	@echo "========================================================================"
 	@echo "Retrieving Logs from Remote Nodes (using rsync)"
 	@echo "========================================================================"
@@ -483,7 +483,7 @@ summarize-logs:
 	@echo "========================================================================"
 	@if [ ! -d $(RECEIVER_LOG_DIR) ]; then \
 		echo "Error: Log directory '$(RECEIVER_LOG_DIR)' does not exist."; \
-		echo "Please run 'make retrieve-logs' first to fetch logs from remote nodes."; \
+		echo "Please run 'make get-logs' first to fetch logs from remote nodes."; \
 		exit 1; \
 	fi
 	@if [ ! -f $(SCRIPT_DIR)/summarize_logs.py ]; then \
