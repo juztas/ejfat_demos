@@ -310,9 +310,9 @@ run:
 	@echo "Running Complete EJFAT Workflow"
 	@echo "========================================================================"
 	@echo ""
-	@RUN_ID=$$(date +"%Y%m%d_%H%M%S"); \
+	@RUN_ID=$$(date -u +"%Y%m%d_%H%M%S"); \
 	export RUN_ID; \
-	echo "Run ID: $$RUN_ID"; \
+	echo "Run ID: $$RUN_ID (UTC)"; \
 	echo "$$RUN_ID" > RUN_ID; \
 	echo ""; \
 	echo "Step 1: Reserving load balancer..."; \
