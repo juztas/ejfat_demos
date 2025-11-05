@@ -15,13 +15,13 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-# SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
-SENDERS_LIST ?= $(HOSTS)
+SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
+#SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-# RECEIVERS_LIST ?= wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net
-RECEIVERS_LIST ?= $(HOSTS)
+RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net 
+#RECEIVERS_LIST ?= $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -53,7 +53,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs sync-scripts
+.PHONY: help reserve free receive send run tcpdump-commands retrieve-logs summarize-logs sync-scripts survey-hardware
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -74,6 +74,7 @@ help:
 	@echo "  retrieve-logs     Retrieve all logs and pcap files from remote nodes"
 	@echo "  summarize-logs    Summarize all tx and rx logs from run_output directory"
 	@echo "  sync-scripts      Update scripts on all nodes via git pull"
+	@echo "  survey-hardware   Compare CPU hardware across all DTN nodes using lscpu"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo ""
 	@echo "CONFIGURATION:"
@@ -112,6 +113,7 @@ help:
 	@echo "  make retrieve-logs"
 	@echo "  make summarize-logs"
 	@echo "  make sync-scripts"
+	@echo "  make survey-hardware"
 	@echo "  make tcpdump-commands"
 	@echo ""
 	@echo "========================================================================"
@@ -310,10 +312,11 @@ run:
 	@echo "Running Complete EJFAT Workflow"
 	@echo "========================================================================"
 	@echo ""
+	@mkdir -p $(RECEIVER_LOG_DIR)
 	@RUN_ID=$$(date -u +"%Y%m%d_%H%M%S"); \
 	export RUN_ID; \
 	echo "Run ID: $$RUN_ID (UTC)"; \
-	echo "$$RUN_ID" > RUN_ID; \
+	echo "$$RUN_ID" > $(RECEIVER_LOG_DIR)/RUN_ID; \
 	echo ""; \
 	echo "Step 1: Reserving load balancer..."; \
 	echo "------------------------------------------------------------------------"; \
@@ -391,61 +394,67 @@ tcpdump-commands:
 
 retrieve-logs:
 	@echo "========================================================================"
-	@echo "Retrieving Logs from Remote Nodes"
+	@echo "Retrieving Logs from Remote Nodes (using rsync)"
 	@echo "========================================================================"
 	@echo "Creating local log directories..."
 	@mkdir -p $(RECEIVER_LOG_DIR)
 	@mkdir -p $(SENDER_LOG_DIR)
 	@echo ""
-	@echo "Fetching receiver logs from all receiver nodes..."
-	@i=0; \
-	for node in $(RECEIVERS_LIST); do \
-		echo "------------------------------------------------------------------------"; \
-		echo "Fetching logs from $$node (receiver $$i)..."; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.log ./$(RECEIVER_LOG_DIR)/rx_$$i.log 2>/dev/null && \
-			echo "  ✓ rx_$$i.log retrieved" || \
-			echo "  ✗ rx_$$i.log not found on $$node"; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/*_rx_csvfile.csv ./$(RECEIVER_LOG_DIR)/ 2>/dev/null && \
-			echo "  ✓ CSV files retrieved from $$node" || \
-			echo "  ✗ No CSV files found on $$node"; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/rx_$$i.pcap ./$(RECEIVER_LOG_DIR)/rx_$$i.pcap 2>/dev/null && \
-			echo "  ✓ rx_$$i.pcap retrieved ($(shell du -h ./$(RECEIVER_LOG_DIR)/rx_$$i.pcap 2>/dev/null | awk '{print $$1}'))" || \
-			echo "  ✗ No PCAP file found on $$node"; \
-		i=$$((i+1)); \
-		echo ""; \
-	done
-	@echo "Fetching sender logs from all sender nodes..."
-	@i=0; \
-	for node in $(SENDERS_LIST); do \
-		echo "------------------------------------------------------------------------"; \
-		echo "Fetching logs from $$node (sender $$i)..."; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/tx_$$i.log ./$(SENDER_LOG_DIR)/tx_$$i.log 2>/dev/null && \
-			echo "  ✓ tx_$$i.log retrieved" || \
-			echo "  ✗ tx_$$i.log not found on $$node"; \
-		i=$$((i+1)); \
-		echo ""; \
-	done
-	@echo "Fetching YAML and INI config files..."
-	@i=0; \
-	for node in $(SENDERS_LIST); do \
-		hostname=$$(echo $$node | cut -d'-' -f1); \
-		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname ./$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname 2>/dev/null && \
-			echo "  ✓ $(SENDER_CONFIG)_$$hostname retrieved from $$node" || \
-			echo "  ✗ $(SENDER_CONFIG)_$$hostname not found on $$node"; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/segmenter_config.ini ./$(SENDER_LOG_DIR)/segmenter_config_$$hostname.ini 2>/dev/null && \
-			echo "  ✓ segmenter_config.ini retrieved from $$node" || \
-			echo "  ✗ segmenter_config.ini not found on $$node"; \
-		i=$$((i+1)); \
-	done
+	@echo "Syncing receiver logs from all receiver nodes..."
 	@i=0; \
 	for node in $(RECEIVERS_LIST); do \
 		hostname=$$(echo $$node | cut -d'-' -f1); \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname ./$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname 2>/dev/null && \
-			echo "  ✓ $(RECEIVER_CONFIG)_$$hostname retrieved from $$node" || \
-			echo "  ✗ $(RECEIVER_CONFIG)_$$hostname not found on $$node"; \
-		scp $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/reassembler_config.ini ./$(RECEIVER_LOG_DIR)/reassembler_config_$$hostname.ini 2>/dev/null && \
-			echo "  ✓ reassembler_config.ini retrieved from $$node" || \
-			echo "  ✗ reassembler_config.ini not found on $$node"; \
+		echo "------------------------------------------------------------------------"; \
+		echo "Syncing logs from $$node (receiver $$i, hostname: $$hostname)..."; \
+		echo "  Pre-renaming conflicting INI file on remote..."; \
+		ssh $$node "cd $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR) 2>/dev/null && \
+			[ -f reassembler_config.ini ] && \
+			mv reassembler_config.ini reassembler_config_$$hostname.ini 2>/dev/null || true" && \
+			echo "    ✓ INI file renamed (or already renamed)" || \
+			echo "    ✗ Could not rename INI file"; \
+		echo "  Running rsync..."; \
+		rsync -avz --progress --stats --human-readable \
+			--partial --partial-dir=.rsync-partial \
+			--itemize-changes \
+			--exclude="[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]/" \
+			--include="RUN_ID" \
+			--include="rx_$$i.log" \
+			--include="rx_$$i.pcap" \
+			--include="*_rx_csvfile.csv" \
+			--include="*_$$hostname.yaml" \
+			--include="*_$$hostname.ini" \
+			--exclude="*" \
+			$$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/ \
+			./$(RECEIVER_LOG_DIR)/ 2>&1 | grep -E "(sent|received|speedup|rx_|csv|yaml|ini|RUN_ID|total size)" || true; \
+		echo "  ✓ Sync complete for $$node"; \
+		echo ""; \
+		i=$$((i+1)); \
+	done
+	@echo "Syncing sender logs from all sender nodes..."
+	@i=0; \
+	for node in $(SENDERS_LIST); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		echo "------------------------------------------------------------------------"; \
+		echo "Syncing logs from $$node (sender $$i, hostname: $$hostname)..."; \
+		echo "  Pre-renaming conflicting INI file on remote..."; \
+		ssh $$node "cd $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR) 2>/dev/null && \
+			[ -f segmenter_config.ini ] && \
+			mv segmenter_config.ini segmenter_config_$$hostname.ini 2>/dev/null || true" && \
+			echo "    ✓ INI file renamed (or already renamed)" || \
+			echo "    ✗ Could not rename INI file"; \
+		echo "  Running rsync..."; \
+		rsync -avz --progress --stats --human-readable \
+			--partial --partial-dir=.rsync-partial \
+			--itemize-changes \
+			--exclude="[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]/" \
+			--include="tx_$$i.log" \
+			--include="*_$$hostname.yaml" \
+			--include="*_$$hostname.ini" \
+			--exclude="*" \
+			$$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/ \
+			./$(SENDER_LOG_DIR)/ 2>&1 | grep -E "(sent|received|speedup|tx_|yaml|ini|total size)" || true; \
+		echo "  ✓ Sync complete for $$node"; \
+		echo ""; \
 		i=$$((i+1)); \
 	done
 	@echo ""
@@ -455,7 +464,7 @@ retrieve-logs:
 	@echo "All logs saved to: $(RECEIVER_LOG_DIR)/ and $(SENDER_LOG_DIR)/"
 	@echo ""
 	@echo "Retrieved files:"
-	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.pcap $(RECEIVER_LOG_DIR)/*.csv $(SENDER_LOG_DIR)/*.log 2>/dev/null | awk '{printf "  %s %s %s\n", $$5, $$9, ""}'
+	@ls -lh $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.pcap $(RECEIVER_LOG_DIR)/*.csv $(SENDER_LOG_DIR)/*.log 2>/dev/null | awk '{printf "  %s %s %s\n", $$5, $$9, ""}' || echo "  (no files found)"
 	@echo ""
 	@echo "Summary:"
 	@echo "  RX logs:        $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
@@ -481,7 +490,25 @@ summarize-logs:
 		echo "Error: summarize_logs.py script not found in $(SCRIPT_DIR)."; \
 		exit 1; \
 	fi
-	@python3 $(SCRIPT_DIR)/summarize_logs.py $(RECEIVER_LOG_DIR)
+	@if [ ! -f $(RECEIVER_LOG_DIR)/RUN_ID ]; then \
+		echo "Warning: RUN_ID file not found in $(RECEIVER_LOG_DIR)/. Using timestamp for output directory."; \
+		RUN_ID=$$(date -u +"%Y%m%d_%H%M%S"); \
+	else \
+		RUN_ID=$$(cat $(RECEIVER_LOG_DIR)/RUN_ID); \
+	fi; \
+	echo "Run ID: $$RUN_ID"; \
+	echo "Creating output directory: $(RECEIVER_LOG_DIR)/$$RUN_ID/"; \
+	mkdir -p $(RECEIVER_LOG_DIR)/$$RUN_ID; \
+	echo "Running log analysis..."; \
+	python3 $(SCRIPT_DIR)/summarize_logs.py $(RECEIVER_LOG_DIR) > $(RECEIVER_LOG_DIR)/$$RUN_ID/log_summary.txt 2>&1; \
+	echo ""; \
+	echo "========================================================================";\
+	echo "Summary saved to: $(RECEIVER_LOG_DIR)/$$RUN_ID/log_summary.txt"; \
+	echo "========================================================================"; \
+	echo ""; \
+	echo "Displaying summary:"; \
+	echo "------------------------------------------------------------------------"; \
+	cat $(RECEIVER_LOG_DIR)/$$RUN_ID/log_summary.txt
 
 sync-scripts:
 	@echo "========================================================================"
@@ -516,5 +543,65 @@ sync-scripts:
 	done
 	@echo "========================================================================"
 	@echo "Script Sync Complete!"
+	@echo "========================================================================"
+	@echo ""
+
+survey-hardware:
+	@echo "========================================================================"
+	@echo "Surveying Hardware Across All DTN Nodes"
+	@echo "========================================================================"
+	@echo "Collecting system information from all hosts: $(HOSTS)"
+	@echo ""
+	@mkdir -p $(RECEIVER_LOG_DIR)
+	@echo "Collecting lscpu data from all nodes..."
+	@for node in $(HOSTS); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		echo "  Fetching lscpu from $$node..."; \
+		ssh $$node "lscpu" > $(RECEIVER_LOG_DIR)/lscpu_$$hostname.txt 2>&1 && \
+			echo "    ✓ lscpu data saved to $(RECEIVER_LOG_DIR)/lscpu_$$hostname.txt" || \
+			echo "    ✗ Failed to get lscpu from $$node"; \
+	done
+	@echo ""
+	@echo "Collecting memory information from all nodes..."
+	@for node in $(HOSTS); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		echo "  Fetching memory info from $$node..."; \
+		ssh $$node "free -h && echo && cat /proc/meminfo" > $(RECEIVER_LOG_DIR)/meminfo_$$hostname.txt 2>&1 && \
+			echo "    ✓ memory data saved to $(RECEIVER_LOG_DIR)/meminfo_$$hostname.txt" || \
+			echo "    ✗ Failed to get memory info from $$node"; \
+	done
+	@echo ""
+	@echo "Collecting socket buffer configuration from all nodes..."
+	@for node in $(HOSTS); do \
+		hostname=$$(echo $$node | cut -d'-' -f1); \
+		echo "  Fetching socket buffer config from $$node..."; \
+		ssh $$node "echo 'Socket Buffer Maximums:' && \
+			echo 'net.core.rmem_max:' && sysctl net.core.rmem_max && \
+			echo 'net.core.wmem_max:' && sysctl net.core.wmem_max && \
+			echo && echo 'Socket Buffer Defaults:' && \
+			echo 'net.core.rmem_default:' && sysctl net.core.rmem_default && \
+			echo 'net.core.wmem_default:' && sysctl net.core.wmem_default && \
+			echo && echo 'TCP Buffer Settings:' && \
+			echo 'net.ipv4.tcp_rmem:' && sysctl net.ipv4.tcp_rmem && \
+			echo 'net.ipv4.tcp_wmem:' && sysctl net.ipv4.tcp_wmem && \
+			echo && echo 'UDP Buffer Settings:' && \
+			echo 'net.ipv4.udp_rmem_min:' && sysctl net.ipv4.udp_rmem_min && \
+			echo 'net.ipv4.udp_wmem_min:' && sysctl net.ipv4.udp_wmem_min" > $(RECEIVER_LOG_DIR)/sysctl_$$hostname.txt 2>&1 && \
+			echo "    ✓ socket buffer config saved to $(RECEIVER_LOG_DIR)/sysctl_$$hostname.txt" || \
+			echo "    ✗ Failed to get socket buffer config from $$node"; \
+	done
+	@echo ""
+	@echo "Comparing hardware configurations..."
+	@if [ ! -f $(SCRIPT_DIR)/compare_hardware.py ]; then \
+		echo "Error: compare_hardware.py script not found in $(SCRIPT_DIR)."; \
+		echo "Creating compare_hardware.py..."; \
+		python3 -c "import sys; sys.path.insert(0, '$(SCRIPT_DIR)'); exec(open('$(SCRIPT_DIR)/compare_hardware.py').read())" $(RECEIVER_LOG_DIR) 2>/dev/null || \
+			echo "Please create $(SCRIPT_DIR)/compare_hardware.py to parse lscpu output"; \
+	else \
+		python3 $(SCRIPT_DIR)/compare_hardware.py $(RECEIVER_LOG_DIR); \
+	fi
+	@echo ""
+	@echo "========================================================================"
+	@echo "Hardware Survey Complete!"
 	@echo "========================================================================"
 	@echo ""
