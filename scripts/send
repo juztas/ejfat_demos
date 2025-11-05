@@ -56,12 +56,42 @@ EOF
 # ARGUMENT PARSING
 #------------------------------------------------------------------------------------------------
 
-# Check for help flag
-if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ -z "$1" ]]; then
+# Debug: Print all arguments
+echo "DEBUG: All arguments: $@" >&2
+echo "DEBUG: Number of arguments: $#" >&2
+
+# Default values
+TX_INDEX=0
+CONFIG_FILE=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        --tx-index)
+            TX_INDEX="$2"
+            shift 2
+            ;;
+        -*)
+            echo "Error: Unknown option: $1"
+            show_help
+            ;;
+        *)
+            if [[ -z "$CONFIG_FILE" ]]; then
+                CONFIG_FILE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check for config file
+if [[ -z "$CONFIG_FILE" ]]; then
+    echo "Error: Configuration file not specified"
     show_help
 fi
-
-CONFIG_FILE="$1"
 
 # Check if config file exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -178,9 +208,9 @@ fi
 # GENERATE SEGMENTER CONFIG
 #------------------------------------------------------------------------------------------------
 
-echo "Generating segmenter_config.ini..."
+echo "Generating segmenter_config_tx_${TX_INDEX}.ini..."
 
-cat > segmenter_config.ini << EOF
+cat > segmenter_config_tx_${TX_INDEX}.ini << EOF
 [general]
 ; whether to use the control plane (gRPC sendState)
 useCP = $USE_CP
@@ -237,6 +267,7 @@ echo "Send Sockets:       $SEND_SOCKETS"
 echo "Data ID:            $DATA_ID"
 echo "Use Control Plane:  $USE_CP"
 echo "MTU:                $MTU"
+echo "TX Index:           $TX_INDEX"
 echo "========================================================================"
 echo ""
 
@@ -248,15 +279,15 @@ echo "========================================================================"
 echo "DEBUG: Current working directory: $(pwd)"
 echo "DEBUG: Contents of current directory:"
 ls -la
-echo "DEBUG: segmenter_config.ini location:"
-ls -la segmenter_config.ini 2>&1
+echo "DEBUG: segmenter_config_tx_${TX_INDEX}.ini location:"
+ls -la segmenter_config_tx_${TX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --send --withcp --ini segmenter_config.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
+echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
 echo "========================================================================"
 echo ""
 
-# e2sar_perf will use the segmenter_config.ini we generated
-e2sar_perf --send --withcp --ini segmenter_config.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
+# e2sar_perf will use the segmenter_config_tx_${TX_INDEX}.ini we generated
+e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
 
 echo ""
 echo "========================================================================"

@@ -15,7 +15,7 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
+SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net  star-dtn1-mgt.es.net 
 #SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
@@ -295,7 +295,7 @@ send:
 			mkdir -p $(SENDER_LOG_DIR) && \
 			export WORK_DIR=$(SENDER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
-			nohup $(SCRIPT_DIR)/send $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
+			nohup $(SCRIPT_DIR)/send --tx-index $$i $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Sender started in background (PID: \$$!)\"'"; \
 		echo ""; \
 		i=$$((i+1)); \
@@ -406,12 +406,6 @@ get-logs:
 		hostname=$$(echo $$node | cut -d'-' -f1); \
 		echo "------------------------------------------------------------------------"; \
 		echo "Syncing logs from $$node (receiver $$i, hostname: $$hostname)..."; \
-		echo "  Pre-renaming conflicting INI file on remote..."; \
-		ssh $$node "cd $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR) 2>/dev/null && \
-			[ -f reassembler_config.ini ] && \
-			mv reassembler_config.ini reassembler_config_$$hostname.ini 2>/dev/null || true" && \
-			echo "    ✓ INI file renamed (or already renamed)" || \
-			echo "    ✗ Could not rename INI file"; \
 		echo "  Running rsync..."; \
 		rsync -avz --progress --stats --human-readable \
 			--partial --partial-dir=.rsync-partial \
@@ -420,9 +414,9 @@ get-logs:
 			--include="RUN_ID" \
 			--include="rx_$$i.log" \
 			--include="rx_$$i.pcap" \
-			--include="*_rx_csvfile.csv" \
+			--include="rx_*_csvfile.csv" \
 			--include="*_$$hostname.yaml" \
-			--include="*_$$hostname.ini" \
+			--include="reassembler_config_rx_*.ini" \
 			--exclude="*" \
 			$$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/ \
 			./$(RECEIVER_LOG_DIR)/ 2>&1 | grep -E "(sent|received|speedup|rx_|csv|yaml|ini|RUN_ID|total size)" || true; \
@@ -436,12 +430,6 @@ get-logs:
 		hostname=$$(echo $$node | cut -d'-' -f1); \
 		echo "------------------------------------------------------------------------"; \
 		echo "Syncing logs from $$node (sender $$i, hostname: $$hostname)..."; \
-		echo "  Pre-renaming conflicting INI file on remote..."; \
-		ssh $$node "cd $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR) 2>/dev/null && \
-			[ -f segmenter_config.ini ] && \
-			mv segmenter_config.ini segmenter_config_$$hostname.ini 2>/dev/null || true" && \
-			echo "    ✓ INI file renamed (or already renamed)" || \
-			echo "    ✗ Could not rename INI file"; \
 		echo "  Running rsync..."; \
 		rsync -avz --progress --stats --human-readable \
 			--partial --partial-dir=.rsync-partial \
@@ -449,7 +437,7 @@ get-logs:
 			--exclude="[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]/" \
 			--include="tx_$$i.log" \
 			--include="*_$$hostname.yaml" \
-			--include="*_$$hostname.ini" \
+			--include="segmenter_config_tx_*.ini" \
 			--exclude="*" \
 			$$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/ \
 			./$(SENDER_LOG_DIR)/ 2>&1 | grep -E "(sent|received|speedup|tx_|yaml|ini|total size)" || true; \
@@ -469,10 +457,10 @@ get-logs:
 	@echo "Summary:"
 	@echo "  RX logs:        $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
 	@echo "  TX logs:        $$(ls -1 $(SENDER_LOG_DIR)/tx_*.log 2>/dev/null | wc -l) files"
-	@echo "  CSV files:      $$(ls -1 $(RECEIVER_LOG_DIR)/*.csv 2>/dev/null | wc -l) files"
+	@echo "  CSV files:      $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*_csvfile.csv 2>/dev/null | wc -l) files"
 	@echo "  PCAP files:     $$(ls -1 $(RECEIVER_LOG_DIR)/*.pcap 2>/dev/null | wc -l) files"
 	@echo "  YAML configs:   $$(ls -1 $(RECEIVER_LOG_DIR)/*_config_*.yaml $(SENDER_LOG_DIR)/*_config_*.yaml 2>/dev/null | wc -l) files"
-	@echo "  INI configs:    $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_*.ini $(SENDER_LOG_DIR)/segmenter_config_*.ini 2>/dev/null | wc -l) files"
+	@echo "  INI configs:    $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_rx_*.ini $(SENDER_LOG_DIR)/segmenter_config_tx_*.ini 2>/dev/null | wc -l) files"
 	@echo "  Archive YAMLs:  $$(ls -1 $(RECEIVER_LOG_DIR)/*.archive $(SENDER_LOG_DIR)/*.archive 2>/dev/null | wc -l) files"
 	@echo "========================================================================"
 	@echo ""

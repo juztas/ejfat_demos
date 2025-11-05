@@ -234,9 +234,9 @@ fi
 # GENERATE REASSEMBLER CONFIG
 #------------------------------------------------------------------------------------------------
 
-echo "Generating reassembler_config.ini..."
+echo "Generating reassembler_config_rx_${RX_INDEX}.ini..."
 
-cat > reassembler_config.ini << EOF
+cat > reassembler_config_rx_${RX_INDEX}.ini << EOF
 [general]
 ; whether to use the control plane (gRPC sendState, registerWorker)
 useCP = $REASSEM_USE_CP
@@ -316,7 +316,7 @@ echo ""
 # START UDP SOCKET MONITOR
 #------------------------------------------------------------------------------------------------
 
-udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/$(hostname)_rx_csvfile.csv &
+udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/rx_${RX_INDEX}_csvfile.csv &
 MONITOR_PID=$!
 
 #------------------------------------------------------------------------------------------------
@@ -327,15 +327,15 @@ echo "========================================================================"
 echo "DEBUG: Current working directory: $(pwd)"
 echo "DEBUG: Contents of current directory:"
 ls -la
-echo "DEBUG: reassembler_config.ini location:"
-ls -la reassembler_config.ini 2>&1
+echo "DEBUG: reassembler_config_rx_${RX_INDEX}.ini location:"
+ls -la reassembler_config_rx_${RX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config.ini"
+echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini"
 echo "========================================================================"
 echo ""
 
-# e2sar_perf will use the reassembler_config.ini we generated and the --port option for dataPort
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config.ini
+# e2sar_perf will use the reassembler_config_rx_${RX_INDEX}.ini we generated and the --port option for dataPort
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP

@@ -653,9 +653,16 @@ def compare_ini_files(log_dir: Path, file_pattern: str) -> Optional[pd.DataFrame
     # Parse all INI files
     all_configs = {}
     for ini_file in ini_files:
-        # Extract hostname from filename (e.g., "wash" from "segmenter_config_wash.ini")
-        hostname = ini_file.stem.split('_')[-1]  # Get last part after splitting by underscore
-        all_configs[hostname] = parse_ini_file(ini_file)
+        # Extract index from filename (e.g., "rx_0" from "reassembler_config_rx_0.ini")
+        # or "tx_1" from "segmenter_config_tx_1.ini"
+        parts = ini_file.stem.split('_')
+        if len(parts) >= 3:
+            # Format: segmenter_config_tx_0 or reassembler_config_rx_0
+            index_key = f"{parts[-2]}_{parts[-1]}"  # e.g., "tx_0" or "rx_0"
+        else:
+            # Fallback to last part if format doesn't match
+            index_key = parts[-1]
+        all_configs[index_key] = parse_ini_file(ini_file)
 
     if not all_configs:
         return None
@@ -832,7 +839,7 @@ def main():
         print()
         print(f"{'SEGMENTER CONFIG COMPARISON':^80}")
         print_separator('=', 80)
-        segmenter_df = compare_ini_files(log_dir, 'segmenter_config_*.ini')
+        segmenter_df = compare_ini_files(log_dir, 'segmenter_config_tx_*.ini')
         if segmenter_df is not None:
             pd.set_option('display.max_columns', None)
             pd.set_option('display.width', None)
@@ -854,7 +861,7 @@ def main():
         print()
         print(f"{'REASSEMBLER CONFIG COMPARISON':^80}")
         print_separator('=', 80)
-        reassembler_df = compare_ini_files(log_dir, 'reassembler_config_*.ini')
+        reassembler_df = compare_ini_files(log_dir, 'reassembler_config_rx_*.ini')
         if reassembler_df is not None:
             pd.set_option('display.max_columns', None)
             pd.set_option('display.width', None)
