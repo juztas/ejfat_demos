@@ -20,7 +20,7 @@ SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net wash-dtn1-mgt.es.net s
 
 # List of DTN nodes for receivers (in priority order)
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net  cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net 
+RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net  
 #RECEIVERS_LIST ?= $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
