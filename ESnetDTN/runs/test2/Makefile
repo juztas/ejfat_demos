@@ -15,12 +15,12 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net  star-dtn1-mgt.es.net 
+SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
 #SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net 
+RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net  cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net 
 #RECEIVERS_LIST ?= $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
@@ -415,6 +415,7 @@ get-logs:
 			--include="rx_$$i.log" \
 			--include="rx_$$i.pcap" \
 			--include="rx_*_csvfile.csv" \
+			--include="rx_*_summary.csv" \
 			--include="*_$$hostname.yaml" \
 			--include="reassembler_config_rx_*.ini" \
 			--exclude="*" \
@@ -457,7 +458,8 @@ get-logs:
 	@echo "Summary:"
 	@echo "  RX logs:        $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*.log 2>/dev/null | wc -l) files"
 	@echo "  TX logs:        $$(ls -1 $(SENDER_LOG_DIR)/tx_*.log 2>/dev/null | wc -l) files"
-	@echo "  CSV files:      $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*_csvfile.csv 2>/dev/null | wc -l) files"
+	@echo "  RX summaries:   $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*_summary.csv 2>/dev/null | wc -l) files"
+	@echo "  Socket CSVs:    $$(ls -1 $(RECEIVER_LOG_DIR)/rx_*_csvfile.csv 2>/dev/null | wc -l) files"
 	@echo "  PCAP files:     $$(ls -1 $(RECEIVER_LOG_DIR)/*.pcap 2>/dev/null | wc -l) files"
 	@echo "  YAML configs:   $$(ls -1 $(RECEIVER_LOG_DIR)/*_config_*.yaml $(SENDER_LOG_DIR)/*_config_*.yaml 2>/dev/null | wc -l) files"
 	@echo "  INI configs:    $$(ls -1 $(RECEIVER_LOG_DIR)/reassembler_config_rx_*.ini $(SENDER_LOG_DIR)/segmenter_config_tx_*.ini 2>/dev/null | wc -l) files"

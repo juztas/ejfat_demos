@@ -26,14 +26,20 @@ from typing import Dict, Optional
 def parse_rx_log(log_path: Path) -> Optional[Dict]:
     """Parse a receiver log file and extract key information."""
     try:
-        with open(log_path, 'r') as f:
-            content = f.read()
+        # Handle stdin
+        if str(log_path) == '/dev/stdin' or str(log_path) == '-':
+            content = sys.stdin.read()
+            filename = 'stdin'
+        else:
+            with open(log_path, 'r') as f:
+                content = f.read()
+            filename = log_path.name
     except Exception as e:
         print(f"Error reading file {log_path}: {e}", file=sys.stderr)
         return None
 
     data = {
-        'file': log_path.name,
+        'file': filename,
         'type': 'receiver',
         'run_id': None,
         'config_file': None,
@@ -361,9 +367,9 @@ Examples:
 
     args = parser.parse_args()
 
-    # Check if file exists
+    # Check if file exists (skip check for stdin)
     log_path = Path(args.log_file)
-    if not log_path.exists():
+    if args.log_file not in ['/dev/stdin', '-'] and not log_path.exists():
         print(f"Error: File not found: {args.log_file}", file=sys.stderr)
         sys.exit(1)
 
