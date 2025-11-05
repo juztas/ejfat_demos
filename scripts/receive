@@ -144,10 +144,7 @@ RX_DEQ="${RX_DEQ:-16}"
 LOG_DIR=$(parse_yaml "$CONFIG_FILE" "log_dir")
 LOG_DIR="${LOG_DIR:-./}"
 
-# Monitoring configuration
-MONITOR_PORTS=$(parse_yaml "$CONFIG_FILE" "monitor_ports")
-MONITOR_PORTS="${MONITOR_PORTS:-10000-10015}"
-
+# Monitoring configuration - will be updated after port calculation
 MONITOR_INTERVAL=$(parse_yaml "$CONFIG_FILE" "monitor_interval")
 MONITOR_INTERVAL="${MONITOR_INTERVAL:-0.1}"
 
@@ -163,8 +160,17 @@ REASSEM_VALIDATE_CERT="${REASSEM_VALIDATE_CERT:-true}"
 REASSEM_USE_HOST_ADDRESS=$(parse_yaml "$CONFIG_FILE" "reassem_use_host_address")
 REASSEM_USE_HOST_ADDRESS="${REASSEM_USE_HOST_ADDRESS:-false}"
 
-REASSEM_DATA_PORT=$(parse_yaml "$CONFIG_FILE" "reassem_data_port")
-REASSEM_DATA_PORT="${REASSEM_DATA_PORT:-10000}"
+REASSEM_DATA_PORT_BASE=$(parse_yaml "$CONFIG_FILE" "reassem_data_port")
+REASSEM_DATA_PORT_BASE="${REASSEM_DATA_PORT_BASE:-10000}"
+
+# Calculate unique port for this receiver instance based on RX_INDEX and number of threads
+# Port = BASE_PORT + (RX_INDEX * RX_THREADS)
+# This ensures non-overlapping port ranges for multiple receivers on same host
+REASSEM_DATA_PORT=$((REASSEM_DATA_PORT_BASE + (RX_INDEX * RX_THREADS)))
+
+# Calculate monitor port range to match the receiver's port range
+# Monitor ports should cover: REASSEM_DATA_PORT to (REASSEM_DATA_PORT + RX_THREADS - 1)
+MONITOR_PORTS="${REASSEM_DATA_PORT}-$((REASSEM_DATA_PORT + RX_THREADS - 1))"
 
 REASSEM_PORT_RANGE=$(parse_yaml "$CONFIG_FILE" "reassem_port_range")
 REASSEM_PORT_RANGE="${REASSEM_PORT_RANGE:--1}"
@@ -311,7 +317,7 @@ echo "IP Version:         IPv$IP_VERSION"
 echo "Interface:          $MY_INTERFACE"
 echo "Work Directory:     $WORK_DIR"
 echo "Log Directory:      $LOG_DIR"
-echo "Data Port:          $REASSEM_DATA_PORT"
+echo "Data Port:          $REASSEM_DATA_PORT (base: $REASSEM_DATA_PORT_BASE + offset: $((RX_INDEX * RX_THREADS)))"
 echo "Monitor Ports:      $MONITOR_PORTS"
 echo "RX Duration:        $RX_DURATION sec"
 echo "RX Buffer Size:     $RX_BUFSIZE bytes"
