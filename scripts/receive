@@ -17,6 +17,9 @@
 
 set -e
 
+# Determine script directory early, before changing directories
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 #------------------------------------------------------------------------------------------------
 # FUNCTIONS
 #------------------------------------------------------------------------------------------------
@@ -352,10 +355,8 @@ echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $
 echo "========================================================================"
 echo ""
 
-# Determine script directory for finding summarize_rx_log.py
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # e2sar_perf will use the reassembler_config_rx_${RX_INDEX}.ini we generated and the --port option for dataPort
+# SCRIPT_DIR was already determined at the beginning of the script
 if [ "$SAVE_FULL_LOG" = true ]; then
     # Save full log to disk
     echo "Saving full log to $LOG_DIR/rx_${RX_INDEX}.log"
