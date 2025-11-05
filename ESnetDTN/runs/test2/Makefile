@@ -53,7 +53,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware
+.PHONY: help reserve free receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -73,6 +73,7 @@ help:
 	@echo "  run               Run complete workflow: reserve, receive, send"
 	@echo "  get-logs          Retrieve all logs and pcap files from remote nodes"
 	@echo "  summarize-logs    Summarize all tx and rx logs from run_output directory"
+	@echo "  clean-run         Remove all files from remote run_output directories"
 	@echo "  sync-scripts      Update scripts on all nodes via git pull"
 	@echo "  survey-hardware   Compare CPU hardware across all DTN nodes using lscpu"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
@@ -112,6 +113,7 @@ help:
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
 	@echo "  make get-logs"
 	@echo "  make summarize-logs"
+	@echo "  make clean-run"
 	@echo "  make sync-scripts"
 	@echo "  make survey-hardware"
 	@echo "  make tcpdump-commands"
@@ -593,5 +595,51 @@ survey-hardware:
 	@echo ""
 	@echo "========================================================================"
 	@echo "Hardware Survey Complete!"
+	@echo "========================================================================"
+	@echo ""
+
+clean-run:
+	@echo "========================================================================"
+	@echo "Cleaning Remote Run Output Directories"
+	@echo "========================================================================"
+	@echo ""
+	@echo "WARNING: This will remove ALL files from run_output directories on:"
+	@all_nodes=""; \
+	for node in $(SENDERS_LIST) $(RECEIVERS_LIST); do \
+		if ! echo "$$all_nodes" | grep -q "$$node"; then \
+			all_nodes="$$all_nodes $$node"; \
+		fi; \
+	done; \
+	for node in $$all_nodes; do \
+		echo "  - $$node"; \
+	done
+	@echo ""
+	@read -p "Are you sure you want to continue? (yes/no): " confirm; \
+	if [ "$$confirm" != "yes" ]; then \
+		echo "Aborted."; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "Cleaning remote directories..."
+	@all_nodes=""; \
+	for node in $(SENDERS_LIST) $(RECEIVERS_LIST); do \
+		if ! echo "$$all_nodes" | grep -q "$$node"; then \
+			all_nodes="$$all_nodes $$node"; \
+		fi; \
+	done; \
+	for node in $$all_nodes; do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/"; \
+		ssh $$node "rm -rf $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/* 2>/dev/null || true" && \
+			echo "  ✓ Receiver log directory cleaned" || \
+			echo "  ✗ Failed to clean receiver log directory"; \
+		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/"; \
+		ssh $$node "rm -rf $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/* 2>/dev/null || true" && \
+			echo "  ✓ Sender log directory cleaned" || \
+			echo "  ✗ Failed to clean sender log directory"; \
+		echo ""; \
+	done
+	@echo "========================================================================"
+	@echo "Remote Cleanup Complete!"
 	@echo "========================================================================"
 	@echo ""
