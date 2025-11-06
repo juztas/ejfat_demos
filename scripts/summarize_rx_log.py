@@ -340,8 +340,8 @@ def format_csv(data: Dict) -> str:
         f"{error_rate:.4f}" if error_rate is not None else '',
     ]
 
-    # Quote values that might contain commas
-    quoted_values = [f'"{v}"' if ',' in v else v for v in values]
+    # Quote values that might contain commas (handle None values)
+    quoted_values = [f'"{v}"' if v and ',' in v else v for v in values]
     return ','.join(quoted_values)
 
 
