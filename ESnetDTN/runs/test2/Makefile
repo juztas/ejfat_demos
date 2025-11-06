@@ -273,6 +273,9 @@ receive:
 			echo "  Copying config files to $$node..."; \
 			cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
 			scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
+			if [ -f $(SENDER_CONFIG) ]; then \
+				scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/sender_config.yaml; \
+			fi; \
 		else \
 			echo "  Skipping uploads (SKIP_UPLOADS=true)..."; \
 		fi; \
