@@ -192,7 +192,28 @@ NFRAMES="${NFRAMES:-10000}"
 SEND_SOCKETS=$(parse_yaml "$CONFIG_FILE" "send_sockets")
 SEND_SOCKETS="${SEND_SOCKETS:-8}"
 
-TX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "tx_cores" "$TX_INDEX")
+# Get short hostname (without domain)
+SHORT_HOSTNAME=$(hostname -s)
+
+# Try hostname-based cores first, then instance-specific, then default
+# Priority: tx_cores_<hostname> > tx_cores_<index> > tx_cores
+TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores_${SHORT_HOSTNAME}")
+if [ -n "$TX_CORES" ]; then
+    TX_CORES_SOURCE="hostname (tx_cores_${SHORT_HOSTNAME})"
+else
+    TX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "tx_cores" "$TX_INDEX")
+    if [ -n "$TX_CORES" ] && [ "$TX_CORES" != "1" ]; then
+        # Check if it came from instance-specific or default
+        instance_cores=$(parse_yaml "$CONFIG_FILE" "tx_cores_${TX_INDEX}")
+        if [ -n "$instance_cores" ]; then
+            TX_CORES_SOURCE="instance (tx_cores_${TX_INDEX})"
+        else
+            TX_CORES_SOURCE="default (tx_cores)"
+        fi
+    else
+        TX_CORES_SOURCE="builtin default"
+    fi
+fi
 TX_CORES="${TX_CORES:-1}"
 
 DATA_ID=$(parse_yaml "$CONFIG_FILE" "data_id")
@@ -356,6 +377,7 @@ echo ""
 if [ -n "$TX_CORES" ]; then
     echo "Thread Mode:        Core pinning (--cores)"
     echo "TX Cores:           $TX_CORES"
+    echo "TX Cores Source:    $TX_CORES_SOURCE"
 else
     echo "Thread Mode:        Socket-based (--sockets)"
     echo "Send Sockets:       $SEND_SOCKETS"
