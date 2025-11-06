@@ -12,7 +12,7 @@ This script parses tx_* and rx_* log files to extract:
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     import pandas as pd
@@ -415,105 +415,120 @@ def print_rx_summary(rx_data: Dict):
         print(f"  Total Packets:     {rx_data['total_packets']:,}")
 
 
-def create_tx_dataframe(tx_files: List[Path]) -> Optional[pd.DataFrame]:
-    """Create a DataFrame from transmitter log data."""
+def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.DataFrame'], Dict]:
+    """Create DataFrames from transmitter log data, grouped by hostname.
+
+    Returns:
+        tuple: (dict of {hostname: DataFrame}, grand_totals dict)
+    """
     if not PANDAS_AVAILABLE or not tx_files:
-        return None
+        return {}, {}
 
-    data_dict = {}
+    # Group files by hostname
+    hosts_data = {}
 
-    # Track totals for summable fields
-    totals = {
-        'Frames Sent': 0,
-        'Errors': 0,
-        'Throughput (Gbps)': 0.0,
-        'Goodput (Gbps)': 0.0,
-    }
-
-    # Track which fields have valid data (not all N/A)
-    has_data = {key: False for key in totals.keys()}
-
+    # Parse all files and group by hostname
     for tx_file in tx_files:
         tx_data = parse_tx_log(tx_file)
         if not tx_data:
             continue
 
-        col_name = tx_data['file']
+        hostname = tx_data.get('hostname', 'Unknown')
+        if hostname not in hosts_data:
+            hosts_data[hostname] = []
+        hosts_data[hostname].append(tx_data)
 
-        # Build column data
-        column_data = {
-            'Run ID': tx_data.get('run_id', 'N/A'),
-            'Hostname': tx_data.get('hostname', 'N/A'),
-            'Sender IP': tx_data.get('sender_ip', 'N/A'),
-            'IP Version': tx_data.get('ip_version', 'N/A'),
-            'TX Rate': tx_data.get('tx_rate', 'N/A'),
-            'TX Length': tx_data.get('tx_length', 'N/A'),
-            'Frames (target)': f"{tx_data['frames']:,}" if tx_data.get('frames') is not None else 'N/A',
-            'Send Sockets': tx_data.get('send_sockets', 'N/A'),
-            'Data ID': tx_data.get('data_id', 'N/A'),
-            'Control Plane': tx_data.get('use_control_plane', 'N/A'),
-            'MTU': tx_data.get('mtu', 'N/A'),
-            'Frames Sent': f"{tx_data['frames_sent']:,}" if tx_data.get('frames_sent') is not None else 'N/A',
-            'Errors': tx_data.get('errors', 'N/A'),
-            'Elapsed Time (sec)': f"{tx_data['elapsed_usecs']/1_000_000:.3f}" if tx_data.get('elapsed_usecs') is not None else 'N/A',
-            'Throughput (Gbps)': f"{tx_data['throughput_gbps']:.4f}" if tx_data.get('throughput_gbps') is not None else 'N/A',
-            'Goodput (Gbps)': f"{tx_data['goodput_gbps']:.4f}" if tx_data.get('goodput_gbps') is not None else 'N/A',
-        }
+    # Create a DataFrame for each hostname
+    host_dataframes = {}
+    grand_totals = {
+        'Frames Sent': 0,
+        'Errors': 0,
+        'Throughput (Gbps)': 0.0,
+        'Goodput (Gbps)': 0.0,
+    }
+    has_grand_data = {key: False for key in grand_totals.keys()}
 
-        # Accumulate totals
-        if tx_data.get('frames_sent') is not None:
-            totals['Frames Sent'] += tx_data['frames_sent']
-            has_data['Frames Sent'] = True
-        if tx_data.get('errors') is not None:
-            totals['Errors'] += tx_data['errors']
-            has_data['Errors'] = True
-        if tx_data.get('throughput_gbps') is not None:
-            totals['Throughput (Gbps)'] += tx_data['throughput_gbps']
-            has_data['Throughput (Gbps)'] = True
-        if tx_data.get('goodput_gbps') is not None:
-            totals['Goodput (Gbps)'] += tx_data['goodput_gbps']
-            has_data['Goodput (Gbps)'] = True
+    for hostname, tx_data_list in sorted(hosts_data.items()):
+        data_dict = {}
 
-        data_dict[col_name] = column_data
+        for tx_data in tx_data_list:
+            col_name = tx_data['file']
 
-    if not data_dict:
-        return None
+            # Build column data
+            column_data = {
+                'Run ID': tx_data.get('run_id', 'N/A'),
+                'Sender IP': tx_data.get('sender_ip', 'N/A'),
+                'IP Version': tx_data.get('ip_version', 'N/A'),
+                'TX Rate': tx_data.get('tx_rate', 'N/A'),
+                'TX Length': tx_data.get('tx_length', 'N/A'),
+                'Frames (target)': f"{tx_data['frames']:,}" if tx_data.get('frames') is not None else 'N/A',
+                'Send Sockets': tx_data.get('send_sockets', 'N/A'),
+                'Data ID': tx_data.get('data_id', 'N/A'),
+                'Control Plane': tx_data.get('use_control_plane', 'N/A'),
+                'MTU': tx_data.get('mtu', 'N/A'),
+                'Frames Sent': f"{tx_data['frames_sent']:,}" if tx_data.get('frames_sent') is not None else 'N/A',
+                'Errors': tx_data.get('errors', 'N/A'),
+                'Elapsed Time (sec)': f"{tx_data['elapsed_usecs']/1_000_000:.3f}" if tx_data.get('elapsed_usecs') is not None else 'N/A',
+                'Throughput (Gbps)': f"{tx_data['throughput_gbps']:.4f}" if tx_data.get('throughput_gbps') is not None else 'N/A',
+                'Goodput (Gbps)': f"{tx_data['goodput_gbps']:.4f}" if tx_data.get('goodput_gbps') is not None else 'N/A',
+            }
 
-    # Add TOTAL column
-    total_column = {
-        'Run ID': '',
-        'Hostname': '',
-        'Sender IP': '',
-        'IP Version': '',
-        'TX Rate': '',
-        'TX Length': '',
-        'Frames (target)': '',
-        'Send Sockets': '',
-        'Data ID': '',
-        'Control Plane': '',
-        'MTU': '',
-        'Frames Sent': f"{totals['Frames Sent']:,}" if has_data['Frames Sent'] else 'N/A',
-        'Errors': totals['Errors'] if has_data['Errors'] else 'N/A',
-        'Elapsed Time (sec)': '',
-        'Throughput (Gbps)': f"{totals['Throughput (Gbps)']:.4f}" if has_data['Throughput (Gbps)'] else 'N/A',
-        'Goodput (Gbps)': f"{totals['Goodput (Gbps)']:.4f}" if has_data['Goodput (Gbps)'] else 'N/A',
+            # Accumulate grand totals
+            if tx_data.get('frames_sent') is not None:
+                grand_totals['Frames Sent'] += tx_data['frames_sent']
+                has_grand_data['Frames Sent'] = True
+            if tx_data.get('errors') is not None:
+                grand_totals['Errors'] += tx_data['errors']
+                has_grand_data['Errors'] = True
+            if tx_data.get('throughput_gbps') is not None:
+                grand_totals['Throughput (Gbps)'] += tx_data['throughput_gbps']
+                has_grand_data['Throughput (Gbps)'] = True
+            if tx_data.get('goodput_gbps') is not None:
+                grand_totals['Goodput (Gbps)'] += tx_data['goodput_gbps']
+                has_grand_data['Goodput (Gbps)'] = True
+
+            data_dict[col_name] = column_data
+
+        if data_dict:
+            host_dataframes[hostname] = pd.DataFrame(data_dict)
+
+    # Format grand totals
+    formatted_grand_totals = {
+        'Frames Sent': f"{grand_totals['Frames Sent']:,}" if has_grand_data['Frames Sent'] else 'N/A',
+        'Errors': grand_totals['Errors'] if has_grand_data['Errors'] else 'N/A',
+        'Throughput (Gbps)': f"{grand_totals['Throughput (Gbps)']:.4f}" if has_grand_data['Throughput (Gbps)'] else 'N/A',
+        'Goodput (Gbps)': f"{grand_totals['Goodput (Gbps)']:.4f}" if has_grand_data['Goodput (Gbps)'] else 'N/A',
     }
 
-    data_dict['TOTAL'] = total_column
-
-    df = pd.DataFrame(data_dict)
-    return df
+    return host_dataframes, formatted_grand_totals
 
 
-def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
-    """Create a DataFrame from receiver log data."""
+def create_rx_dataframes_by_host(rx_files: List[Path]) -> Tuple[Dict[str, 'pd.DataFrame'], Dict]:
+    """Create DataFrames from receiver log data, grouped by hostname.
+
+    Returns:
+        tuple: (dict of {hostname: DataFrame}, grand_totals dict)
+    """
     if not PANDAS_AVAILABLE or not rx_files:
-        return None
+        return {}, {}
 
-    data_dict = {}
+    # Group files by hostname
+    hosts_data = {}
 
-    # Track totals for summable fields
-    totals = {
+    # Parse all files and group by hostname
+    for rx_file in rx_files:
+        rx_data = parse_rx_log(rx_file)
+        if not rx_data:
+            continue
+
+        hostname = rx_data.get('hostname', 'Unknown')
+        if hostname not in hosts_data:
+            hosts_data[hostname] = []
+        hosts_data[hostname].append(rx_data)
+
+    # Create a DataFrame for each hostname
+    host_dataframes = {}
+    grand_totals = {
         'Events Received': 0,
         'Events Mangled': 0,
         'Events Lost (Reassembly)': 0,
@@ -522,101 +537,79 @@ def create_rx_dataframe(rx_files: List[Path]) -> Optional[pd.DataFrame]:
         'gRPC Errors': 0,
         'Total Packets': 0,
     }
+    has_grand_data = {key: False for key in grand_totals.keys()}
 
-    # Track which fields have valid data (not all N/A)
-    has_data = {key: False for key in totals.keys()}
+    for hostname, rx_data_list in sorted(hosts_data.items()):
+        data_dict = {}
 
-    for rx_file in rx_files:
-        rx_data = parse_rx_log(rx_file)
-        if not rx_data:
-            continue
+        for rx_data in rx_data_list:
+            col_name = rx_data['file']
 
-        col_name = rx_data['file']
+            # Build column data
+            column_data = {
+                'Run ID': rx_data.get('run_id', 'N/A'),
+                'Receiver IP': rx_data.get('receiver_ip', 'N/A'),
+                'IP Version': rx_data.get('ip_version', 'N/A'),
+                'Interface': rx_data.get('interface', 'N/A'),
+                'Data Port': rx_data.get('data_port', 'N/A'),
+                'Monitor Ports': rx_data.get('monitor_ports', 'N/A'),
+                'RX Duration': rx_data.get('rx_duration', 'N/A'),
+                'RX Buffer Size': rx_data.get('rx_buffer_size', 'N/A'),
+                'RX Timeout': rx_data.get('rx_timeout', 'N/A'),
+                'RX Cores': rx_data.get('rx_cores', 'N/A'),
+                'RX Dequeue': rx_data.get('rx_dequeue', 'N/A'),
+                'Monitor Interval': rx_data.get('monitor_interval', 'N/A'),
+                'Control Plane': rx_data.get('use_control_plane', 'N/A'),
+                'RX Index': rx_data.get('rx_index', 'N/A'),
+                'Events Received': f"{rx_data['events_received']:,}" if rx_data.get('events_received') is not None else 'N/A',
+                'Events Mangled': f"{rx_data['events_mangled']:,}" if rx_data.get('events_mangled') is not None else 'N/A',
+                'Events Lost (Reassembly)': f"{rx_data['events_lost_reassembly']:,}" if rx_data.get('events_lost_reassembly') is not None else 'N/A',
+                'Events Lost (Enqueue)': f"{rx_data['events_lost_enqueue']:,}" if rx_data.get('events_lost_enqueue') is not None else 'N/A',
+                'Data Errors': f"{rx_data['data_errors']:,}" if rx_data.get('data_errors') is not None else 'N/A',
+                'gRPC Errors': f"{rx_data['grpc_errors']:,}" if rx_data.get('grpc_errors') is not None else 'N/A',
+                'Total Packets': f"{rx_data['total_packets']:,}" if rx_data.get('total_packets') is not None else 'N/A',
+            }
 
-        # Build column data
-        column_data = {
-            'Run ID': rx_data.get('run_id', 'N/A'),
-            'Hostname': rx_data.get('hostname', 'N/A'),
-            'Receiver IP': rx_data.get('receiver_ip', 'N/A'),
-            'IP Version': rx_data.get('ip_version', 'N/A'),
-            'Interface': rx_data.get('interface', 'N/A'),
-            'Data Port': rx_data.get('data_port', 'N/A'),
-            'Monitor Ports': rx_data.get('monitor_ports', 'N/A'),
-            'RX Duration': rx_data.get('rx_duration', 'N/A'),
-            'RX Buffer Size': rx_data.get('rx_buffer_size', 'N/A'),
-            'RX Timeout': rx_data.get('rx_timeout', 'N/A'),
-            'RX Cores': rx_data.get('rx_cores', 'N/A'),
-            'RX Dequeue': rx_data.get('rx_dequeue', 'N/A'),
-            'Monitor Interval': rx_data.get('monitor_interval', 'N/A'),
-            'Control Plane': rx_data.get('use_control_plane', 'N/A'),
-            'RX Index': rx_data.get('rx_index', 'N/A'),
-            'Events Received': f"{rx_data['events_received']:,}" if rx_data.get('events_received') is not None else 'N/A',
-            'Events Mangled': f"{rx_data['events_mangled']:,}" if rx_data.get('events_mangled') is not None else 'N/A',
-            'Events Lost (Reassembly)': f"{rx_data['events_lost_reassembly']:,}" if rx_data.get('events_lost_reassembly') is not None else 'N/A',
-            'Events Lost (Enqueue)': f"{rx_data['events_lost_enqueue']:,}" if rx_data.get('events_lost_enqueue') is not None else 'N/A',
-            'Data Errors': f"{rx_data['data_errors']:,}" if rx_data.get('data_errors') is not None else 'N/A',
-            'gRPC Errors': f"{rx_data['grpc_errors']:,}" if rx_data.get('grpc_errors') is not None else 'N/A',
-            'Total Packets': f"{rx_data['total_packets']:,}" if rx_data.get('total_packets') is not None else 'N/A',
-        }
+            # Accumulate grand totals
+            if rx_data.get('events_received') is not None:
+                grand_totals['Events Received'] += rx_data['events_received']
+                has_grand_data['Events Received'] = True
+            if rx_data.get('events_mangled') is not None:
+                grand_totals['Events Mangled'] += rx_data['events_mangled']
+                has_grand_data['Events Mangled'] = True
+            if rx_data.get('events_lost_reassembly') is not None:
+                grand_totals['Events Lost (Reassembly)'] += rx_data['events_lost_reassembly']
+                has_grand_data['Events Lost (Reassembly)'] = True
+            if rx_data.get('events_lost_enqueue') is not None:
+                grand_totals['Events Lost (Enqueue)'] += rx_data['events_lost_enqueue']
+                has_grand_data['Events Lost (Enqueue)'] = True
+            if rx_data.get('data_errors') is not None:
+                grand_totals['Data Errors'] += rx_data['data_errors']
+                has_grand_data['Data Errors'] = True
+            if rx_data.get('grpc_errors') is not None:
+                grand_totals['gRPC Errors'] += rx_data['grpc_errors']
+                has_grand_data['gRPC Errors'] = True
+            if rx_data.get('total_packets') is not None:
+                grand_totals['Total Packets'] += rx_data['total_packets']
+                has_grand_data['Total Packets'] = True
 
-        # Accumulate totals
-        if rx_data.get('events_received') is not None:
-            totals['Events Received'] += rx_data['events_received']
-            has_data['Events Received'] = True
-        if rx_data.get('events_mangled') is not None:
-            totals['Events Mangled'] += rx_data['events_mangled']
-            has_data['Events Mangled'] = True
-        if rx_data.get('events_lost_reassembly') is not None:
-            totals['Events Lost (Reassembly)'] += rx_data['events_lost_reassembly']
-            has_data['Events Lost (Reassembly)'] = True
-        if rx_data.get('events_lost_enqueue') is not None:
-            totals['Events Lost (Enqueue)'] += rx_data['events_lost_enqueue']
-            has_data['Events Lost (Enqueue)'] = True
-        if rx_data.get('data_errors') is not None:
-            totals['Data Errors'] += rx_data['data_errors']
-            has_data['Data Errors'] = True
-        if rx_data.get('grpc_errors') is not None:
-            totals['gRPC Errors'] += rx_data['grpc_errors']
-            has_data['gRPC Errors'] = True
-        if rx_data.get('total_packets') is not None:
-            totals['Total Packets'] += rx_data['total_packets']
-            has_data['Total Packets'] = True
+            data_dict[col_name] = column_data
 
-        data_dict[col_name] = column_data
+        if data_dict:
+            host_dataframes[hostname] = pd.DataFrame(data_dict)
 
-    if not data_dict:
-        return None
-
-    # Add TOTAL column
-    total_column = {
-        'Run ID': '',
-        'Hostname': '',
-        'Receiver IP': '',
-        'IP Version': '',
-        'Interface': '',
-        'Data Port': '',
-        'Monitor Ports': '',
-        'RX Duration': '',
-        'RX Buffer Size': '',
-        'RX Timeout': '',
-        'RX Cores': '',
-        'RX Dequeue': '',
-        'Monitor Interval': '',
-        'Control Plane': '',
-        'RX Index': '',
-        'Events Received': f"{totals['Events Received']:,}" if has_data['Events Received'] else 'N/A',
-        'Events Mangled': f"{totals['Events Mangled']:,}" if has_data['Events Mangled'] else 'N/A',
-        'Events Lost (Reassembly)': f"{totals['Events Lost (Reassembly)']:,}" if has_data['Events Lost (Reassembly)'] else 'N/A',
-        'Events Lost (Enqueue)': f"{totals['Events Lost (Enqueue)']:,}" if has_data['Events Lost (Enqueue)'] else 'N/A',
-        'Data Errors': f"{totals['Data Errors']:,}" if has_data['Data Errors'] else 'N/A',
-        'gRPC Errors': f"{totals['gRPC Errors']:,}" if has_data['gRPC Errors'] else 'N/A',
-        'Total Packets': f"{totals['Total Packets']:,}" if has_data['Total Packets'] else 'N/A',
+    # Format grand totals
+    formatted_grand_totals = {
+        'Events Received': f"{grand_totals['Events Received']:,}" if has_grand_data['Events Received'] else 'N/A',
+        'Events Mangled': f"{grand_totals['Events Mangled']:,}" if has_grand_data['Events Mangled'] else 'N/A',
+        'Events Lost (Reassembly)': f"{grand_totals['Events Lost (Reassembly)']:,}" if has_grand_data['Events Lost (Reassembly)'] else 'N/A',
+        'Events Lost (Enqueue)': f"{grand_totals['Events Lost (Enqueue)']:,}" if has_grand_data['Events Lost (Enqueue)'] else 'N/A',
+        'Data Errors': f"{grand_totals['Data Errors']:,}" if has_grand_data['Data Errors'] else 'N/A',
+        'gRPC Errors': f"{grand_totals['gRPC Errors']:,}" if has_grand_data['gRPC Errors'] else 'N/A',
+        'Total Packets': f"{grand_totals['Total Packets']:,}" if has_grand_data['Total Packets'] else 'N/A',
     }
 
-    data_dict['TOTAL'] = total_column
-
-    df = pd.DataFrame(data_dict)
-    return df
+    return host_dataframes, formatted_grand_totals
 
 
 def parse_ini_file(ini_path: Path) -> Dict[str, str]:
@@ -879,35 +872,72 @@ def main():
         print()
         print_separator('=', 80)
 
-        # Create transmitter comparison DataFrame THIRD
+        # Create transmitter comparison DataFrames grouped by host - THIRD
         if tx_files:
             print()
-            print(f"{'TRANSMITTER COMPARISON':^80}")
+            print(f"{'TRANSMITTER COMPARISON BY HOST':^80}")
             print_separator('=', 80)
-            tx_df = create_tx_dataframe(tx_files)
-            if tx_df is not None:
+            tx_host_dfs, tx_grand_totals = create_tx_dataframes_by_host(tx_files)
+            if tx_host_dfs:
                 # Configure pandas display options for better formatting
                 pd.set_option('display.max_columns', None)
                 pd.set_option('display.width', None)
                 pd.set_option('display.max_colwidth', None)
-                print(tx_df.to_string())
+
+                # Print one table per host
+                for hostname in sorted(tx_host_dfs.keys()):
+                    print()
+                    print(f"Transmitter: {hostname}")
+                    print_separator('-', 80)
+                    print(tx_host_dfs[hostname].to_string())
+                    print()
+
+                # Print grand totals
+                print()
+                print_separator('=', 80)
+                print(f"{'TRANSMITTER GRAND TOTALS':^80}")
+                print_separator('=', 80)
+                print(f"Frames Sent:       {tx_grand_totals['Frames Sent']}")
+                print(f"Errors:            {tx_grand_totals['Errors']}")
+                print(f"Throughput (Gbps): {tx_grand_totals['Throughput (Gbps)']}")
+                print(f"Goodput (Gbps):    {tx_grand_totals['Goodput (Gbps)']}")
             else:
                 print("No transmitter data available for comparison")
             print()
             print_separator('=', 80)
 
-        # Create receiver comparison DataFrame FOURTH
+        # Create receiver comparison DataFrames grouped by host - FOURTH
         if rx_files:
             print()
-            print(f"{'RECEIVER COMPARISON':^80}")
+            print(f"{'RECEIVER COMPARISON BY HOST':^80}")
             print_separator('=', 80)
-            rx_df = create_rx_dataframe(rx_files)
-            if rx_df is not None:
+            rx_host_dfs, rx_grand_totals = create_rx_dataframes_by_host(rx_files)
+            if rx_host_dfs:
                 # Configure pandas display options for better formatting
                 pd.set_option('display.max_columns', None)
                 pd.set_option('display.width', None)
                 pd.set_option('display.max_colwidth', None)
-                print(rx_df.to_string())
+
+                # Print one table per host
+                for hostname in sorted(rx_host_dfs.keys()):
+                    print()
+                    print(f"Receiver: {hostname}")
+                    print_separator('-', 80)
+                    print(rx_host_dfs[hostname].to_string())
+                    print()
+
+                # Print grand totals
+                print()
+                print_separator('=', 80)
+                print(f"{'RECEIVER GRAND TOTALS':^80}")
+                print_separator('=', 80)
+                print(f"Events Received:           {rx_grand_totals['Events Received']}")
+                print(f"Events Mangled:            {rx_grand_totals['Events Mangled']}")
+                print(f"Events Lost (Reassembly):  {rx_grand_totals['Events Lost (Reassembly)']}")
+                print(f"Events Lost (Enqueue):     {rx_grand_totals['Events Lost (Enqueue)']}")
+                print(f"Data Errors:               {rx_grand_totals['Data Errors']}")
+                print(f"gRPC Errors:               {rx_grand_totals['gRPC Errors']}")
+                print(f"Total Packets:             {rx_grand_totals['Total Packets']}")
             else:
                 print("No receiver data available for comparison")
             print()
