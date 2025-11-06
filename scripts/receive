@@ -144,6 +144,10 @@ LOG_DIR="${LOG_DIR:-./}"
 MONITOR_INTERVAL=$(parse_yaml "$CONFIG_FILE" "monitor_interval")
 MONITOR_INTERVAL="${MONITOR_INTERVAL:-0.1}"
 
+# Stats reporting period for e2sar_perf receiver
+STATS_PERIOD_MS=$(parse_yaml "$CONFIG_FILE" "stats_period_ms")
+STATS_PERIOD_MS="${STATS_PERIOD_MS:-1000}"
+
 MY_INTERFACE=$(parse_yaml "$CONFIG_FILE" "interface")
 
 # Reassembler configuration
@@ -322,6 +326,7 @@ echo "RX Timeout:         $RX_TIMEOUT ms"
 echo "RX Cores:           $RX_CORES"
 echo "RX Dequeue:         $RX_DEQ"
 echo "Monitor Interval:   $MONITOR_INTERVAL sec"
+echo "Stats Period:       $STATS_PERIOD_MS ms"
 echo "Use Control Plane:  $REASSEM_USE_CP"
 echo "RX Index:           $RX_INDEX"
 echo "========================================================================"
@@ -345,12 +350,12 @@ ls -la
 echo "DEBUG: reassembler_config_rx_${RX_INDEX}.ini location:"
 ls -la reassembler_config_rx_${RX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini"
+echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini"
 echo "========================================================================"
 echo ""
 
 # e2sar_perf will use the reassembler_config_rx_${RX_INDEX}.ini we generated and the --port option for dataPort
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP

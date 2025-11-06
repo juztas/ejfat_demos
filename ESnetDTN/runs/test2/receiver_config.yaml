@@ -73,7 +73,12 @@ monitor_ports: 10000-10007
 
 # Monitoring interval (in seconds)
 # Default: 0.1
-monitor_interval: 0.1
+monitor_interval: 10
+
+# Stats reporting period for e2sar_perf (in milliseconds)
+# Controls how often receiver stats are printed to the console
+# Default: 1000
+stats_period_ms: 60000
 
 # ============================================================================
 # REASSEMBLER CONFIGURATION (reassembler_config.ini settings)
