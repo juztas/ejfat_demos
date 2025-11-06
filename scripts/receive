@@ -336,8 +336,78 @@ echo ""
 # START UDP SOCKET MONITOR
 #------------------------------------------------------------------------------------------------
 
-udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/rx_${RX_INDEX}_csvfile.csv &
-MONITOR_PID=$!
+# Disabled UDP socket monitor
+# udp-socket-monitor.sh -p $MONITOR_PORTS -t $MONITOR_INTERVAL -o $LOG_DIR/rx_${RX_INDEX}_csvfile.csv &
+# MONITOR_PID=$!
+
+#------------------------------------------------------------------------------------------------
+# SYNCHRONIZED START
+#------------------------------------------------------------------------------------------------
+
+# If START_TIME is set, wait until that time before starting e2sar_perf
+if [ -n "$START_TIME" ]; then
+    CURRENT_TIME=$(date +%s)
+    SECONDS_TO_WAIT=$((START_TIME - CURRENT_TIME))
+
+    echo "========================================================================"
+    echo "Synchronized Start Configuration"
+    echo "========================================================================"
+    echo "Target start time:  $(date -u -d @$START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
+    echo "Current time:       $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+    echo "Seconds to wait:    $SECONDS_TO_WAIT seconds"
+    echo "========================================================================"
+    echo ""
+
+    # Write timing debug info to log file
+    {
+        echo "========== RECEIVER SYNCHRONIZED START DEBUG =========="
+        echo "Target start time (epoch):  $START_TIME"
+        echo "Target start time (UTC):    $(date -u -d @$START_TIME +"%Y-%m-%d %H:%M:%S.%N UTC" 2>/dev/null || date -u -r $START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
+        echo "Current time (epoch):       $CURRENT_TIME"
+        echo "Current time (UTC):         $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
+        echo "Seconds to wait:            $SECONDS_TO_WAIT"
+    } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
+
+    if [ $SECONDS_TO_WAIT -gt 0 ]; then
+        echo "Waiting $SECONDS_TO_WAIT seconds until synchronized start time..."
+
+        # Log time just before blocking
+        BEFORE_SLEEP_TIME=$(date +%s.%N)
+        {
+            echo "Time BEFORE sleep (epoch):  $BEFORE_SLEEP_TIME"
+            echo "Time BEFORE sleep (UTC):    $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
+        } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
+
+        sleep $SECONDS_TO_WAIT
+
+        # Log time just after blocking
+        AFTER_SLEEP_TIME=$(date +%s.%N)
+        {
+            echo "Time AFTER sleep (epoch):   $AFTER_SLEEP_TIME"
+            echo "Time AFTER sleep (UTC):     $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
+            echo "Actual sleep duration:      $(echo "$AFTER_SLEEP_TIME - $BEFORE_SLEEP_TIME" | bc) seconds"
+            echo "======================================================="
+        } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
+
+        echo "Starting NOW at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+        echo ""
+    elif [ $SECONDS_TO_WAIT -lt -30 ]; then
+        echo "WARNING: Start time was $((0 - SECONDS_TO_WAIT)) seconds ago!"
+        echo "WARNING: This receiver is starting significantly late."
+        {
+            echo "WARNING: Starting late by $((0 - SECONDS_TO_WAIT)) seconds"
+            echo "======================================================="
+        } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
+        echo ""
+    else
+        echo "Start time is now or in the recent past, starting immediately..."
+        {
+            echo "Starting immediately (within 30 seconds of target)"
+            echo "======================================================="
+        } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
+        echo ""
+    fi
+fi
 
 #------------------------------------------------------------------------------------------------
 # RUN E2SAR_PERF RECEIVER
@@ -361,10 +431,10 @@ e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP 
 # CLEANUP
 #------------------------------------------------------------------------------------------------
 
-# Kill the UDP socket monitor
-echo "Stopping UDP socket monitor..."
-kill -15 $MONITOR_PID 2>/dev/null || true
-sleep 1
+# Kill the UDP socket monitor (disabled)
+# echo "Stopping UDP socket monitor..."
+# kill -15 $MONITOR_PID 2>/dev/null || true
+# sleep 1
 
 jobs
 
