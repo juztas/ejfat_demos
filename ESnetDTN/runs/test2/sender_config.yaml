@@ -84,46 +84,59 @@ send_sockets: 8
 # Default: 1
 #
 # CONFIGURATION PRIORITY (first match wins):
-#   1. tx_cores_<hostname>    # Hostname-based (e.g., tx_cores_wash-dtn1)
-#   2. tx_cores_<index>       # Instance-specific (e.g., tx_cores_0)
-#   3. tx_cores               # Global default
+#   1. tx_cores_<hostname>_<index>  # Most specific: hostname AND instance
+#   2. tx_cores_<hostname>          # Hostname-based: all instances on this host
+#   3. tx_cores_<index>             # Instance-based: this instance on any host
+#   4. tx_cores                     # Global default: all instances, all hosts
+#
+# HOSTNAME+INSTANCE CONFIGURATION (MOST SPECIFIC):
+# Define different CPU cores for each sender instance on each DTN node.
+# This is the most flexible option for complex NUMA optimization.
+#
+# Example: Multiple sender instances per DTN with different cores
+#   tx_cores_wash-dtn1_0:  0  1  2  3  4  5  6  7    # wash-dtn1, instance 0
+#   tx_cores_wash-dtn1_1:  8  9 10 11 12 13 14 15    # wash-dtn1, instance 1
+#   tx_cores_wash-dtn1_2: 16 17 18 19 20 21 22 23    # wash-dtn1, instance 2
+#   tx_cores_star-dtn1_0:  0  1  2  3  4  5  6  7    # star-dtn1, instance 0
+#   tx_cores_star-dtn1_1:  8  9 10 11 12 13 14 15    # star-dtn1, instance 1
 #
 # HOSTNAME-BASED CONFIGURATION (RECOMMENDED):
-# Define CPU cores by DTN hostname for better organization and NUMA optimization.
-# The script will automatically detect the hostname and use the appropriate cores.
+# Define CPU cores by DTN hostname - same cores for all instances on that host.
 #
-# Example 1: Organize by DTN node
-#   tx_cores_wash-dtn1: 0 1 2 3 4 5 6 7
-#   tx_cores_star-dtn1: 8 9 10 11 12 13 14 15
-#   tx_cores_cern773-dtn1: 16 17 18 19 20 21 22 23
-#
-# Example 2: NUMA-aware configuration per node
-#   tx_cores_wash-dtn1: 0 1 2 3       # NUMA node 0
-#   tx_cores_star-dtn1: 8 9 10 11     # NUMA node 1
-#   tx_cores_sunn-dtn1: 16 17 18 19   # NUMA node 2
+# Example: All sender instances on a DTN use the same cores
+#   tx_cores_wash-dtn1: 0 1 2 3 4 5 6 7      # All instances on wash-dtn1
+#   tx_cores_star-dtn1: 8 9 10 11 12 13 14 15    # All instances on star-dtn1
 #
 # INSTANCE-BASED CONFIGURATION (FALLBACK):
-# Used when no hostname-based configuration is found.
+# Define cores by instance number - same across all DTN nodes.
 #
-# Example: Different cores per instance
-#   tx_cores_0: 0 1 2 3           # Instance 0: cores 0-3
-#   tx_cores_1: 8 9 10 11         # Instance 1: cores 8-11
-#   tx_cores_2: 16 17 18 19       # Instance 2: cores 16-19
+# Example: All DTNs use the same core pattern per instance
+#   tx_cores_0: 0 1 2 3           # Instance 0 on any DTN
+#   tx_cores_1: 8 9 10 11         # Instance 1 on any DTN
 #
 
-# Hostname-based CPU core assignments (uncomment and customize for your DTNs)
-# tx_cores_wash-dtn1: 0 1 2 3 4 5 6 7
-# tx_cores_star-dtn1: 8 9 10 11 12 13 14 15
-# tx_cores_cern773-dtn1: 16 17 18 19 20 21 22 23
-# tx_cores_denv-dtn1: 24 25 26 27 28 29 30 31
-# tx_cores_hous-dtn1: 32 33 34 35 36 37 38 39
-# tx_cores_sunn-dtn1: 40 41 42 43 44 45 46 47
+# Hostname+Instance CPU core assignments (most specific - customize for your setup)
+tx_cores_wash-dtn1_0:  0  1  2  3  4  5  6  7
+tx_cores_wash-dtn1_1:  8  9 10 11 12 13 14 15
+tx_cores_wash-dtn1_2: 16 17 18 19 20 21 22 23
 
-# Instance-based CPU core assignments (fallback)
-tx_cores: 0 1 2 3 4 5 6 7
+tx_cores_star-dtn1_0:  0  1  2  3  4  5  6  7
+tx_cores_star-dtn1_1:  8  9 10 11 12 13 14 15
+tx_cores_star-dtn1_2: 16 17 18 19 20 21 22 23
+
+# Hostname-based CPU core assignments (all instances use same cores)
+# tx_cores_cern773-dtn1: 0 1 2 3 4 5 6 7
+# tx_cores_denv-dtn1: 8 9 10 11 12 13 14 15
+# tx_cores_hous-dtn1: 16 17 18 19 20 21 22 23
+# tx_cores_sunn-dtn1: 24 25 26 27 28 29 30 31
+
+# Instance-based CPU core assignments (fallback - any DTN)
 tx_cores_0: 0 1 2 3
 tx_cores_1: 4 5 6 7
 tx_cores_2: 8 9 10 11
+
+# Global default
+tx_cores: 0 1 2 3 4 5 6 7
 
 # Data ID (identifier for the data stream)
 # Default: random number between 1-1000
