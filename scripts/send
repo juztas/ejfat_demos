@@ -275,7 +275,29 @@ fi
 
 echo "Generating segmenter_config_tx_${TX_INDEX}.ini..."
 
+# Calculate expected duration for documentation in INI file
+EXPECTED_DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
+FORMATTED_DURATION=$(format_duration "$EXPECTED_DURATION")
+TOTAL_DATA_GB=$(echo "scale=2; $NFRAMES * $TX_LENGTH / 1073741824" | bc)
+
 cat > segmenter_config_tx_${TX_INDEX}.ini << EOF
+; ============================================================================
+; EXPECTED SENDER DURATION CALCULATION
+; ============================================================================
+; This section shows the expected runtime based on configuration parameters.
+; Calculated using: Duration = (Frames × Length × 8 bits/byte) / (Rate × 10^9)
+;
+; Frames to send:      $NFRAMES
+; Frame size (bytes):  $TX_LENGTH
+; Transmission rate:   $TX_RATE Gbps
+;
+; Total data size:     ${TOTAL_DATA_GB} GB
+; Expected duration:   ${FORMATTED_DURATION} (${EXPECTED_DURATION} seconds)
+;
+; Note: Actual duration may vary due to network conditions, control plane
+;       overhead, and system performance.
+; ============================================================================
+
 [general]
 ; whether to use the control plane (gRPC sendState)
 useCP = $USE_CP
@@ -328,11 +350,6 @@ echo "Work Directory:     $WORK_DIR"
 echo "TX Rate:            $TX_RATE Gbps"
 echo "TX Length:          $TX_LENGTH bytes"
 echo "Frames:             $NFRAMES"
-
-# Calculate and display expected duration
-EXPECTED_DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
-FORMATTED_DURATION=$(format_duration "$EXPECTED_DURATION")
-TOTAL_DATA_GB=$(echo "scale=2; $NFRAMES * $TX_LENGTH / 1073741824" | bc)
 echo "Total Data:         ${TOTAL_DATA_GB} GB"
 echo "Expected Duration:  ${FORMATTED_DURATION} (${EXPECTED_DURATION}s)"
 
