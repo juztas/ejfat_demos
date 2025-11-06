@@ -46,6 +46,8 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
         'tx_rate': None,
         'tx_length': None,
         'frames': None,
+        'thread_mode': None,
+        'tx_cores': None,
         'send_sockets': None,
         'data_id': None,
         'use_control_plane': None,
@@ -89,6 +91,14 @@ def parse_tx_log(log_path: Path) -> Optional[Dict]:
     frames_match = re.search(r'Frames:\s*(\d+)', content)
     if frames_match:
         data['frames'] = int(frames_match.group(1))
+
+    thread_mode_match = re.search(r'Thread Mode:\s*(.+)', content)
+    if thread_mode_match:
+        data['thread_mode'] = thread_mode_match.group(1).strip()
+
+    tx_cores_match = re.search(r'TX Cores:\s*(.+)', content)
+    if tx_cores_match:
+        data['tx_cores'] = tx_cores_match.group(1).strip()
 
     sockets_match = re.search(r'Send Sockets:\s*(\d+)', content)
     if sockets_match:
@@ -321,6 +331,10 @@ def print_tx_summary(tx_data: Dict):
         print(f"  TX Length:         {tx_data['tx_length']}")
     if tx_data['frames'] is not None:
         print(f"  Frames:            {tx_data['frames']:,}")
+    if tx_data['thread_mode']:
+        print(f"  Thread Mode:       {tx_data['thread_mode']}")
+    if tx_data['tx_cores']:
+        print(f"  TX Cores:          {tx_data['tx_cores']}")
     if tx_data['send_sockets'] is not None:
         print(f"  Send Sockets:      {tx_data['send_sockets']}")
     if tx_data['data_id'] is not None:
@@ -471,6 +485,8 @@ def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
                 'TX Rate': tx_data.get('tx_rate', 'N/A'),
                 'TX Length': tx_data.get('tx_length', 'N/A'),
                 'Frames (target)': f"{tx_data['frames']:,}" if tx_data.get('frames') is not None else 'N/A',
+                'Thread Mode': tx_data.get('thread_mode', 'N/A'),
+                'TX Cores': tx_data.get('tx_cores', 'N/A'),
                 'Send Sockets': tx_data.get('send_sockets', 'N/A'),
                 'Data ID': tx_data.get('data_id', 'N/A'),
                 'Control Plane': tx_data.get('use_control_plane', 'N/A'),
@@ -521,6 +537,8 @@ def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
                 'TX Rate': '',
                 'TX Length': '',
                 'Frames (target)': '',
+                'Thread Mode': '',
+                'TX Cores': '',
                 'Send Sockets': '',
                 'Data ID': '',
                 'Control Plane': '',
