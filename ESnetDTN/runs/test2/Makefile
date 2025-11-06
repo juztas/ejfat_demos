@@ -17,11 +17,10 @@ HOSTS := cern773-dtn1-mgt.es.net \
 # List of DTN nodes for senders (in priority order)
 SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
+
+
+
 
 #SENDERS_LIST ?= $(HOSTS)
 
@@ -54,6 +53,12 @@ RECEIVER_LOG_DIR ?= run_output
 # Sender configuration
 SENDER_CONFIG ?= sender_config.yaml
 SENDER_LOG_DIR ?= run_output
+
+# Upload control - set to true to skip uploading config files (for fast restarts)
+SKIP_UPLOADS ?= false
+
+# Start time synchronization - offset in minutes from RUN_ID timestamp
+START_OFFSET_MINUTES ?= 2
 
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
@@ -110,6 +115,8 @@ help:
 	@echo "  RECEIVER_LOG_DIR  Receiver log directory (default: $(RECEIVER_LOG_DIR))"
 	@echo "  SENDER_CONFIG     Sender config file (default: $(SENDER_CONFIG))"
 	@echo "  SENDER_LOG_DIR    Sender log directory (default: $(SENDER_LOG_DIR))"
+	@echo "  SKIP_UPLOADS      Skip uploading config files: true or false (default: $(SKIP_UPLOADS))"
+	@echo "  START_OFFSET_MINUTES  Minutes to add to RUN_ID for synchronized start (default: $(START_OFFSET_MINUTES))"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
@@ -119,9 +126,12 @@ help:
 	@echo "  make overview EJFAT_URI_BETA=\$$EJFAT_URI_BETA"
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
+	@echo "  make receive SKIP_UPLOADS=true"
 	@echo "  make send"
 	@echo "  make send SENDERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
+	@echo "  make send SKIP_UPLOADS=true"
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
+	@echo "  make run START_OFFSET_MINUTES=5"
 	@echo "  make get-logs"
 	@echo "  make summarize-logs"
 	@echo "  make clean-run"
@@ -227,6 +237,9 @@ receive:
 	@if [ -n "$(RUN_ID)" ]; then \
 		echo "Run ID:              $(RUN_ID)"; \
 	fi
+	@if [ -n "$(START_TIME)" ]; then \
+		echo "Target Start Time:   $$(date -u -d @$(START_TIME) +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $(START_TIME) +"%Y-%m-%d %H:%M:%S UTC")"; \
+	fi
 	@echo "========================================================================"
 	@echo ""
 	@if [ ! -f INSTANCE_URI ]; then \
@@ -256,9 +269,13 @@ receive:
 		echo "  RX Index: $$i"; \
 		echo "  Creating remote directories..."; \
 		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)"; \
-		echo "  Copying config files to $$node..."; \
-		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
-		scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
+		if [ "$(SKIP_UPLOADS)" != "true" ]; then \
+			echo "  Copying config files to $$node..."; \
+			cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
+			scp $(RECEIVER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname; \
+		else \
+			echo "  Skipping uploads (SKIP_UPLOADS=true)..."; \
+		fi; \
 		echo "  Starting receiver in background..."; \
 		ssh -t $$node bash -i -c "'conda activate e2sar && \
 			cd $(REMOTE_WORK_DIR) && \
@@ -266,6 +283,7 @@ receive:
 			mkdir -p $(RECEIVER_LOG_DIR) && \
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
+			export START_TIME=\"$(START_TIME)\" && \
 			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \
@@ -288,6 +306,9 @@ send:
 	@echo "Remote Work Dir:     $(REMOTE_WORK_DIR)"
 	@if [ -n "$(RUN_ID)" ]; then \
 		echo "Run ID:              $(RUN_ID)"; \
+	fi
+	@if [ -n "$(START_TIME)" ]; then \
+		echo "Target Start Time:   $$(date -u -d @$(START_TIME) +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $(START_TIME) +"%Y-%m-%d %H:%M:%S UTC")"; \
 	fi
 	@echo "========================================================================"
 	@echo ""
@@ -319,11 +340,15 @@ send:
 		echo "  Data ID:  $$data_id"; \
 		echo "  Creating remote directories..."; \
 		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)"; \
-		echo "  Copying config files to $$node..."; \
-		cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
-		scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname; \
-		echo "  Modifying config to set data_id: $$data_id"; \
-		ssh $$node "sed 's/^# data_id:.*/data_id: $$data_id/' $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp && mv $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname"; \
+		if [ "$(SKIP_UPLOADS)" != "true" ]; then \
+			echo "  Copying config files to $$node..."; \
+			cat INSTANCE_URI | ssh $$node "cat > $(REMOTE_WORK_DIR)/INSTANCE_URI"; \
+			scp $(SENDER_CONFIG) $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname; \
+			echo "  Modifying config to set data_id: $$data_id"; \
+			ssh $$node "sed 's/^# data_id:.*/data_id: $$data_id/' $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp && mv $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname.tmp $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname"; \
+		else \
+			echo "  Skipping uploads (SKIP_UPLOADS=true)..."; \
+		fi; \
 		echo "  Starting sender in background..."; \
 		ssh -t $$node bash -i -c "'conda activate e2sar && \
 			cd $(REMOTE_WORK_DIR) && \
@@ -331,6 +356,7 @@ send:
 			mkdir -p $(SENDER_LOG_DIR) && \
 			export WORK_DIR=$(SENDER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
+			export START_TIME=\"$(START_TIME)\" && \
 			nohup $(SCRIPT_DIR)/send --tx-index $$i $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Sender started in background (PID: \$$!)\"'"; \
 		echo ""; \
@@ -353,6 +379,16 @@ run:
 	export RUN_ID; \
 	echo "Run ID: $$RUN_ID (UTC)"; \
 	echo "$$RUN_ID" > $(RECEIVER_LOG_DIR)/RUN_ID; \
+	if BASE_TIME=$$(date -u -d "$$RUN_ID" +"%s" 2>/dev/null); then \
+		START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
+	else \
+		BASE_TIME=$$(date -u -j -f "%Y%m%d_%H%M%S" "$$RUN_ID" +%s 2>/dev/null); \
+		START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
+	fi; \
+	export START_TIME; \
+	echo "Start offset: $(START_OFFSET_MINUTES) minutes"; \
+	echo "Target start time: $$(date -u -d @$$START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $$START_TIME +"%Y-%m-%d %H:%M:%S UTC")"; \
+	echo "$$START_TIME" > $(RECEIVER_LOG_DIR)/START_TIME; \
 	echo ""; \
 	echo "Step 1: Reserving load balancer..."; \
 	echo "------------------------------------------------------------------------"; \
@@ -375,14 +411,14 @@ run:
 	echo ""; \
 	echo "Step 2: Starting receivers on all DTN nodes..."; \
 	echo "------------------------------------------------------------------------"; \
-	$(MAKE) receive RUN_ID=$$RUN_ID; \
+	$(MAKE) receive RUN_ID=$$RUN_ID START_TIME=$$START_TIME; \
 	echo ""; \
 	echo "Waiting 5 seconds for receivers to initialize..."; \
 	sleep 5; \
 	echo ""; \
 	echo "Step 3: Starting sender..."; \
 	echo "------------------------------------------------------------------------"; \
-	$(MAKE) send RUN_ID=$$RUN_ID; \
+	$(MAKE) send RUN_ID=$$RUN_ID START_TIME=$$START_TIME; \
 	echo ""; \
 	echo "========================================================================"; \
 	echo "Workflow Started Successfully!"; \
@@ -673,5 +709,21 @@ clean-run:
 	done
 	@echo "========================================================================"
 	@echo "Remote Cleanup Complete!"
+	@echo "========================================================================"
+	@echo ""
+	@echo "========================================================================"
+	@echo "Cleaning Local Run Output Directory"
+	@echo "========================================================================"
+	@if [ -d "$(RECEIVER_LOG_DIR)" ]; then \
+		echo "Removing local log and INI files from $(RECEIVER_LOG_DIR)/"; \
+		rm -f $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.ini 2>/dev/null && \
+			echo "  ✓ Local log and INI files removed" || \
+			echo "  ✗ No local log/INI files to remove"; \
+	else \
+		echo "  Local $(RECEIVER_LOG_DIR)/ directory does not exist"; \
+	fi
+	@echo ""
+	@echo "========================================================================"
+	@echo "Cleanup Complete!"
 	@echo "========================================================================"
 	@echo ""
