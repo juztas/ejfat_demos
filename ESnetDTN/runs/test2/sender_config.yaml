@@ -28,7 +28,12 @@ ip_version: 6
 # ============================================================================
 
 # Transmission rate in Gbps
+# Supports instance-specific values: tx_rate_0, tx_rate_1, etc.
 # Default: 0.1
+# Example:
+#   tx_rate: 25         # Default for all instances
+#   tx_rate_0: 10       # Override for instance 0
+#   tx_rate_1: 30       # Override for instance 1
 tx_rate: 25
 
 # Transmission length (packet size in bytes)
@@ -44,11 +49,14 @@ nframes: 100000
 send_sockets: 8
 
 # Number of CPU cores to use for sender threads
+# Supports instance-specific values: tx_cores_0, tx_cores_1, etc.
 # Can be a single number or a space-separated list of core IDs
 # Default: 1
 # Examples:
-#   tx_cores: 8          (use 8 threads)
-#   tx_cores: 0 1 2 3    (bind to cores 0, 1, 2, 3)
+#   tx_cores: 8          # Default: use 8 threads for all instances
+#   tx_cores: 0 1 2 3    # Default: bind to cores 0, 1, 2, 3
+#   tx_cores_0: 4        # Override for instance 0
+#   tx_cores_1: 8 9 10   # Override for instance 1 (bind to specific cores)
 tx_cores: 8
 
 # Data ID (identifier for the data stream)

@@ -32,6 +32,29 @@ parse_yaml() {
     grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
 }
 
+# Function to parse instance-specific YAML with fallback to default
+# Usage: parse_yaml_instance <file> <key_prefix> <instance_index>
+# Tries: <key_prefix>_<index>, then falls back to <key_prefix>
+# Example: parse_yaml_instance config.yaml "rx_cores" 0
+#   First tries: rx_cores_0
+#   Then tries:  rx_cores (default)
+parse_yaml_instance() {
+    local yaml_file="$1"
+    local key_prefix="$2"
+    local instance="$3"
+
+    # Try instance-specific value first
+    local instance_key="${key_prefix}_${instance}"
+    local value=$(parse_yaml "$yaml_file" "$instance_key")
+
+    # If not found, try default key
+    if [ -z "$value" ]; then
+        value=$(parse_yaml "$yaml_file" "$key_prefix")
+    fi
+
+    echo "$value"
+}
+
 # Function to display help
 show_help() {
     cat << EOF
@@ -130,10 +153,10 @@ RX_BUFSIZE="${RX_BUFSIZE:-400000000}"
 RX_TIMEOUT=$(parse_yaml "$CONFIG_FILE" "rx_timeout")
 RX_TIMEOUT="${RX_TIMEOUT:-7000}"
 
-RX_CORES=$(parse_yaml "$CONFIG_FILE" "rx_cores")
+RX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "rx_cores" "$RX_INDEX")
 RX_CORES="${RX_CORES:-1}"
 
-RX_DEQ=$(parse_yaml "$CONFIG_FILE" "rx_dequeue")
+RX_DEQ=$(parse_yaml_instance "$CONFIG_FILE" "rx_dequeue" "$RX_INDEX")
 RX_DEQ="${RX_DEQ:-16}"
 
 # Logging configuration
@@ -173,7 +196,7 @@ REASSEM_DATA_PORT=$((REASSEM_DATA_PORT_BASE + PORT_OFFSET))
 # Monitor ports should cover: REASSEM_DATA_PORT to (REASSEM_DATA_PORT + RX_THREADS - 1)
 MONITOR_PORTS="${REASSEM_DATA_PORT}-$((REASSEM_DATA_PORT + RX_THREADS - 1))"
 
-REASSEM_PORT_RANGE=$(parse_yaml "$CONFIG_FILE" "reassem_port_range")
+REASSEM_PORT_RANGE=$(parse_yaml_instance "$CONFIG_FILE" "reassembler_port_range" "$RX_INDEX")
 REASSEM_PORT_RANGE="${REASSEM_PORT_RANGE:--1}"
 
 REASSEM_WITH_LB_HEADER=$(parse_yaml "$CONFIG_FILE" "reassem_with_lb_header")

@@ -33,7 +33,7 @@ ip_version: 6
 
 # Duration to receive data (in seconds)
 # Default: 120
-rx_duration: 360
+rx_duration: 480
 
 # Number of receiver threads
 # Default: 16
@@ -48,10 +48,17 @@ rx_bufsize: 400000000
 rx_timeout: 7000
 
 # Number of CPU cores to use
+# Supports instance-specific values: rx_cores_0, rx_cores_1, etc.
+# Falls back to rx_cores if instance-specific value not found
 # Default: 1
+# Example:
+#   rx_cores: 8         # Default for all instances
+#   rx_cores_0: 4       # Override for instance 0
+#   rx_cores_1: 12      # Override for instance 1
 rx_cores: 8
 
 # Dequeue parameter
+# Supports instance-specific values: rx_dequeue_0, rx_dequeue_1, etc.
 # Default: 16
 rx_dequeue: 16
 
@@ -107,9 +114,13 @@ reassem_use_host_address: true
 reassem_data_port: 10000
 
 # Port range: 2^portRange listening ports will be open starting from dataPort
+# Supports instance-specific values: reassembler_port_range_0, reassembler_port_range_1, etc.
 # Values: 0-14 (power of 2), or -1 to match number of CPU cores/threads
 # Default: -1
-# reassem_port_range: -1
+# Example:
+#   reassembler_port_range: -1     # Default for all instances
+#   reassembler_port_range_0: 4    # Override for instance 0 (16 ports)
+# reassembler_port_range: -1
 
 # Expect LB header to be included (mainly for testing when useCP==false)
 # Default: false

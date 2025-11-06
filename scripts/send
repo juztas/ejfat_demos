@@ -29,6 +29,29 @@ parse_yaml() {
     grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
 }
 
+# Function to parse instance-specific YAML with fallback to default
+# Usage: parse_yaml_instance <file> <key_prefix> <instance_index>
+# Tries: <key_prefix>_<index>, then falls back to <key_prefix>
+# Example: parse_yaml_instance config.yaml "tx_cores" 0
+#   First tries: tx_cores_0
+#   Then tries:  tx_cores (default)
+parse_yaml_instance() {
+    local yaml_file="$1"
+    local key_prefix="$2"
+    local instance="$3"
+
+    # Try instance-specific value first
+    local instance_key="${key_prefix}_${instance}"
+    local value=$(parse_yaml "$yaml_file" "$instance_key")
+
+    # If not found, try default key
+    if [ -z "$value" ]; then
+        value=$(parse_yaml "$yaml_file" "$key_prefix")
+    fi
+
+    echo "$value"
+}
+
 # Function to display help
 show_help() {
     cat << EOF
@@ -118,7 +141,7 @@ IP_VERSION="${IP_VERSION:-6}"
 IP_VERSION_DASH="-${IP_VERSION}"
 
 # Sender configuration
-TX_RATE=$(parse_yaml "$CONFIG_FILE" "tx_rate")
+TX_RATE=$(parse_yaml_instance "$CONFIG_FILE" "tx_rate" "$TX_INDEX")
 TX_RATE="${TX_RATE:-0.1}"
 
 TX_LENGTH=$(parse_yaml "$CONFIG_FILE" "tx_length")
@@ -130,7 +153,7 @@ NFRAMES="${NFRAMES:-10000}"
 SEND_SOCKETS=$(parse_yaml "$CONFIG_FILE" "send_sockets")
 SEND_SOCKETS="${SEND_SOCKETS:-8}"
 
-TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores")
+TX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "tx_cores" "$TX_INDEX")
 TX_CORES="${TX_CORES:-1}"
 
 DATA_ID=$(parse_yaml "$CONFIG_FILE" "data_id")
