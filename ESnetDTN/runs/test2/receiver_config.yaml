@@ -51,15 +51,35 @@ rx_timeout: 7000
 # Supports instance-specific values: rx_cores_0, rx_cores_1, etc.
 # Falls back to rx_cores if instance-specific value not found
 # Default: 1
-# Example:
+#
+# INSTANCE-SPECIFIC CONFIGURATION EXAMPLES:
+#
+# Example 1: All instances use same value
+#   rx_cores: 8
+#   Result: rx_0, rx_1, rx_2... all use 8 cores
+#
+# Example 2: Override specific instances
 #   rx_cores: 8         # Default for all instances
-#   rx_cores_0: 4       # Override for instance 0
-#   rx_cores_1: 12      # Override for instance 1
+#   rx_cores_0: 4       # Instance 0 uses 4 cores
+#   rx_cores_1: 12      # Instance 1 uses 12 cores
+#   Result: rx_0=4, rx_1=12, rx_2+=8 (default)
+#
+# Example 3: Pin to specific CPU cores
+#   rx_cores: 0 1 2 3 4 5 6 7     # Default: cores 0-7
+#   rx_cores_0: 8 9 10 11         # Instance 0: cores 8-11
+#   rx_cores_1: 12 13 14 15       # Instance 1: cores 12-15
+#
 rx_cores: 8
 
 # Dequeue parameter
 # Supports instance-specific values: rx_dequeue_0, rx_dequeue_1, etc.
 # Default: 16
+#
+# Example: Different dequeue values per instance
+#   rx_dequeue: 16        # Default for all instances
+#   rx_dequeue_0: 32      # Instance 0 uses larger buffer
+#   rx_dequeue_1: 8       # Instance 1 uses smaller buffer
+#
 rx_dequeue: 16
 
 # ============================================================================
@@ -117,9 +137,19 @@ reassem_data_port: 10000
 # Supports instance-specific values: reassembler_port_range_0, reassembler_port_range_1, etc.
 # Values: 0-14 (power of 2), or -1 to match number of CPU cores/threads
 # Default: -1
-# Example:
-#   reassembler_port_range: -1     # Default for all instances
-#   reassembler_port_range_0: 4    # Override for instance 0 (16 ports)
+#
+# Example 1: All instances auto-match cores
+#   reassembler_port_range: -1
+#   Result: Each instance opens 2^(cores) ports
+#
+# Example 2: Different port ranges per instance
+#   reassembler_port_range: -1     # Default: auto-match cores
+#   reassembler_port_range_0: 4    # Instance 0: 2^4 = 16 ports
+#   reassembler_port_range_1: 6    # Instance 1: 2^6 = 64 ports
+#
+# Example 3: Fixed port count for testing
+#   reassembler_port_range: 3      # All instances use 2^3 = 8 ports
+#
 # reassembler_port_range: -1
 
 # Expect LB header to be included (mainly for testing when useCP==false)
