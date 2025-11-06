@@ -15,12 +15,21 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
+SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
+
 #SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
+RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net  \
+		  cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
+
 #RECEIVERS_LIST ?= $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
@@ -53,7 +62,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run
+.PHONY: help reserve free overview receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -68,6 +77,7 @@ help:
 	@echo "  help              Display this help message"
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
+	@echo "  overview          Monitor load balancer status (lbadm --overview)"
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send"
@@ -106,6 +116,7 @@ help:
 	@echo "  make reserve EJFAT_URI_BETA=\$$EJFAT_URI_BETA LB_NAME=my_test"
 	@echo "  make free"
 	@echo "  make free IP_VERSION=4"
+	@echo "  make overview"
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make send"
@@ -181,6 +192,20 @@ free:
 	@echo "Load balancer freed successfully."
 	@echo "========================================================================"
 	@echo ""
+
+overview:
+	@echo "========================================================================"
+	@echo "Load Balancer Overview Monitor"
+	@echo "========================================================================"
+	@echo "Running on:          $(PRIMARY_DTN)"
+	@echo "Update interval:     1 second"
+	@echo ""
+	@echo "Press Ctrl-C to stop monitoring"
+	@echo "========================================================================"
+	@echo ""
+	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
+		cd $(REMOTE_WORK_DIR) && \
+		watch -n 1 lbadm --overview'"
 
 receive:
 	@echo "========================================================================"
