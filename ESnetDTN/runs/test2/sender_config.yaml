@@ -29,7 +29,7 @@ ip_version: 6
 
 # Transmission rate in Gbps
 # Default: 0.1
-tx_rate: 15
+tx_rate: 25
 
 # Transmission length (packet size in bytes)
 # Default: 2097152 (2 MB)
@@ -37,11 +37,19 @@ tx_length: 2097152
 
 # Number of frames to send
 # Default: 10000
-nframes: 10000
+nframes: 100000
 
 # Number of send sockets to use
 # Default: 8
 send_sockets: 8
+
+# Number of CPU cores to use for sender threads
+# Can be a single number or a space-separated list of core IDs
+# Default: 1
+# Examples:
+#   tx_cores: 8          (use 8 threads)
+#   tx_cores: 0 1 2 3    (bind to cores 0, 1, 2, 3)
+tx_cores: 8
 
 # Data ID (identifier for the data stream)
 # Default: random number between 1-1000

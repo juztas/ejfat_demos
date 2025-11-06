@@ -130,6 +130,9 @@ NFRAMES="${NFRAMES:-10000}"
 SEND_SOCKETS=$(parse_yaml "$CONFIG_FILE" "send_sockets")
 SEND_SOCKETS="${SEND_SOCKETS:-8}"
 
+TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores")
+TX_CORES="${TX_CORES:-1}"
+
 DATA_ID=$(parse_yaml "$CONFIG_FILE" "data_id")
 if [ -z "$DATA_ID" ]; then
     DATA_ID=$((RANDOM % 1000 + 1))
@@ -264,6 +267,7 @@ echo "TX Rate:            $TX_RATE Gbps"
 echo "TX Length:          $TX_LENGTH bytes"
 echo "Frames:             $NFRAMES"
 echo "Send Sockets:       $SEND_SOCKETS"
+echo "TX Cores:           $TX_CORES"
 echo "Data ID:            $DATA_ID"
 echo "Use Control Plane:  $USE_CP"
 echo "MTU:                $MTU"
@@ -355,12 +359,12 @@ ls -la
 echo "DEBUG: segmenter_config_tx_${TX_INDEX}.ini location:"
 ls -la segmenter_config_tx_${TX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
+echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH"
 echo "========================================================================"
 echo ""
 
 # e2sar_perf will use the segmenter_config_tx_${TX_INDEX}.ini we generated
-e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
+e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH
 
 echo ""
 echo "========================================================================"
