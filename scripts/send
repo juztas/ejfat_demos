@@ -25,8 +25,8 @@ set -e
 parse_yaml() {
     local yaml_file="$1"
     local key="$2"
-    # Simple YAML parser for key: value format
-    grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+    # Simple YAML parser for key: value format (allows optional whitespace before colon)
+    grep "^${key}[[:space:]]*:" "$yaml_file" 2>/dev/null | sed "s/^${key}[[:space:]]*:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
 }
 
 # Function to parse instance-specific YAML with fallback to default
