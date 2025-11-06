@@ -412,7 +412,7 @@ cat > reassembler_config_rx_${RX_INDEX}.ini << EOF
 ; RECEIVER DURATION CALCULATION
 ; ============================================================================
 $(if [ "$AUTO_CALCULATED_DURATION" = "true" ]; then
-cat << 'CALC_EOF'
+cat << CALC_EOF
 ; This receiver duration was AUTO-CALCULATED based on sender configuration.
 ;
 ; Calculation method:
@@ -439,7 +439,7 @@ cat << 'CALC_EOF'
 ; to a positive value (0 or greater).
 CALC_EOF
 else
-cat << 'MANUAL_EOF'
+cat << MANUAL_EOF
 ; Receiver duration: ${RX_DURATION} seconds
 ; This value was manually configured in receiver_config.yaml
 ;
