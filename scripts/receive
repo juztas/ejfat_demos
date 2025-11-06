@@ -246,10 +246,11 @@ if [ "$RX_DURATION" = "-1" ]; then
     if [ -n "$SENDER_CONFIG" ]; then
         echo "Auto-calculating receiver duration from sender config: $SENDER_CONFIG"
 
-        # Find longest sender duration
-        LONGEST_DURATION=$(find_longest_sender_duration "$SENDER_CONFIG")
+        # Find longest sender duration (call without subshell to preserve globals)
+        find_longest_sender_duration "$SENDER_CONFIG" > /dev/null
+        LONGEST_DURATION=$LONGEST_SENDER_DURATION
 
-        if [ "$LONGEST_DURATION" != "0" ]; then
+        if [ "$LONGEST_DURATION" != "0" ] && [ -n "$LONGEST_DURATION" ]; then
             # Add 30 second buffer for sender completion and cleanup
             BUFFER_SECONDS=30
             RX_DURATION=$(echo "$LONGEST_DURATION + $BUFFER_SECONDS" | bc)
