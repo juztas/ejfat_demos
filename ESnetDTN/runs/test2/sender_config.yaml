@@ -53,11 +53,26 @@ ip_version: 6
 tx_rate: 25
 
 # Transmission length (packet size in bytes)
+# Supports instance-specific values: tx_length_0, tx_length_1, etc.
 # Default: 2097152 (2 MB)
+#
+# Example: Different frame sizes per instance
+#   tx_length: 2097152      # Default: 2 MB frames
+#   tx_length_0: 1048576    # Instance 0: 1 MB frames
+#   tx_length_1: 4194304    # Instance 1: 4 MB frames
+#
 tx_length: 2097152
 
 # Number of frames to send
+# Supports instance-specific values: nframes_0, nframes_1, etc.
 # Default: 10000
+#
+# Example: Different frame counts per instance (variable duration tests)
+#   nframes: 100000         # Default: 100k frames
+#   nframes_0: 50000        # Instance 0: shorter test
+#   nframes_1: 200000       # Instance 1: longer test
+#   Result: Each instance runs for different duration
+#
 nframes: 100000
 
 # Number of send sockets to use
@@ -88,7 +103,11 @@ send_sockets: 8
 #   tx_cores: 4          # Default: 4 threads
 #   tx_cores_0: 16 17 18 19 20 21 22 23  # Instance 0: dedicated cores
 #
-tx_cores: 8
+
+tx_cores: 0 1 2 3 4 5 6 7
+tx_cores_0 : 0 1 2 3
+tx_cores_1 : 4 5 6 7
+tx_cores_2 : 8 9 10 11
 
 # Data ID (identifier for the data stream)
 # Default: random number between 1-1000

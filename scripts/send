@@ -183,10 +183,10 @@ IP_VERSION_DASH="-${IP_VERSION}"
 TX_RATE=$(parse_yaml_instance "$CONFIG_FILE" "tx_rate" "$TX_INDEX")
 TX_RATE="${TX_RATE:-0.1}"
 
-TX_LENGTH=$(parse_yaml "$CONFIG_FILE" "tx_length")
+TX_LENGTH=$(parse_yaml_instance "$CONFIG_FILE" "tx_length" "$TX_INDEX")
 TX_LENGTH="${TX_LENGTH:-2097152}"
 
-NFRAMES=$(parse_yaml "$CONFIG_FILE" "nframes")
+NFRAMES=$(parse_yaml_instance "$CONFIG_FILE" "nframes" "$TX_INDEX")
 NFRAMES="${NFRAMES:-10000}"
 
 SEND_SOCKETS=$(parse_yaml "$CONFIG_FILE" "send_sockets")
