@@ -352,9 +352,14 @@ echo "TX Length:          $TX_LENGTH bytes"
 echo "Frames:             $NFRAMES"
 echo "Total Data:         ${TOTAL_DATA_GB} GB"
 echo "Expected Duration:  ${FORMATTED_DURATION} (${EXPECTED_DURATION}s)"
-
-echo "Send Sockets:       $SEND_SOCKETS"
-echo "TX Cores:           $TX_CORES"
+echo ""
+if [ -n "$TX_CORES" ]; then
+    echo "Thread Mode:        Core pinning (--cores)"
+    echo "TX Cores:           $TX_CORES"
+else
+    echo "Thread Mode:        Socket-based (--sockets)"
+    echo "Send Sockets:       $SEND_SOCKETS"
+fi
 echo "Data ID:            $DATA_ID"
 echo "Use Control Plane:  $USE_CP"
 echo "MTU:                $MTU"
@@ -446,12 +451,22 @@ ls -la
 echo "DEBUG: segmenter_config_tx_${TX_INDEX}.ini location:"
 ls -la segmenter_config_tx_${TX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH"
+# Use --cores if TX_CORES is specified, otherwise use --sockets
+if [ -n "$TX_CORES" ]; then
+    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH"
+else
+    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
+fi
 echo "========================================================================"
 echo ""
 
 # e2sar_perf will use the segmenter_config_tx_${TX_INDEX}.ini we generated
-e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH
+# Use --cores if TX_CORES is specified, otherwise use --sockets
+if [ -n "$TX_CORES" ]; then
+    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH
+else
+    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
+fi
 
 echo ""
 echo "========================================================================"
