@@ -1,0 +1,170 @@
+#!/bin/bash
+#
+# calculate_sender_duration - Calculate expected sender duration
+#
+# This script calculates how long a sender will run based on:
+# - Number of frames (events)
+# - Frame size in bytes (event size)
+# - Transmission rate in Gbps
+#
+# Usage: calculate_sender_duration [--config <config.yaml>] [--nframes N] [--length L] [--rate R]
+#
+
+# Function to parse YAML
+parse_yaml() {
+    local yaml_file="$1"
+    local key="$2"
+    grep "^${key}:" "$yaml_file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+}
+
+# Function to calculate duration
+calculate_duration() {
+    local nframes=$1
+    local tx_length=$2
+    local tx_rate=$3
+
+    # Total data in bytes
+    local total_bytes=$(echo "$nframes * $tx_length" | bc)
+
+    # Total bits
+    local total_bits=$(echo "$total_bytes * 8" | bc)
+
+    # Duration in seconds = total_bits / (rate_gbps * 10^9)
+    local duration=$(echo "scale=2; $total_bits / ($tx_rate * 1000000000)" | bc)
+
+    echo "$duration"
+}
+
+# Function to format duration
+format_duration() {
+    local total_seconds=$1
+
+    local hours=$(echo "$total_seconds / 3600" | bc)
+    local remainder=$(echo "$total_seconds % 3600" | bc)
+    local minutes=$(echo "$remainder / 60" | bc)
+    local seconds=$(echo "scale=1; $remainder % 60" | bc)
+
+    if [ "$hours" -gt 0 ]; then
+        printf "%dh %dm %.1fs" "$hours" "$minutes" "$seconds"
+    elif [ "$minutes" -gt 0 ]; then
+        printf "%dm %.1fs" "$minutes" "$seconds"
+    else
+        printf "%.1fs" "$seconds"
+    fi
+}
+
+# Display help
+show_help() {
+    cat << EOF
+Calculate Expected Sender Duration
+
+Usage:
+  calculate_sender_duration --config <config.yaml>
+  calculate_sender_duration --nframes N --length L --rate R
+
+Options:
+  --config <file>    Read parameters from sender config YAML file
+  --nframes <N>      Number of frames to send
+  --length <L>       Frame size in bytes
+  --rate <R>         Transmission rate in Gbps
+  --help             Display this help message
+
+Examples:
+  # From config file
+  calculate_sender_duration --config sender_config.yaml
+
+  # Direct parameters
+  calculate_sender_duration --nframes 100000 --length 2097152 --rate 25
+
+  # Calculate for different rates
+  for rate in 10 25 50 100; do
+    calculate_sender_duration --nframes 100000 --length 2097152 --rate \$rate
+  done
+
+Formula:
+  Duration (seconds) = (Frames × Length × 8 bits/byte) / (Rate × 10^9 bits/Gbps)
+
+EOF
+}
+
+# Parse command line arguments
+CONFIG_FILE=""
+NFRAMES=""
+TX_LENGTH=""
+TX_RATE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --config)
+            CONFIG_FILE="$2"
+            shift 2
+            ;;
+        --nframes)
+            NFRAMES="$2"
+            shift 2
+            ;;
+        --length)
+            TX_LENGTH="$2"
+            shift 2
+            ;;
+        --rate)
+            TX_RATE="$2"
+            shift 2
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# If config file specified, read from it
+if [ -n "$CONFIG_FILE" ]; then
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Error: Config file not found: $CONFIG_FILE"
+        exit 1
+    fi
+
+    NFRAMES=$(parse_yaml "$CONFIG_FILE" "nframes")
+    TX_LENGTH=$(parse_yaml "$CONFIG_FILE" "tx_length")
+    TX_RATE=$(parse_yaml "$CONFIG_FILE" "tx_rate")
+fi
+
+# Validate we have all required parameters
+if [ -z "$NFRAMES" ] || [ -z "$TX_LENGTH" ] || [ -z "$TX_RATE" ]; then
+    echo "Error: Missing required parameters"
+    echo ""
+    echo "Please provide either:"
+    echo "  --config <config.yaml>"
+    echo "  OR"
+    echo "  --nframes N --length L --rate R"
+    echo ""
+    echo "Use --help for more information"
+    exit 1
+fi
+
+# Calculate duration
+DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
+FORMATTED=$(format_duration "$DURATION")
+
+# Calculate total data size
+TOTAL_BYTES=$(echo "$NFRAMES * $TX_LENGTH" | bc)
+TOTAL_GB=$(echo "scale=2; $TOTAL_BYTES / 1073741824" | bc)
+TOTAL_TB=$(echo "scale=3; $TOTAL_BYTES / 1099511627776" | bc)
+
+# Display results
+echo "========================================================================"
+echo "Sender Duration Calculation"
+echo "========================================================================"
+echo "Frames:             $NFRAMES"
+echo "Frame Size:         $TX_LENGTH bytes"
+echo "Transmission Rate:  $TX_RATE Gbps"
+echo ""
+echo "Total Data:         ${TOTAL_GB} GB (${TOTAL_TB} TB)"
+echo "Expected Duration:  ${FORMATTED} (${DURATION} seconds)"
+echo "========================================================================"

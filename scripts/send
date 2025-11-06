@@ -52,6 +52,45 @@ parse_yaml_instance() {
     echo "$value"
 }
 
+# Function to calculate expected sender duration
+# Usage: calculate_duration <nframes> <tx_length_bytes> <tx_rate_gbps>
+calculate_duration() {
+    local nframes=$1
+    local tx_length=$2
+    local tx_rate=$3
+
+    # Total data in bytes
+    local total_bytes=$(echo "$nframes * $tx_length" | bc)
+
+    # Total bits
+    local total_bits=$(echo "$total_bytes * 8" | bc)
+
+    # Duration in seconds = total_bits / (rate_gbps * 10^9)
+    local duration=$(echo "scale=2; $total_bits / ($tx_rate * 1000000000)" | bc)
+
+    echo "$duration"
+}
+
+# Function to format duration in human-readable format
+# Usage: format_duration <seconds>
+format_duration() {
+    local total_seconds=$1
+
+    # Use bc for floating point arithmetic
+    local hours=$(echo "$total_seconds / 3600" | bc)
+    local remainder=$(echo "$total_seconds % 3600" | bc)
+    local minutes=$(echo "$remainder / 60" | bc)
+    local seconds=$(echo "scale=1; $remainder % 60" | bc)
+
+    if [ "$hours" -gt 0 ]; then
+        printf "%dh %dm %.1fs" "$hours" "$minutes" "$seconds"
+    elif [ "$minutes" -gt 0 ]; then
+        printf "%dm %.1fs" "$minutes" "$seconds"
+    else
+        printf "%.1fs" "$seconds"
+    fi
+}
+
 # Function to display help
 show_help() {
     cat << EOF
@@ -289,6 +328,14 @@ echo "Work Directory:     $WORK_DIR"
 echo "TX Rate:            $TX_RATE Gbps"
 echo "TX Length:          $TX_LENGTH bytes"
 echo "Frames:             $NFRAMES"
+
+# Calculate and display expected duration
+EXPECTED_DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
+FORMATTED_DURATION=$(format_duration "$EXPECTED_DURATION")
+TOTAL_DATA_GB=$(echo "scale=2; $NFRAMES * $TX_LENGTH / 1073741824" | bc)
+echo "Total Data:         ${TOTAL_DATA_GB} GB"
+echo "Expected Duration:  ${FORMATTED_DURATION} (${EXPECTED_DURATION}s)"
+
 echo "Send Sockets:       $SEND_SOCKETS"
 echo "TX Cores:           $TX_CORES"
 echo "Data ID:            $DATA_ID"
