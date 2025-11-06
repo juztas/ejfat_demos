@@ -196,15 +196,27 @@ SEND_SOCKETS="${SEND_SOCKETS:-8}"
 SHORT_HOSTNAME=$(hostname -s)
 
 # Try cores configuration with priority:
-# 1. tx_cores_<hostname>_<index> - Most specific (hostname AND instance)
-# 2. tx_cores_<hostname>         - Hostname-based (all instances on this host)
-# 3. tx_cores_<index>            - Instance-based (this instance on any host)
-# 4. tx_cores                    - Default (all instances, all hosts)
+# 1. tx_cores_<hostname>_<ordinal> - Most specific (hostname AND ordinal position)
+# 2. tx_cores_<hostname>           - Hostname-based (all instances on this host)
+# 3. tx_cores_<index>              - Instance-based (this instance on any host)
+# 4. tx_cores                      - Default (all instances, all hosts)
+#
+# Note: TX_ORDINAL is the ordinal position (0, 1, 2, ...) of this sender on this DTN,
+#       set by the Makefile based on the order of senders for this node.
+#       If not set, falls back to using TX_INDEX.
 
-# Priority 1: hostname + instance
-TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores_${SHORT_HOSTNAME}_${TX_INDEX}")
+# Determine which index to use for hostname+instance lookup
+# Use TX_ORDINAL if set (ordinal position on this DTN), otherwise use TX_INDEX
+LOOKUP_INDEX="${TX_ORDINAL:-$TX_INDEX}"
+
+# Priority 1: hostname + ordinal (or index if ordinal not set)
+TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores_${SHORT_HOSTNAME}_${LOOKUP_INDEX}")
 if [ -n "$TX_CORES" ]; then
-    TX_CORES_SOURCE="hostname+instance (tx_cores_${SHORT_HOSTNAME}_${TX_INDEX})"
+    if [ -n "$TX_ORDINAL" ]; then
+        TX_CORES_SOURCE="hostname+ordinal (tx_cores_${SHORT_HOSTNAME}_${TX_ORDINAL}, ordinal=$TX_ORDINAL for TX_INDEX=$TX_INDEX)"
+    else
+        TX_CORES_SOURCE="hostname+instance (tx_cores_${SHORT_HOSTNAME}_${TX_INDEX})"
+    fi
 else
     # Priority 2: hostname only
     TX_CORES=$(parse_yaml "$CONFIG_FILE" "tx_cores_${SHORT_HOSTNAME}")

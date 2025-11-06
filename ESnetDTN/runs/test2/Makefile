@@ -333,14 +333,21 @@ send:
 	@echo ""
 	@echo "Starting senders on all sender nodes..."
 	@i=0; \
+	declare -A node_ordinal; \
 	for node in $(SENDERS_LIST); do \
 		log_file="tx_$$i.log"; \
 		data_id=$$((100 + i)); \
 		hostname=$$(echo $$node | cut -d'-' -f1); \
+		short_hostname=$$(hostname -s 2>/dev/null | cut -d'.' -f1 || echo $$hostname); \
+		if [ -z "$${node_ordinal[$$node]}" ]; then \
+			node_ordinal[$$node]=0; \
+		fi; \
+		ordinal=$${node_ordinal[$$node]}; \
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting sender $$i on $$node..."; \
 		echo "  Log file: $(SENDER_LOG_DIR)/$$log_file"; \
 		echo "  Data ID:  $$data_id"; \
+		echo "  Ordinal:  $$ordinal ($$((ordinal + 1))th sender on $$hostname)"; \
 		echo "  Creating remote directories..."; \
 		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)"; \
 		if [ "$(SKIP_UPLOADS)" != "true" ]; then \
@@ -360,9 +367,11 @@ send:
 			export WORK_DIR=$(SENDER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
 			export START_TIME=\"$(START_TIME)\" && \
+			export TX_ORDINAL=$$ordinal && \
 			nohup $(SCRIPT_DIR)/send --tx-index $$i $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/$(SENDER_CONFIG)_$$hostname > $(SENDER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Sender started in background (PID: \$$!)\"'"; \
 		echo ""; \
+		node_ordinal[$$node]=$$((ordinal + 1)); \
 		i=$$((i+1)); \
 	done
 	@echo "========================================================================"
