@@ -55,6 +55,85 @@ parse_yaml_instance() {
     echo "$value"
 }
 
+# Function to calculate sender duration
+# Usage: calculate_sender_duration <nframes> <tx_length_bytes> <tx_rate_gbps>
+calculate_sender_duration() {
+    local nframes=$1
+    local tx_length=$2
+    local tx_rate=$3
+
+    # Total data in bytes
+    local total_bytes=$(echo "$nframes * $tx_length" | bc)
+
+    # Total bits
+    local total_bits=$(echo "$total_bytes * 8" | bc)
+
+    # Duration in seconds = total_bits / (rate_gbps * 10^9)
+    local duration=$(echo "scale=2; $total_bits / ($tx_rate * 1000000000)" | bc)
+
+    echo "$duration"
+}
+
+# Function to find longest sender duration from sender config
+# Returns the longest duration and sets global variables for documentation
+find_longest_sender_duration() {
+    local sender_config="$1"
+
+    if [ ! -f "$sender_config" ]; then
+        echo "0"
+        return
+    fi
+
+    # Get default values
+    local default_rate=$(parse_yaml "$sender_config" "tx_rate")
+    default_rate="${default_rate:-25}"
+    local default_length=$(parse_yaml "$sender_config" "tx_length")
+    default_length="${default_length:-2097152}"
+    local default_nframes=$(parse_yaml "$sender_config" "nframes")
+    default_nframes="${default_nframes:-10000}"
+
+    local max_duration=0
+    local max_instance=""
+    local max_rate=""
+    local max_length=""
+    local max_nframes=""
+
+    # Check up to 20 instances (should be more than enough)
+    for instance in {0..19}; do
+        # Get instance-specific values or defaults
+        local rate=$(parse_yaml "$sender_config" "tx_rate_${instance}")
+        rate="${rate:-$default_rate}"
+
+        local length=$(parse_yaml "$sender_config" "tx_length_${instance}")
+        length="${length:-$default_length}"
+
+        local nframes=$(parse_yaml "$sender_config" "nframes_${instance}")
+        nframes="${nframes:-$default_nframes}"
+
+        # Calculate duration for this instance
+        local duration=$(calculate_sender_duration "$nframes" "$length" "$rate")
+
+        # Track the maximum
+        local is_greater=$(echo "$duration > $max_duration" | bc)
+        if [ "$is_greater" -eq 1 ]; then
+            max_duration=$duration
+            max_instance=$instance
+            max_rate=$rate
+            max_length=$length
+            max_nframes=$nframes
+        fi
+    done
+
+    # Set global variables for documentation
+    LONGEST_SENDER_INSTANCE=$max_instance
+    LONGEST_SENDER_RATE=$max_rate
+    LONGEST_SENDER_LENGTH=$max_length
+    LONGEST_SENDER_NFRAMES=$max_nframes
+    LONGEST_SENDER_DURATION=$max_duration
+
+    echo "$max_duration"
+}
+
 # Function to display help
 show_help() {
     cat << EOF
@@ -142,6 +221,52 @@ IP_VERSION_DASH="-${IP_VERSION}"
 
 # Receiver configuration
 RX_DURATION=$(parse_yaml "$CONFIG_FILE" "rx_duration")
+RX_DURATION_FROM_CONFIG="$RX_DURATION"
+
+# If rx_duration is not set or is 0, try to calculate from sender config
+if [ -z "$RX_DURATION" ] || [ "$RX_DURATION" = "0" ]; then
+    # Try to find sender config file
+    CONFIG_DIR=$(dirname "$CONFIG_FILE")
+    SENDER_CONFIG=""
+
+    # Look for sender config in same directory
+    for name in sender_config.yaml sender_config.yml; do
+        if [ -f "$CONFIG_DIR/$name" ]; then
+            SENDER_CONFIG="$CONFIG_DIR/$name"
+            break
+        fi
+    done
+
+    # If found, calculate receiver duration based on longest sender
+    if [ -n "$SENDER_CONFIG" ]; then
+        echo "Auto-calculating receiver duration from sender config: $SENDER_CONFIG"
+
+        # Find longest sender duration
+        LONGEST_DURATION=$(find_longest_sender_duration "$SENDER_CONFIG")
+
+        if [ "$LONGEST_DURATION" != "0" ]; then
+            # Add 30 second buffer for sender completion and cleanup
+            BUFFER_SECONDS=30
+            RX_DURATION=$(echo "$LONGEST_DURATION + $BUFFER_SECONDS" | bc)
+            RX_DURATION=$(printf "%.0f" "$RX_DURATION")  # Round to integer
+
+            echo "Calculated receiver duration: ${RX_DURATION}s (longest sender: ${LONGEST_DURATION}s + ${BUFFER_SECONDS}s buffer)"
+            AUTO_CALCULATED_DURATION="true"
+        else
+            # Fallback to default if calculation failed
+            RX_DURATION=120
+            AUTO_CALCULATED_DURATION="false"
+        fi
+    else
+        # No sender config found, use default
+        RX_DURATION=120
+        AUTO_CALCULATED_DURATION="false"
+    fi
+else
+    AUTO_CALCULATED_DURATION="false"
+fi
+
+# Ensure we have a valid duration
 RX_DURATION="${RX_DURATION:-120}"
 
 RX_THREADS=$(parse_yaml "$CONFIG_FILE" "rx_threads")
@@ -279,6 +404,46 @@ fi
 echo "Generating reassembler_config_rx_${RX_INDEX}.ini..."
 
 cat > reassembler_config_rx_${RX_INDEX}.ini << EOF
+; ============================================================================
+; RECEIVER DURATION CALCULATION
+; ============================================================================
+$(if [ "$AUTO_CALCULATED_DURATION" = "true" ]; then
+cat << 'CALC_EOF'
+; This receiver duration was AUTO-CALCULATED based on sender configuration.
+;
+; Calculation method:
+;   1. Analyzed all sender instances in sender_config.yaml
+;   2. Found longest sender duration across all instances
+;   3. Added buffer time for sender completion and cleanup
+;   4. Set receiver duration = longest_sender_duration + buffer
+;
+; Longest sender instance found:
+;   Instance:            tx_${LONGEST_SENDER_INSTANCE}
+;   Frames to send:      ${LONGEST_SENDER_NFRAMES}
+;   Frame size (bytes):  ${LONGEST_SENDER_LENGTH}
+;   Transmission rate:   ${LONGEST_SENDER_RATE} Gbps
+;   Sender duration:     ${LONGEST_SENDER_DURATION} seconds
+;
+; Buffer calculation:
+;   Safety buffer:       30 seconds (for sender completion + cleanup)
+;
+; Final receiver duration:
+;   Duration:            ${RX_DURATION} seconds
+;   Formula:             ${LONGEST_SENDER_DURATION}s + 30s = ${RX_DURATION}s
+;
+; To override this auto-calculation, set rx_duration in receiver_config.yaml
+; to a non-zero value.
+CALC_EOF
+else
+cat << 'MANUAL_EOF'
+; Receiver duration: ${RX_DURATION} seconds
+; This value was manually configured in receiver_config.yaml
+;
+; To enable auto-calculation based on sender config, set rx_duration: 0
+MANUAL_EOF
+fi)
+; ============================================================================
+
 [general]
 ; whether to use the control plane (gRPC sendState, registerWorker)
 useCP = $REASSEM_USE_CP
