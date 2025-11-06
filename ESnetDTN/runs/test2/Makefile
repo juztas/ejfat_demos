@@ -116,7 +116,7 @@ help:
 	@echo "  make reserve EJFAT_URI_BETA=\$$EJFAT_URI_BETA LB_NAME=my_test"
 	@echo "  make free"
 	@echo "  make free IP_VERSION=4"
-	@echo "  make overview"
+	@echo "  make overview EJFAT_URI_BETA=\$$EJFAT_URI_BETA"
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make send"
@@ -194,18 +194,27 @@ free:
 	@echo ""
 
 overview:
+	@if [ -z "$(EJFAT_URI_BETA)" ]; then \
+		echo "Error: EJFAT_URI_BETA is required."; \
+		echo "Usage: make overview EJFAT_URI_BETA=ejfat://..."; \
+		exit 1; \
+	fi
 	@echo "========================================================================"
 	@echo "Load Balancer Overview Monitor"
 	@echo "========================================================================"
+	@echo "EJFAT_URI_BETA:      $(EJFAT_URI_BETA)"
 	@echo "Running on:          $(PRIMARY_DTN)"
 	@echo "Update interval:     1 second"
+	@echo "IP Version:          IPv$(IP_VERSION)"
 	@echo ""
 	@echo "Press Ctrl-C to stop monitoring"
 	@echo "========================================================================"
 	@echo ""
 	@ssh -t $(PRIMARY_DTN) bash -i -c "'conda activate e2sar && \
 		cd $(REMOTE_WORK_DIR) && \
-		watch -n 1 lbadm --overview'"
+		export EJFAT_URI=\"$(EJFAT_URI_BETA)\" && \
+		export IP_VERSION=\"-$(IP_VERSION)\" && \
+		watch -n 1 $(SCRIPT_DIR)/overview'"
 
 receive:
 	@echo "========================================================================"

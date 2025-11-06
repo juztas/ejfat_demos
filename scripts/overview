@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# overview - Display EJFAT Load Balancer Overview
+#
+# This script displays the load balancer overview using lbadm.
+# It's designed to be called repeatedly by watch or in a loop.
+#
+# Environment Variables (required):
+#   EJFAT_URI        EJFAT instance URI (usually set from EJFAT_URI_BETA)
+#   IP_VERSION       IP version flag (-4 or -6)
+#
+
+# Check if EJFAT_URI is set
+if [ -z "$EJFAT_URI" ]; then
+    echo "Error: EJFAT_URI environment variable is not set" >&2
+    exit 1
+fi
+
+# Run lbadm overview
+lbadm -u "$EJFAT_URI" $IP_VERSION --overview
