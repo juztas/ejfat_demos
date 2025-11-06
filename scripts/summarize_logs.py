@@ -451,6 +451,15 @@ def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
     for hostname, tx_data_list in sorted(hosts_data.items()):
         data_dict = {}
 
+        # Track host totals for summable fields
+        host_totals = {
+            'Frames Sent': 0,
+            'Errors': 0,
+            'Throughput (Gbps)': 0.0,
+            'Goodput (Gbps)': 0.0,
+        }
+        has_host_data = {key: False for key in host_totals.keys()}
+
         for tx_data in tx_data_list:
             col_name = tx_data['file']
 
@@ -473,6 +482,20 @@ def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
                 'Goodput (Gbps)': f"{tx_data['goodput_gbps']:.4f}" if tx_data.get('goodput_gbps') is not None else 'N/A',
             }
 
+            # Accumulate host totals
+            if tx_data.get('frames_sent') is not None:
+                host_totals['Frames Sent'] += tx_data['frames_sent']
+                has_host_data['Frames Sent'] = True
+            if tx_data.get('errors') is not None:
+                host_totals['Errors'] += tx_data['errors']
+                has_host_data['Errors'] = True
+            if tx_data.get('throughput_gbps') is not None:
+                host_totals['Throughput (Gbps)'] += tx_data['throughput_gbps']
+                has_host_data['Throughput (Gbps)'] = True
+            if tx_data.get('goodput_gbps') is not None:
+                host_totals['Goodput (Gbps)'] += tx_data['goodput_gbps']
+                has_host_data['Goodput (Gbps)'] = True
+
             # Accumulate grand totals
             if tx_data.get('frames_sent') is not None:
                 grand_totals['Frames Sent'] += tx_data['frames_sent']
@@ -489,7 +512,26 @@ def create_tx_dataframes_by_host(tx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
 
             data_dict[col_name] = column_data
 
+        # Add TOTAL column for this host
         if data_dict:
+            total_column = {
+                'Run ID': '',
+                'Sender IP': '',
+                'IP Version': '',
+                'TX Rate': '',
+                'TX Length': '',
+                'Frames (target)': '',
+                'Send Sockets': '',
+                'Data ID': '',
+                'Control Plane': '',
+                'MTU': '',
+                'Frames Sent': f"{host_totals['Frames Sent']:,}" if has_host_data['Frames Sent'] else 'N/A',
+                'Errors': host_totals['Errors'] if has_host_data['Errors'] else 'N/A',
+                'Elapsed Time (sec)': '',
+                'Throughput (Gbps)': f"{host_totals['Throughput (Gbps)']:.4f}" if has_host_data['Throughput (Gbps)'] else 'N/A',
+                'Goodput (Gbps)': f"{host_totals['Goodput (Gbps)']:.4f}" if has_host_data['Goodput (Gbps)'] else 'N/A',
+            }
+            data_dict['TOTAL'] = total_column
             host_dataframes[hostname] = pd.DataFrame(data_dict)
 
     # Format grand totals
@@ -542,6 +584,18 @@ def create_rx_dataframes_by_host(rx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
     for hostname, rx_data_list in sorted(hosts_data.items()):
         data_dict = {}
 
+        # Track host totals for summable fields
+        host_totals = {
+            'Events Received': 0,
+            'Events Mangled': 0,
+            'Events Lost (Reassembly)': 0,
+            'Events Lost (Enqueue)': 0,
+            'Data Errors': 0,
+            'gRPC Errors': 0,
+            'Total Packets': 0,
+        }
+        has_host_data = {key: False for key in host_totals.keys()}
+
         for rx_data in rx_data_list:
             col_name = rx_data['file']
 
@@ -570,6 +624,29 @@ def create_rx_dataframes_by_host(rx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
                 'Total Packets': f"{rx_data['total_packets']:,}" if rx_data.get('total_packets') is not None else 'N/A',
             }
 
+            # Accumulate host totals
+            if rx_data.get('events_received') is not None:
+                host_totals['Events Received'] += rx_data['events_received']
+                has_host_data['Events Received'] = True
+            if rx_data.get('events_mangled') is not None:
+                host_totals['Events Mangled'] += rx_data['events_mangled']
+                has_host_data['Events Mangled'] = True
+            if rx_data.get('events_lost_reassembly') is not None:
+                host_totals['Events Lost (Reassembly)'] += rx_data['events_lost_reassembly']
+                has_host_data['Events Lost (Reassembly)'] = True
+            if rx_data.get('events_lost_enqueue') is not None:
+                host_totals['Events Lost (Enqueue)'] += rx_data['events_lost_enqueue']
+                has_host_data['Events Lost (Enqueue)'] = True
+            if rx_data.get('data_errors') is not None:
+                host_totals['Data Errors'] += rx_data['data_errors']
+                has_host_data['Data Errors'] = True
+            if rx_data.get('grpc_errors') is not None:
+                host_totals['gRPC Errors'] += rx_data['grpc_errors']
+                has_host_data['gRPC Errors'] = True
+            if rx_data.get('total_packets') is not None:
+                host_totals['Total Packets'] += rx_data['total_packets']
+                has_host_data['Total Packets'] = True
+
             # Accumulate grand totals
             if rx_data.get('events_received') is not None:
                 grand_totals['Events Received'] += rx_data['events_received']
@@ -595,7 +672,32 @@ def create_rx_dataframes_by_host(rx_files: List[Path]) -> Tuple[Dict[str, 'pd.Da
 
             data_dict[col_name] = column_data
 
+        # Add TOTAL column for this host
         if data_dict:
+            total_column = {
+                'Run ID': '',
+                'Receiver IP': '',
+                'IP Version': '',
+                'Interface': '',
+                'Data Port': '',
+                'Monitor Ports': '',
+                'RX Duration': '',
+                'RX Buffer Size': '',
+                'RX Timeout': '',
+                'RX Cores': '',
+                'RX Dequeue': '',
+                'Monitor Interval': '',
+                'Control Plane': '',
+                'RX Index': '',
+                'Events Received': f"{host_totals['Events Received']:,}" if has_host_data['Events Received'] else 'N/A',
+                'Events Mangled': f"{host_totals['Events Mangled']:,}" if has_host_data['Events Mangled'] else 'N/A',
+                'Events Lost (Reassembly)': f"{host_totals['Events Lost (Reassembly)']:,}" if has_host_data['Events Lost (Reassembly)'] else 'N/A',
+                'Events Lost (Enqueue)': f"{host_totals['Events Lost (Enqueue)']:,}" if has_host_data['Events Lost (Enqueue)'] else 'N/A',
+                'Data Errors': f"{host_totals['Data Errors']:,}" if has_host_data['Data Errors'] else 'N/A',
+                'gRPC Errors': f"{host_totals['gRPC Errors']:,}" if has_host_data['gRPC Errors'] else 'N/A',
+                'Total Packets': f"{host_totals['Total Packets']:,}" if has_host_data['Total Packets'] else 'N/A',
+            }
+            data_dict['TOTAL'] = total_column
             host_dataframes[hostname] = pd.DataFrame(data_dict)
 
     # Format grand totals
