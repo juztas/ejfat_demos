@@ -44,7 +44,6 @@ Arguments:
 
 Options:
   --rx-index <n>      Receiver index number (default: 0)
-  --save-full-log     Save complete rx_<n>.log file (default: save CSV summary only)
   -h, --help          Show this help message
 
 Environment Variables (optional):
@@ -54,7 +53,6 @@ Environment Variables (optional):
 Examples:
   receive receiver_config.yaml
   receive --rx-index 0 receiver_config.yaml
-  receive --save-full-log --rx-index 0 receiver_config.yaml
   WORK_DIR=./run_output receive receiver_config.yaml
 
 See receiver_config.yaml for configuration options.
@@ -69,7 +67,6 @@ EOF
 # Default values
 RX_INDEX=0
 CONFIG_FILE=""
-SAVE_FULL_LOG=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -81,10 +78,6 @@ while [[ $# -gt 0 ]]; do
             RX_INDEX="$2"
             shift 2
             continue
-            ;;
-        --save-full-log)
-            SAVE_FULL_LOG=true
-            shift
             ;;
         *)
             CONFIG_FILE="$1"
@@ -357,16 +350,7 @@ echo "========================================================================"
 echo ""
 
 # e2sar_perf will use the reassembler_config_rx_${RX_INDEX}.ini we generated and the --port option for dataPort
-# SCRIPT_DIR was already determined at the beginning of the script
-if [ "$SAVE_FULL_LOG" = true ]; then
-    # Save full log to disk
-    echo "Saving full log to $LOG_DIR/rx_${RX_INDEX}.log"
-    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini 2>&1 | tee $LOG_DIR/rx_${RX_INDEX}.log | python3 $SCRIPT_DIR/summarize_rx_log.py /dev/stdin --format csv --header > $LOG_DIR/rx_${RX_INDEX}_summary.csv
-else
-    # Pipe through summarize script, save only CSV summary
-    echo "Generating CSV summary: $LOG_DIR/rx_${RX_INDEX}_summary.csv"
-    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini 2>&1 | python3 $SCRIPT_DIR/summarize_rx_log.py /dev/stdin --format csv --header > $LOG_DIR/rx_${RX_INDEX}_summary.csv
-fi
+e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT -i reassembler_config_rx_${RX_INDEX}.ini
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP
