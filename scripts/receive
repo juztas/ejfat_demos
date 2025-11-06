@@ -223,8 +223,13 @@ IP_VERSION_DASH="-${IP_VERSION}"
 RX_DURATION=$(parse_yaml "$CONFIG_FILE" "rx_duration")
 RX_DURATION_FROM_CONFIG="$RX_DURATION"
 
-# If rx_duration is not set or is 0, try to calculate from sender config
-if [ -z "$RX_DURATION" ] || [ "$RX_DURATION" = "0" ]; then
+# Set default if not specified
+if [ -z "$RX_DURATION" ]; then
+    RX_DURATION=120
+fi
+
+# If rx_duration is -1, try to calculate from sender config
+if [ "$RX_DURATION" = "-1" ]; then
     # Try to find sender config file
     CONFIG_DIR=$(dirname "$CONFIG_FILE")
     SENDER_CONFIG=""
@@ -254,20 +259,19 @@ if [ -z "$RX_DURATION" ] || [ "$RX_DURATION" = "0" ]; then
             AUTO_CALCULATED_DURATION="true"
         else
             # Fallback to default if calculation failed
+            echo "Warning: Auto-calculation failed, using default duration of 120s"
             RX_DURATION=120
             AUTO_CALCULATED_DURATION="false"
         fi
     else
         # No sender config found, use default
+        echo "Warning: sender_config.yaml not found, using default duration of 120s"
         RX_DURATION=120
         AUTO_CALCULATED_DURATION="false"
     fi
 else
     AUTO_CALCULATED_DURATION="false"
 fi
-
-# Ensure we have a valid duration
-RX_DURATION="${RX_DURATION:-120}"
 
 RX_THREADS=$(parse_yaml "$CONFIG_FILE" "rx_threads")
 RX_THREADS="${RX_THREADS:-16}"
@@ -432,14 +436,14 @@ cat << 'CALC_EOF'
 ;   Formula:             ${LONGEST_SENDER_DURATION}s + 30s = ${RX_DURATION}s
 ;
 ; To override this auto-calculation, set rx_duration in receiver_config.yaml
-; to a non-zero value.
+; to a positive value (0 or greater).
 CALC_EOF
 else
 cat << 'MANUAL_EOF'
 ; Receiver duration: ${RX_DURATION} seconds
 ; This value was manually configured in receiver_config.yaml
 ;
-; To enable auto-calculation based on sender config, set rx_duration: 0
+; To enable auto-calculation based on sender config, set rx_duration: -1
 MANUAL_EOF
 fi)
 ; ============================================================================

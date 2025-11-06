@@ -34,10 +34,14 @@ ip_version: 6
 # Duration to receive data (in seconds)
 # Default: 120
 #
-# AUTO-CALCULATION FEATURE:
-# Set rx_duration: 0 to automatically calculate receiver duration based on sender configuration.
+# RECEIVER DURATION OPTIONS:
+#   rx_duration: -1     # Auto-calculate from sender_config.yaml (if found, else default 120s)
+#   rx_duration: 0      # Run for 0 seconds (immediate shutdown - useful for testing)
+#   rx_duration: 360    # Fixed 360 second (6 minute) receiver duration
+#   rx_duration: 7200   # Fixed 2 hour receiver duration for long tests
 #
-# When rx_duration is set to 0, the receive script will:
+# AUTO-CALCULATION FEATURE (rx_duration: -1):
+# When set to -1, the receive script will:
 #   1. Look for sender_config.yaml in the same directory as receiver_config.yaml
 #   2. Analyze ALL sender instances (tx_0, tx_1, tx_2, etc.) considering instance-specific overrides
 #   3. Calculate duration for each sender: (nframes × tx_length × 8 bits) / (tx_rate × 10^9)
@@ -45,11 +49,7 @@ ip_version: 6
 #   5. Add a 30-second buffer for sender completion and cleanup
 #   6. Set receiver duration = longest_sender_duration + 30 seconds
 #   7. Document the calculation in the generated reassembler INI file
-#
-# Example scenarios:
-#   rx_duration: 0      # Auto-calculate from sender_config.yaml (if found, else default 120s)
-#   rx_duration: 360    # Fixed 360 second (6 minute) receiver duration
-#   rx_duration: 7200   # Fixed 2 hour receiver duration for long tests
+#   8. If sender_config.yaml is not found or calculation fails, fall back to default 120s
 #
 # The auto-calculation ensures receivers run long enough to capture all data from the
 # slowest sender, preventing premature receiver shutdown.
