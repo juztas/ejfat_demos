@@ -826,6 +826,61 @@ def main():
     print()
     print_separator('=', 80)
 
+    # Filter files by the latest RUN_ID
+    latest_run_id = None
+    all_run_ids = set()
+
+    # Collect all run IDs
+    for tx_file in tx_files:
+        tx_data = parse_tx_log(tx_file)
+        if tx_data and tx_data.get('run_id'):
+            all_run_ids.add(tx_data['run_id'])
+
+    for rx_file in rx_files:
+        rx_data = parse_rx_log(rx_file)
+        if rx_data and rx_data.get('run_id'):
+            all_run_ids.add(rx_data['run_id'])
+
+    # Pick the latest run ID (alphabetically sorted, since format is YYYYMMDD_HHMMSS)
+    if all_run_ids:
+        latest_run_id = sorted(all_run_ids)[-1]
+        ignored_run_ids = sorted(all_run_ids - {latest_run_id})
+
+        if ignored_run_ids:
+            print()
+            print_separator('=', 80)
+            print(f"{'WARNING: Multiple Run IDs Detected':^80}")
+            print_separator('=', 80)
+            print(f"Latest Run ID (used for analysis): {latest_run_id}")
+            print(f"Ignored Run IDs: {', '.join(ignored_run_ids)}")
+            print()
+            print("Only logs matching the latest Run ID will be included in the analysis.")
+            print_separator('=', 80)
+
+        # Filter files by latest run ID
+        filtered_tx_files = []
+        for tx_file in tx_files:
+            tx_data = parse_tx_log(tx_file)
+            if tx_data and tx_data.get('run_id') == latest_run_id:
+                filtered_tx_files.append(tx_file)
+
+        filtered_rx_files = []
+        for rx_file in rx_files:
+            rx_data = parse_rx_log(rx_file)
+            if rx_data and rx_data.get('run_id') == latest_run_id:
+                filtered_rx_files.append(rx_file)
+
+        # Use filtered files for the rest of the analysis
+        tx_files = filtered_tx_files
+        rx_files = filtered_rx_files
+
+        print()
+        print_separator('=', 80)
+        print(f"Analysis for Run ID: {latest_run_id}")
+        print_separator('=', 80)
+        print(f"Transmitter Logs (filtered): {len(tx_files)}")
+        print(f"Receiver Logs (filtered): {len(rx_files)}")
+
     # Print DataFrames for side-by-side comparison
     if PANDAS_AVAILABLE:
         # Compare segmenter config files FIRST
@@ -873,6 +928,8 @@ def main():
         print_separator('=', 80)
 
         # Create transmitter comparison DataFrames grouped by host - THIRD
+        tx_host_dfs = {}
+        tx_grand_totals = {}
         if tx_files:
             print()
             print(f"{'TRANSMITTER COMPARISON BY HOST':^80}")
@@ -891,22 +948,14 @@ def main():
                     print_separator('-', 80)
                     print(tx_host_dfs[hostname].to_string())
                     print()
-
-                # Print grand totals
-                print()
-                print_separator('=', 80)
-                print(f"{'TRANSMITTER GRAND TOTALS':^80}")
-                print_separator('=', 80)
-                print(f"Frames Sent:       {tx_grand_totals['Frames Sent']}")
-                print(f"Errors:            {tx_grand_totals['Errors']}")
-                print(f"Throughput (Gbps): {tx_grand_totals['Throughput (Gbps)']}")
-                print(f"Goodput (Gbps):    {tx_grand_totals['Goodput (Gbps)']}")
             else:
                 print("No transmitter data available for comparison")
             print()
             print_separator('=', 80)
 
         # Create receiver comparison DataFrames grouped by host - FOURTH
+        rx_host_dfs = {}
+        rx_grand_totals = {}
         if rx_files:
             print()
             print(f"{'RECEIVER COMPARISON BY HOST':^80}")
@@ -925,21 +974,37 @@ def main():
                     print_separator('-', 80)
                     print(rx_host_dfs[hostname].to_string())
                     print()
-
-                # Print grand totals
-                print()
-                print_separator('=', 80)
-                print(f"{'RECEIVER GRAND TOTALS':^80}")
-                print_separator('=', 80)
-                print(f"Events Received:           {rx_grand_totals['Events Received']}")
-                print(f"Events Mangled:            {rx_grand_totals['Events Mangled']}")
-                print(f"Events Lost (Reassembly):  {rx_grand_totals['Events Lost (Reassembly)']}")
-                print(f"Events Lost (Enqueue):     {rx_grand_totals['Events Lost (Enqueue)']}")
-                print(f"Data Errors:               {rx_grand_totals['Data Errors']}")
-                print(f"gRPC Errors:               {rx_grand_totals['gRPC Errors']}")
-                print(f"Total Packets:             {rx_grand_totals['Total Packets']}")
             else:
                 print("No receiver data available for comparison")
+            print()
+            print_separator('=', 80)
+
+        # Print combined grand totals - FIFTH
+        if tx_grand_totals or rx_grand_totals:
+            print()
+            print_separator('=', 80)
+            print(f"{'GRAND TOTALS':^80}")
+            print_separator('=', 80)
+
+            if tx_grand_totals:
+                print()
+                print("TRANSMITTER:")
+                print(f"  Frames Sent:       {tx_grand_totals['Frames Sent']}")
+                print(f"  Errors:            {tx_grand_totals['Errors']}")
+                print(f"  Throughput (Gbps): {tx_grand_totals['Throughput (Gbps)']}")
+                print(f"  Goodput (Gbps):    {tx_grand_totals['Goodput (Gbps)']}")
+
+            if rx_grand_totals:
+                print()
+                print("RECEIVER:")
+                print(f"  Events Received:           {rx_grand_totals['Events Received']}")
+                print(f"  Events Mangled:            {rx_grand_totals['Events Mangled']}")
+                print(f"  Events Lost (Reassembly):  {rx_grand_totals['Events Lost (Reassembly)']}")
+                print(f"  Events Lost (Enqueue):     {rx_grand_totals['Events Lost (Enqueue)']}")
+                print(f"  Data Errors:               {rx_grand_totals['Data Errors']}")
+                print(f"  gRPC Errors:               {rx_grand_totals['gRPC Errors']}")
+                print(f"  Total Packets:             {rx_grand_totals['Total Packets']}")
+
             print()
             print_separator('=', 80)
     else:
