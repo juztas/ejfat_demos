@@ -15,8 +15,8 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-#SENDERS_LIST ?= $(HOSTS)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS)
+#SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
 #SENDERS_LIST ?= wash-dtn1-mgt.es.net
@@ -481,7 +481,7 @@ tcpdump-commands:
 		echo "Error: Receiver config file not found: $(RECEIVER_CONFIG)"; \
 		exit 1; \
 	fi
-	@$(SCRIPT_DIR)/generate_tcpdump_commands.sh $(RECEIVER_CONFIG) INSTANCE_URI $(RECEIVERS_LIST)
+	@$(SCRIPT_DIR)/generate_tcpdump_commands.sh $(RECEIVER_CONFIG) INSTANCE_URI $(REMOTE_WORK_DIR) $(RECEIVER_LOG_DIR) $(RECEIVERS_LIST)
 
 get-logs:
 	@echo "========================================================================"

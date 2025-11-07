@@ -5,7 +5,7 @@
 # This script generates the tcpdump commands needed for packet capture on each
 # receiver node, including proper filters and durations.
 #
-# Usage: generate_tcpdump_commands.sh <receiver_config.yaml> <INSTANCE_URI_file> <node1> <node2> ...
+# Usage: generate_tcpdump_commands.sh <receiver_config.yaml> <INSTANCE_URI_file> <remote_work_dir> <log_dir> <node1> <node2> ...
 #
 
 set -e
@@ -14,17 +14,26 @@ set -e
 # ARGUMENT PARSING
 #------------------------------------------------------------------------------------------------
 
-if [ $# -lt 3 ]; then
-    echo "Usage: $0 <receiver_config.yaml> <INSTANCE_URI_file> <node1> [node2] [node3] ..."
+if [ $# -lt 5 ]; then
+    echo "Usage: $0 <receiver_config.yaml> <INSTANCE_URI_file> <remote_work_dir> <log_dir> <node1> [node2] [node3] ..."
+    echo ""
+    echo "Arguments:"
+    echo "  receiver_config.yaml   Path to receiver configuration file"
+    echo "  INSTANCE_URI_file      Path to INSTANCE_URI file"
+    echo "  remote_work_dir        Remote working directory (e.g., ~/ejfat_demos/ESnetDTN/runs/test2)"
+    echo "  log_dir                Log directory name (e.g., run_output)"
+    echo "  node1 [node2...]       List of receiver nodes"
     echo ""
     echo "Example:"
-    echo "  $0 receiver_config.yaml INSTANCE_URI wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net"
+    echo "  $0 receiver_config.yaml INSTANCE_URI ~/ejfat_demos/ESnetDTN/runs/test2 run_output wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net"
     exit 1
 fi
 
 RECEIVER_CONFIG="$1"
 INSTANCE_URI_FILE="$2"
-shift 2
+REMOTE_WORK_DIR="$3"
+LOG_DIR="$4"
+shift 4
 RECEIVER_NODES=("$@")
 
 #------------------------------------------------------------------------------------------------
@@ -136,7 +145,7 @@ for node in "${RECEIVER_NODES[@]}"; do
     echo "   ssh $node"
     echo ""
     echo "2. Change to the working directory:"
-    echo "   cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output"
+    echo "   cd $REMOTE_WORK_DIR/$LOG_DIR"
     echo ""
     echo "3. Detect the network interface (if needed):"
     if [ "$IP_VERSION" = "4" ]; then
@@ -184,9 +193,9 @@ index=0
 for node in "${RECEIVER_NODES[@]}"; do
     echo "# $node (receiver $index) - Open in separate terminal"
     if [ "$IP_VERSION" = "4" ]; then
-        echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
+        echo "ssh -t $node 'cd $REMOTE_WORK_DIR/$LOG_DIR && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
     else
-        echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
+        echo "ssh -t $node 'cd $REMOTE_WORK_DIR/$LOG_DIR && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE -w rx_${index}.pcap \"$TCPDUMP_FILTER\" -s 0 -v'"
     fi
     echo ""
     index=$((index + 1))
@@ -200,9 +209,9 @@ index=0
 for node in "${RECEIVER_NODES[@]}"; do
     echo "# $node (receiver $index) - Open in separate terminal"
     if [ "$IP_VERSION" = "4" ]; then
-        echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
+        echo "ssh -t $node 'cd $REMOTE_WORK_DIR/$LOG_DIR && IFACE=\$(ip route get $LB_IPV4 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
     else
-        echo "ssh -t $node 'cd ~/ejfat_demos/ESnetDTN/runs/test2/run_output && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
+        echo "ssh -t $node 'cd $REMOTE_WORK_DIR/$LOG_DIR && IFACE=\$(ip route get $LB_IPV6 | head -1 | sed \"s/^.*dev//\" | awk \"{ print \\\$1 }\") && sudo timeout $TCPDUMP_DURATION tcpdump -i \$IFACE \"$TCPDUMP_FILTER\" -s 0 -vvv'"
     fi
     echo ""
     index=$((index + 1))
