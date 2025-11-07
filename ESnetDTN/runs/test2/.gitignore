@@ -1,3 +1,0 @@
-# run_output now handled by root .gitignore
-# Keep the .archive files tracked
-!run_output/*.archive
