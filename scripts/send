@@ -314,6 +314,9 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
+lbadm lbadm --addsenders $MY_IP
+sleep 1
+
 #------------------------------------------------------------------------------------------------
 # GENERATE SEGMENTER CONFIG
 #------------------------------------------------------------------------------------------------
@@ -510,6 +513,13 @@ if [ -n "$TX_CORES" ]; then
 else
     e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
 fi
+
+echo "==========================================================================="
+echo "  Add a little hang time to flush the packet pipeline before deregistering "
+echo "==========================================================================="
+
+sleep 10
+lbadm --removesenders $MY_IP -v
 
 echo ""
 echo "========================================================================"
