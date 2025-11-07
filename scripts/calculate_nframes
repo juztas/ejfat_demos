@@ -1,0 +1,292 @@
+#!/bin/bash
+#
+# calculate_nframes - Calculate number of frames for desired test duration
+#
+# This script calculates the required nframes value for sender_config.yaml
+# to achieve a specific transmission duration.
+#
+# Usage: calculate_nframes <duration_minutes> [sender_config.yaml]
+#
+
+set -e
+
+#------------------------------------------------------------------------------------------------
+# FUNCTIONS
+#------------------------------------------------------------------------------------------------
+
+show_help() {
+    cat << EOF
+Usage: calculate_nframes <duration_minutes> [sender_config.yaml]
+
+Calculate the number of frames needed for a specific transmission duration.
+
+Arguments:
+  duration_minutes    Target duration in minutes (can be decimal, e.g., 0.5 for 30 seconds)
+  sender_config.yaml  Path to sender config file (default: sender_config.yaml in current dir)
+
+Examples:
+  calculate_nframes 30                    # Calculate for 30-minute run
+  calculate_nframes 0.5                   # Calculate for 30-second run
+  calculate_nframes 5 ../sender_config.yaml    # Use specific config file
+  calculate_nframes 60                    # Calculate for 1-hour run
+
+The script will:
+  - Read tx_rate, tx_length from sender_config.yaml
+  - Calculate required nframes for the target duration
+  - Show total data size and bandwidth requirements
+  - Compare with current configuration
+  - Provide configuration update instructions
+
+EOF
+    exit 0
+}
+
+# Function to parse YAML and extract value
+parse_yaml() {
+    local yaml_file="$1"
+    local key="$2"
+    grep "^${key}[[:space:]]*:" "$yaml_file" 2>/dev/null | head -1 | sed "s/^${key}[[:space:]]*:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+}
+
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+if [[ $# -lt 1 ]] || [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    show_help
+fi
+
+DURATION_MINUTES="$1"
+SENDER_CONFIG="${2:-sender_config.yaml}"
+
+# Validate duration is a number
+if ! [[ "$DURATION_MINUTES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+    echo "Error: Duration must be a number (minutes)"
+    echo "Example: calculate_nframes 30"
+    exit 1
+fi
+
+# Check if config file exists
+if [[ ! -f "$SENDER_CONFIG" ]]; then
+    echo "Error: Sender config file not found: $SENDER_CONFIG"
+    exit 1
+fi
+
+#------------------------------------------------------------------------------------------------
+# READ CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+TX_RATE=$(parse_yaml "$SENDER_CONFIG" "tx_rate")
+TX_LENGTH=$(parse_yaml "$SENDER_CONFIG" "tx_length")
+CURRENT_NFRAMES=$(parse_yaml "$SENDER_CONFIG" "nframes")
+
+if [[ -z "$TX_RATE" ]] || [[ -z "$TX_LENGTH" ]]; then
+    echo "Error: Could not read tx_rate or tx_length from $SENDER_CONFIG"
+    exit 1
+fi
+
+# Set defaults if values are missing
+TX_RATE="${TX_RATE:-25}"
+TX_LENGTH="${TX_LENGTH:-2097152}"
+CURRENT_NFRAMES="${CURRENT_NFRAMES:-100000}"
+
+#------------------------------------------------------------------------------------------------
+# CALCULATE NFRAMES FOR TARGET DURATION
+#------------------------------------------------------------------------------------------------
+
+TARGET_DURATION=$(echo "$DURATION_MINUTES * 60" | bc)
+TX_LENGTH_MB=$(echo "scale=2; $TX_LENGTH / 1048576" | bc)
+
+echo "========================================================================"
+echo "NFRAMES CALCULATOR FOR TARGET DURATION"
+echo "========================================================================"
+echo ""
+echo "Target Duration: $DURATION_MINUTES minutes ($TARGET_DURATION seconds)"
+echo "Configuration:   $SENDER_CONFIG"
+echo ""
+echo "Sender Parameters:"
+echo "  tx_rate:    $TX_RATE Gbps"
+echo "  tx_length:  $TX_LENGTH bytes (${TX_LENGTH_MB} MB per frame)"
+echo ""
+
+echo "========================================================================"
+echo "CALCULATION"
+echo "========================================================================"
+echo ""
+echo "Formula to calculate nframes for desired duration:"
+echo "  duration = (nframes × tx_length × 8 bits) / (tx_rate × 10^9)"
+echo ""
+echo "Rearranging for nframes:"
+echo "  nframes = (duration × tx_rate × 10^9) / (tx_length × 8)"
+echo ""
+
+# Calculate nframes
+# nframes = (duration × tx_rate × 10^9) / (tx_length × 8)
+NUMERATOR=$(echo "$TARGET_DURATION * $TX_RATE * 1000000000" | bc)
+DENOMINATOR=$(echo "$TX_LENGTH * 8" | bc)
+NFRAMES=$(echo "$NUMERATOR / $DENOMINATOR" | bc)
+
+echo "  nframes = ($TARGET_DURATION × $TX_RATE × 10^9) / ($TX_LENGTH × 8)"
+echo "  nframes = $NFRAMES"
+echo ""
+
+# Calculate total data size
+TOTAL_BYTES=$(echo "$NFRAMES * $TX_LENGTH" | bc)
+TOTAL_GB=$(echo "scale=2; $TOTAL_BYTES / 1073741824" | bc)
+TOTAL_TB=$(echo "scale=3; $TOTAL_BYTES / 1099511627776" | bc)
+
+# Calculate actual duration (verify)
+TOTAL_BITS=$(echo "$TOTAL_BYTES * 8" | bc)
+ACTUAL_DURATION=$(echo "scale=2; $TOTAL_BITS / ($TX_RATE * 1000000000)" | bc)
+ACTUAL_MINUTES=$(echo "scale=2; $ACTUAL_DURATION / 60" | bc)
+
+echo "========================================================================"
+echo "RESULT"
+echo "========================================================================"
+echo ""
+echo "  Required nframes:     $NFRAMES frames"
+echo ""
+echo "  Total data size:      $TOTAL_GB GB"
+if (( $(echo "$TOTAL_TB > 1" | bc -l) )); then
+    echo "                        $TOTAL_TB TB"
+fi
+echo ""
+echo "  Transmission time:    $ACTUAL_DURATION seconds"
+echo "                        $ACTUAL_MINUTES minutes"
+echo ""
+
+# Suggest rounded values
+NFRAMES_10K=$((($NFRAMES + 5000) / 10000 * 10000))
+NFRAMES_100K=$((($NFRAMES + 50000) / 100000 * 100000))
+
+echo "Suggested rounded values:"
+echo "  nframes: $NFRAMES_10K   (rounded to 10k)"
+echo "  nframes: $NFRAMES_100K  (rounded to 100k)"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# COMPARISON WITH CURRENT CONFIG
+#------------------------------------------------------------------------------------------------
+
+if [[ -n "$CURRENT_NFRAMES" ]]; then
+    CURRENT_DURATION=$(echo "scale=2; $CURRENT_NFRAMES * $TX_LENGTH * 8 / ($TX_RATE * 1000000000)" | bc)
+    CURRENT_MINUTES=$(echo "scale=2; $CURRENT_DURATION / 60" | bc)
+    CURRENT_TOTAL_BYTES=$(echo "$CURRENT_NFRAMES * $TX_LENGTH" | bc)
+    CURRENT_TOTAL_GB=$(echo "scale=2; $CURRENT_TOTAL_BYTES / 1073741824" | bc)
+
+    RATIO=$(echo "scale=1; $NFRAMES / $CURRENT_NFRAMES" | bc)
+
+    echo "========================================================================"
+    echo "COMPARISON WITH CURRENT CONFIGURATION"
+    echo "========================================================================"
+    echo ""
+    echo "                        Current Config       Target Config"
+    echo "                        --------------       -------------"
+    echo "  nframes:              $CURRENT_NFRAMES                   $NFRAMES"
+    echo "  Transmission time:    $CURRENT_DURATION seconds             $ACTUAL_DURATION seconds"
+    echo "                        $CURRENT_MINUTES minutes             $ACTUAL_MINUTES minutes"
+    echo "  Data size:            $CURRENT_TOTAL_GB GB                 $TOTAL_GB GB"
+    echo ""
+    echo "  Multiplier:           ${RATIO}x more frames needed"
+    echo ""
+fi
+
+#------------------------------------------------------------------------------------------------
+# RECEIVER RUNTIME WITH AUTO-CALCULATION
+#------------------------------------------------------------------------------------------------
+
+RX_DURATION_AUTO=$(echo "$NFRAMES * $TX_LENGTH * 8 / ($TX_RATE * 1000000000)" | bc)
+RX_DURATION_AUTO_INT=$(echo "($RX_DURATION_AUTO + 0.5) / 1" | bc)
+RX_DURATION_WITH_BUFFER=$((RX_DURATION_AUTO_INT + 30))
+RX_DURATION_MINUTES=$(echo "scale=2; $RX_DURATION_WITH_BUFFER / 60" | bc)
+
+echo "========================================================================"
+echo "RECEIVER CONFIGURATION (with rx_duration: -1)"
+echo "========================================================================"
+echo ""
+echo "With auto-calculation enabled (rx_duration: -1):"
+echo ""
+echo "  Calculated rx_duration: $RX_DURATION_WITH_BUFFER seconds"
+echo "                          $RX_DURATION_MINUTES minutes"
+echo "                          (transmission time + 30s buffer)"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# STORAGE AND BANDWIDTH REQUIREMENTS
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "STORAGE AND BANDWIDTH REQUIREMENTS"
+echo "========================================================================"
+echo ""
+echo "Per Sender:"
+echo "  Data transmitted:     $TOTAL_GB GB"
+if (( $(echo "$TOTAL_TB > 1" | bc -l) )); then
+    echo "                        $TOTAL_TB TB"
+fi
+echo "  Network bandwidth:    $TX_RATE Gbps sustained"
+echo "  Duration:             $ACTUAL_MINUTES minutes"
+echo ""
+
+# Calculate for multiple senders (assume up to 6 based on typical config)
+MAX_SENDERS=6
+TOTAL_NETWORK_TB=$(echo "scale=2; $TOTAL_TB * $MAX_SENDERS" | bc)
+TOTAL_NETWORK_GBPS=$(echo "scale=0; $TX_RATE * $MAX_SENDERS" | bc)
+
+echo "With $MAX_SENDERS concurrent senders:"
+echo "  Total data:           $(echo "scale=2; $TOTAL_GB * $MAX_SENDERS" | bc) GB"
+if (( $(echo "$TOTAL_TB > 0.1" | bc -l) )); then
+    echo "                        $TOTAL_NETWORK_TB TB"
+fi
+echo "  Aggregate bandwidth:  $TOTAL_NETWORK_GBPS Gbps peak"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# CONFIGURATION UPDATE INSTRUCTIONS
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "CONFIGURATION UPDATE"
+echo "========================================================================"
+echo ""
+echo "To configure for $DURATION_MINUTES-minute run, update $SENDER_CONFIG:"
+echo ""
+echo "  nframes: $NFRAMES"
+echo ""
+echo "Or use a rounded value:"
+echo "  nframes: $NFRAMES_10K   # Rounded to 10k"
+echo "  nframes: $NFRAMES_100K  # Rounded to 100k"
+echo ""
+echo "Ensure receiver_config.yaml has:"
+echo "  rx_duration: -1  # Auto-calculate from sender config"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# QUICK REFERENCE TABLE
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "QUICK REFERENCE - NFRAMES FOR COMMON DURATIONS"
+echo "========================================================================"
+echo ""
+echo "At tx_rate=$TX_RATE Gbps, tx_length=${TX_LENGTH_MB} MB:"
+echo ""
+printf "  %-12s  %-15s  %-12s\n" "Duration" "nframes" "Data Size"
+printf "  %-12s  %-15s  %-12s\n" "--------" "-------" "---------"
+
+for min in 0.5 1 2 5 10 15 30 60; do
+    dur=$(echo "$min * 60" | bc)
+    nf=$(echo "$dur * $TX_RATE * 1000000000 / ($TX_LENGTH * 8)" | bc)
+    nf_rounded=$((($nf + 5000) / 10000 * 10000))
+    data_gb=$(echo "scale=1; $nf * $TX_LENGTH / 1073741824" | bc)
+
+    if (( $(echo "$min < 1" | bc -l) )); then
+        min_str=$(echo "$min * 60" | bc | awk '{printf "%.0f", $1}')
+        printf "  %-12s  %-15s  %-12s\n" "${min_str} sec" "$nf_rounded" "${data_gb} GB"
+    else
+        printf "  %-12s  %-15s  %-12s\n" "${min} min" "$nf_rounded" "${data_gb} GB"
+    fi
+done
+
+echo ""
+echo "========================================================================"

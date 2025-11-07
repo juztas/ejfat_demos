@@ -1,0 +1,475 @@
+#!/bin/bash
+#
+# analyze_timeline - Analyze EJFAT test run timeline
+#
+# This script analyzes the current configuration and displays a complete
+# timeline of events from the beginning to end of an EJFAT test run.
+#
+# Usage: analyze_timeline [config_directory]
+#
+
+set -e
+
+#------------------------------------------------------------------------------------------------
+# FUNCTIONS
+#------------------------------------------------------------------------------------------------
+
+show_help() {
+    cat << EOF
+Usage: analyze_timeline [config_directory]
+
+Analyze the complete timeline of an EJFAT test run based on current configuration.
+
+Arguments:
+  config_directory    Directory containing config files (default: current directory)
+                      Must contain: sender_config.yaml, receiver_config.yaml
+                      Optional: Makefile (for timing parameters)
+
+Examples:
+  analyze_timeline                  # Analyze current directory
+  analyze_timeline ../runs/test2   # Analyze specific test directory
+
+The script will:
+  - Read sender and receiver configuration
+  - Calculate all timing events
+  - Display complete timeline from start to finish
+  - Show data transfer statistics
+  - Identify potential timing issues
+  - Provide visual timeline representation
+
+Configuration Files:
+  sender_config.yaml    - Transmission parameters (tx_rate, tx_length, nframes)
+  receiver_config.yaml  - Receiver parameters (rx_duration, rx_cores, etc.)
+  Makefile              - Timing parameters (START_OFFSET_MINUTES, SENDER_START_DELAY_SECONDS)
+
+EOF
+    exit 0
+}
+
+# Function to parse YAML and extract value
+parse_yaml() {
+    local yaml_file="$1"
+    local key="$2"
+    grep "^${key}[[:space:]]*:" "$yaml_file" 2>/dev/null | head -1 | sed "s/^${key}[[:space:]]*:[[:space:]]*//" | sed "s/[[:space:]]*$//" | sed "s/^['\"]//; s/['\"]$//"
+}
+
+# Function to parse Makefile variables
+parse_makefile() {
+    local makefile="$1"
+    local key="$2"
+    local default="$3"
+    local value=$(grep "^${key}[[:space:]]*?=" "$makefile" 2>/dev/null | head -1 | sed "s/^${key}[[:space:]]*?=[[:space:]]*//" | sed "s/[[:space:]]*$//")
+    if [[ -z "$value" ]]; then
+        echo "$default"
+    else
+        echo "$value"
+    fi
+}
+
+# Function to format time duration
+format_duration() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local remainder=$((total_seconds % 3600))
+    local minutes=$((remainder / 60))
+    local seconds=$((remainder % 60))
+
+    if [ "$hours" -gt 0 ]; then
+        printf "%dh %dm %ds" "$hours" "$minutes" "$seconds"
+    elif [ "$minutes" -gt 0 ]; then
+        printf "%dm %ds" "$minutes" "$seconds"
+    else
+        printf "%ds" "$seconds"
+    fi
+}
+
+# Function to format timestamp relative to start
+format_timestamp() {
+    local seconds=$1
+    local minutes=$((seconds / 60))
+    local secs=$((seconds % 60))
+    printf "T+%02d:%02d" "$minutes" "$secs"
+}
+
+# Function to format absolute time (handle both GNU and BSD date)
+format_absolute_time() {
+    local epoch=$1
+    if date -u -d @$epoch >/dev/null 2>&1; then
+        # GNU date
+        date -u -d @$epoch +"%Y-%m-%d %H:%M:%S UTC"
+    else
+        # BSD date
+        date -u -r $epoch +"%Y-%m-%d %H:%M:%S UTC"
+    fi
+}
+
+#------------------------------------------------------------------------------------------------
+# ARGUMENT PARSING
+#------------------------------------------------------------------------------------------------
+
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    show_help
+fi
+
+CONFIG_DIR="${1:-.}"
+
+# Check if directory exists
+if [[ ! -d "$CONFIG_DIR" ]]; then
+    echo "Error: Directory not found: $CONFIG_DIR"
+    exit 1
+fi
+
+SENDER_CONFIG="$CONFIG_DIR/sender_config.yaml"
+RECEIVER_CONFIG="$CONFIG_DIR/receiver_config.yaml"
+MAKEFILE="$CONFIG_DIR/Makefile"
+
+# Check required files
+if [[ ! -f "$SENDER_CONFIG" ]]; then
+    echo "Error: sender_config.yaml not found in $CONFIG_DIR"
+    exit 1
+fi
+
+if [[ ! -f "$RECEIVER_CONFIG" ]]; then
+    echo "Error: receiver_config.yaml not found in $CONFIG_DIR"
+    exit 1
+fi
+
+#------------------------------------------------------------------------------------------------
+# READ CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "EJFAT TEST RUN TIMELINE ANALYZER"
+echo "========================================================================"
+echo ""
+echo "Configuration Directory: $CONFIG_DIR"
+echo ""
+
+# Read sender configuration
+TX_RATE=$(parse_yaml "$SENDER_CONFIG" "tx_rate")
+TX_LENGTH=$(parse_yaml "$SENDER_CONFIG" "tx_length")
+NFRAMES=$(parse_yaml "$SENDER_CONFIG" "nframes")
+
+# Set defaults
+TX_RATE="${TX_RATE:-25}"
+TX_LENGTH="${TX_LENGTH:-2097152}"
+NFRAMES="${NFRAMES:-100000}"
+
+# Read receiver configuration
+RX_DURATION_RAW=$(parse_yaml "$RECEIVER_CONFIG" "rx_duration")
+RX_DURATION_RAW="${RX_DURATION_RAW:--1}"
+
+# Read Makefile timing parameters if available
+if [[ -f "$MAKEFILE" ]]; then
+    START_OFFSET_MINUTES=$(parse_makefile "$MAKEFILE" "START_OFFSET_MINUTES" "2")
+    SENDER_START_DELAY_SECONDS=$(parse_makefile "$MAKEFILE" "SENDER_START_DELAY_SECONDS" "10")
+    echo "Makefile found: Using timing parameters from Makefile"
+else
+    START_OFFSET_MINUTES=2
+    SENDER_START_DELAY_SECONDS=10
+    echo "Makefile not found: Using default timing parameters"
+fi
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# DISPLAY CONFIGURATION
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "CONFIGURATION SUMMARY"
+echo "========================================================================"
+echo ""
+echo "Sender Configuration ($SENDER_CONFIG):"
+echo "  tx_rate:                $TX_RATE Gbps"
+echo "  tx_length:              $TX_LENGTH bytes ($(echo "scale=2; $TX_LENGTH / 1048576" | bc) MB)"
+echo "  nframes:                $NFRAMES"
+echo ""
+echo "Receiver Configuration ($RECEIVER_CONFIG):"
+echo "  rx_duration:            $RX_DURATION_RAW"
+if [[ "$RX_DURATION_RAW" == "-1" ]]; then
+    echo "                          (auto-calculate from sender config)"
+fi
+echo ""
+echo "Timing Parameters:"
+echo "  START_OFFSET_MINUTES:   $START_OFFSET_MINUTES minutes"
+echo "  SENDER_START_DELAY:     $SENDER_START_DELAY_SECONDS seconds"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# CALCULATE TIMING
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "TIMING CALCULATIONS"
+echo "========================================================================"
+echo ""
+
+# Calculate sender duration
+TOTAL_BYTES=$(echo "$NFRAMES * $TX_LENGTH" | bc)
+TOTAL_BITS=$(echo "$TOTAL_BYTES * 8" | bc)
+SENDER_DURATION=$(echo "scale=2; $TOTAL_BITS / ($TX_RATE * 1000000000)" | bc)
+SENDER_DURATION_INT=$(echo "($SENDER_DURATION + 0.5) / 1" | bc)
+
+TOTAL_GB=$(echo "scale=2; $TOTAL_BYTES / 1073741824" | bc)
+TOTAL_TB=$(echo "scale=3; $TOTAL_BYTES / 1099511627776" | bc)
+
+echo "Sender Transmission:"
+echo "  Total data:             $TOTAL_GB GB"
+if (( $(echo "$TOTAL_TB > 1" | bc -l) )); then
+    echo "                          $TOTAL_TB TB"
+fi
+echo "  Expected duration:      $SENDER_DURATION seconds"
+echo "                          $(format_duration $SENDER_DURATION_INT)"
+echo ""
+
+# Calculate or use rx_duration
+if [[ "$RX_DURATION_RAW" == "-1" ]]; then
+    RX_DURATION=$((SENDER_DURATION_INT + 30))
+    echo "Receiver Duration (auto-calculated):"
+    echo "  Sender duration:        $SENDER_DURATION_INT seconds"
+    echo "  + Buffer:               30 seconds"
+    echo "  = RX duration:          $RX_DURATION seconds"
+    echo "                          $(format_duration $RX_DURATION)"
+    RX_AUTO_CALC=true
+else
+    RX_DURATION=$RX_DURATION_RAW
+    echo "Receiver Duration (fixed from config):"
+    echo "  RX duration:            $RX_DURATION seconds"
+    echo "                          $(format_duration $RX_DURATION)"
+    RX_AUTO_CALC=false
+fi
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# CALCULATE TIMELINE
+#------------------------------------------------------------------------------------------------
+
+# Simulate a RUN_ID (use current time for demonstration)
+RUN_ID=$(date -u +"%Y%m%d_%H%M%S")
+if BASE_TIME=$(date -u -d "$RUN_ID" +"%s" 2>/dev/null); then
+    # GNU date worked
+    true
+else
+    # Try BSD date
+    BASE_TIME=$(date -u -j -f "%Y%m%d_%H%M%S" "$RUN_ID" +%s 2>/dev/null)
+fi
+
+# Calculate event times (relative to RUN_ID)
+RX_START_OFFSET=$((START_OFFSET_MINUTES * 60))
+TX_START_OFFSET=$((RX_START_OFFSET + SENDER_START_DELAY_SECONDS))
+TX_END_OFFSET=$((TX_START_OFFSET + SENDER_DURATION_INT))
+RX_END_OFFSET=$((RX_START_OFFSET + RX_DURATION))
+
+# Calculate absolute times
+RX_START_TIME=$((BASE_TIME + RX_START_OFFSET))
+TX_START_TIME=$((BASE_TIME + TX_START_OFFSET))
+TX_END_TIME=$((BASE_TIME + TX_END_OFFSET))
+RX_END_TIME=$((BASE_TIME + RX_END_OFFSET))
+
+echo "========================================================================"
+echo "COMPLETE TIMELINE"
+echo "========================================================================"
+echo ""
+echo "Simulated Run ID: $RUN_ID"
+echo ""
+echo "Event Timeline:"
+echo "------------------------------------------------------------------------"
+printf "%-8s  %-25s  %s\n" "Time" "Event" "Absolute Time"
+echo "------------------------------------------------------------------------"
+printf "%-8s  %-25s  %s\n" "T+00:00" "RUN_ID Generated" "$(format_absolute_time $BASE_TIME)"
+printf "%-8s  %-25s  %s\n" "$(format_timestamp $RX_START_OFFSET)" "Receivers START" "$(format_absolute_time $RX_START_TIME)"
+printf "%-8s  %-25s  %s\n" "" "  (RUN_ID + ${START_OFFSET_MINUTES}m)" ""
+printf "%-8s  %-25s  %s\n" "$(format_timestamp $TX_START_OFFSET)" "Senders START" "$(format_absolute_time $TX_START_TIME)"
+printf "%-8s  %-25s  %s\n" "" "  (Receivers + ${SENDER_START_DELAY_SECONDS}s)" ""
+printf "%-8s  %-25s  %s\n" "$(format_timestamp $TX_END_OFFSET)" "Senders END (expected)" "$(format_absolute_time $TX_END_TIME)"
+printf "%-8s  %-25s  %s\n" "" "  (after ${SENDER_DURATION}s xmit)" ""
+printf "%-8s  %-25s  %s\n" "$(format_timestamp $RX_END_OFFSET)" "Receivers END" "$(format_absolute_time $RX_END_TIME)"
+printf "%-8s  %-25s  %s\n" "" "  (after ${RX_DURATION}s runtime)" ""
+echo "------------------------------------------------------------------------"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# VISUAL TIMELINE
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "VISUAL TIMELINE"
+echo "========================================================================"
+echo ""
+
+# Calculate buffer time
+BUFFER_TIME=$((RX_END_OFFSET - TX_END_OFFSET))
+
+# Create visual representation
+MAX_WIDTH=60
+TOTAL_DURATION=$RX_END_OFFSET
+
+echo "Duration: $(format_duration $TOTAL_DURATION) total"
+echo ""
+
+# Helper function to print timeline bar
+print_timeline() {
+    local start=$1
+    local duration=$2
+    local char=$3
+    local label=$4
+    local scale=$((TOTAL_DURATION / MAX_WIDTH + 1))
+
+    local start_pos=$((start / scale))
+    local bar_len=$((duration / scale))
+
+    # Ensure minimum visible length
+    if [ "$bar_len" -lt 1 ] && [ "$duration" -gt 0 ]; then
+        bar_len=1
+    fi
+
+    # Ensure start_pos is non-negative
+    if [ "$start_pos" -lt 0 ]; then
+        start_pos=0
+    fi
+
+    printf "%-25s |" "$label"
+    if [ "$start_pos" -gt 0 ]; then
+        printf "%${start_pos}s" ""
+    fi
+    if [ "$bar_len" -gt 0 ]; then
+        for i in $(seq 1 $bar_len); do
+            printf "$char"
+        done
+    fi
+    echo ""
+}
+
+# Print timeline bars
+print_timeline $RX_START_OFFSET $((TX_START_OFFSET - RX_START_OFFSET)) "-" "RX waiting"
+print_timeline $TX_START_OFFSET $SENDER_DURATION_INT "█" "TX sending data"
+print_timeline $TX_END_OFFSET $BUFFER_TIME "░" "RX buffer time"
+
+echo ""
+echo "Legend:"
+echo "  -  Receiver waiting for senders"
+echo "  █  Active transmission"
+echo "  ░  Safety buffer (capturing late packets)"
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# TIMING ANALYSIS
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "TIMING ANALYSIS"
+echo "========================================================================"
+echo ""
+
+echo "Key Metrics:"
+echo "  Total test duration:    $(format_duration $TOTAL_DURATION)"
+echo "  Receiver runtime:       $(format_duration $RX_DURATION)"
+echo "  Sender runtime:         $(format_duration $SENDER_DURATION_INT)"
+echo "  Buffer after sender:    $(format_duration $BUFFER_TIME)"
+echo ""
+
+# Analyze timing
+WARNINGS=0
+
+echo "Analysis:"
+if [ "$BUFFER_TIME" -lt 0 ]; then
+    echo "  ⚠️  WARNING: Receivers will shut down BEFORE senders finish!"
+    echo "      Receivers end at: $(format_timestamp $RX_END_OFFSET)"
+    echo "      Senders end at:   $(format_timestamp $TX_END_OFFSET)"
+    echo "      Missing:          $(format_duration $((0 - BUFFER_TIME)))"
+    echo ""
+    echo "      RECOMMENDATION: Increase rx_duration by at least $((-BUFFER_TIME + 30)) seconds"
+    WARNINGS=$((WARNINGS + 1))
+elif [ "$BUFFER_TIME" -lt 30 ]; then
+    echo "  ⚠️  WARNING: Buffer time is very small (< 30s)"
+    echo "      Current buffer:   $(format_duration $BUFFER_TIME)"
+    echo "      Recommended:      30+ seconds"
+    echo ""
+    if [ "$RX_AUTO_CALC" = false ]; then
+        echo "      RECOMMENDATION: Set rx_duration: -1 for auto-calculation"
+    fi
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo "  ✓  Buffer time is adequate (${BUFFER_TIME}s)"
+fi
+echo ""
+
+# Check if auto-calc is being used
+if [ "$RX_AUTO_CALC" = true ]; then
+    echo "  ✓  Auto-calculation enabled (rx_duration: -1)"
+    echo "     Receiver runtime will automatically adjust to sender config"
+else
+    echo "  ℹ️  Fixed receiver duration (rx_duration: $RX_DURATION)"
+    echo "     Consider setting rx_duration: -1 for automatic adjustment"
+fi
+echo ""
+
+#------------------------------------------------------------------------------------------------
+# BANDWIDTH AND STORAGE
+#------------------------------------------------------------------------------------------------
+
+echo "========================================================================"
+echo "BANDWIDTH AND STORAGE REQUIREMENTS"
+echo "========================================================================"
+echo ""
+
+echo "Per Sender:"
+echo "  Data transmitted:       $TOTAL_GB GB"
+if (( $(echo "$TOTAL_TB > 1" | bc -l) )); then
+    echo "                          $TOTAL_TB TB"
+fi
+echo "  Network bandwidth:      $TX_RATE Gbps sustained"
+echo "  Duration:               $(format_duration $SENDER_DURATION_INT)"
+echo ""
+
+# Estimate for multiple senders (based on Makefile config if available)
+if [[ -f "$MAKEFILE" ]]; then
+    SENDERS_LIST=$(grep "^SENDERS_LIST" "$MAKEFILE" | head -1 | sed 's/^SENDERS_LIST[[:space:]]*?=[[:space:]]*//' | wc -w)
+    RECEIVERS_LIST=$(grep "^RECEIVERS_LIST" "$MAKEFILE" | head -1 | sed 's/^RECEIVERS_LIST[[:space:]]*?=[[:space:]]*//' | wc -w)
+
+    if [ "$SENDERS_LIST" -gt 0 ]; then
+        TOTAL_NETWORK_GB=$(echo "scale=2; $TOTAL_GB * $SENDERS_LIST" | bc)
+        TOTAL_NETWORK_TB=$(echo "scale=2; $TOTAL_TB * $SENDERS_LIST" | bc)
+        TOTAL_NETWORK_GBPS=$(echo "scale=0; $TX_RATE * $SENDERS_LIST" | bc)
+
+        echo "With $SENDERS_LIST configured sender(s):"
+        echo "  Total data:             $TOTAL_NETWORK_GB GB"
+        if (( $(echo "$TOTAL_NETWORK_TB > 1" | bc -l) )); then
+            echo "                          $TOTAL_NETWORK_TB TB"
+        fi
+        echo "  Aggregate bandwidth:    $TOTAL_NETWORK_GBPS Gbps peak"
+        echo ""
+    fi
+fi
+
+#------------------------------------------------------------------------------------------------
+# RECOMMENDATIONS
+#------------------------------------------------------------------------------------------------
+
+if [ "$WARNINGS" -gt 0 ]; then
+    echo "========================================================================"
+    echo "RECOMMENDATIONS"
+    echo "========================================================================"
+    echo ""
+    echo "⚠️  $WARNINGS warning(s) found. Please review the timing analysis above."
+    echo ""
+fi
+
+echo "========================================================================"
+echo "SUMMARY"
+echo "========================================================================"
+echo ""
+echo "Test Configuration:"
+echo "  • Senders transmit for $(format_duration $SENDER_DURATION_INT)"
+echo "  • Receivers run for $(format_duration $RX_DURATION)"
+echo "  • Total test duration: $(format_duration $TOTAL_DURATION)"
+echo "  • Data per sender: $TOTAL_GB GB"
+echo ""
+echo "Timeline:"
+echo "  1. T+00:00 - Test starts (RUN_ID generated)"
+echo "  2. $(format_timestamp $RX_START_OFFSET) - Receivers start waiting"
+echo "  3. $(format_timestamp $TX_START_OFFSET) - Senders begin transmission"
+echo "  4. $(format_timestamp $TX_END_OFFSET) - Senders complete transmission"
+echo "  5. $(format_timestamp $RX_END_OFFSET) - Receivers shut down"
+echo ""
+echo "========================================================================"
