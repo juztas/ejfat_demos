@@ -418,17 +418,15 @@ echo ""
 #------------------------------------------------------------------------------------------------
 
 # If START_TIME is set, wait until that time before starting e2sar_perf
-# Senders add 10 seconds to give receivers time to start first
+# The START_TIME is already offset from receiver start time (configured via SENDER_START_DELAY_SECONDS)
 if [ -n "$START_TIME" ]; then
-    SENDER_START_TIME=$((START_TIME + 10))
     CURRENT_TIME=$(date +%s)
-    SECONDS_TO_WAIT=$((SENDER_START_TIME - CURRENT_TIME))
+    SECONDS_TO_WAIT=$((START_TIME - CURRENT_TIME))
 
     echo "========================================================================"
     echo "Synchronized Start Configuration (Sender)"
     echo "========================================================================"
-    echo "Receiver start time: $(date -u -d @$START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
-    echo "Sender start time:   $(date -u -d @$SENDER_START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $SENDER_START_TIME +"%Y-%m-%d %H:%M:%S UTC") (+10s delay)"
+    echo "Target start time:   $(date -u -d @$START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
     echo "Current time:        $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
     echo "Seconds to wait:     $SECONDS_TO_WAIT seconds"
     echo "========================================================================"
@@ -437,9 +435,8 @@ if [ -n "$START_TIME" ]; then
     # Write timing debug info to log file
     {
         echo "========== SENDER SYNCHRONIZED START DEBUG =========="
-        echo "Receiver start time (epoch): $START_TIME"
-        echo "Sender start time (epoch):   $SENDER_START_TIME (+10s offset)"
-        echo "Target start time (UTC):     $(date -u -d @$SENDER_START_TIME +"%Y-%m-%d %H:%M:%S.%N UTC" 2>/dev/null || date -u -r $SENDER_START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
+        echo "Target start time (epoch):   $START_TIME"
+        echo "Target start time (UTC):     $(date -u -d @$START_TIME +"%Y-%m-%d %H:%M:%S.%N UTC" 2>/dev/null || date -u -r $START_TIME +"%Y-%m-%d %H:%M:%S UTC")"
         echo "Current time (epoch):        $CURRENT_TIME"
         echo "Current time (UTC):          $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
         echo "Seconds to wait:             $SECONDS_TO_WAIT"

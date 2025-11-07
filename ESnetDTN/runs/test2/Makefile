@@ -60,6 +60,10 @@ SKIP_UPLOADS ?= false
 # Start time synchronization - offset in minutes from RUN_ID timestamp
 START_OFFSET_MINUTES ?= 2
 
+# Sender start delay - additional seconds to wait after receiver start time
+# This gives receivers time to initialize before senders start transmitting
+SENDER_START_DELAY_SECONDS ?= 10
+
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
 # On remote nodes, ejfat_demos is located under the user's home directory
@@ -117,6 +121,7 @@ help:
 	@echo "  SENDER_LOG_DIR    Sender log directory (default: $(SENDER_LOG_DIR))"
 	@echo "  SKIP_UPLOADS      Skip uploading config files: true or false (default: $(SKIP_UPLOADS))"
 	@echo "  START_OFFSET_MINUTES  Minutes to add to RUN_ID for synchronized start (default: $(START_OFFSET_MINUTES))"
+	@echo "  SENDER_START_DELAY_SECONDS  Additional seconds for senders to wait after receiver start (default: $(SENDER_START_DELAY_SECONDS))"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
@@ -132,6 +137,7 @@ help:
 	@echo "  make send SKIP_UPLOADS=true"
 	@echo "  make run SENDERS_LIST=\"wash-dtn1-mgt.es.net\" RECEIVERS_LIST=\"sunn-dtn1-mgt.es.net star-dtn1-mgt.es.net\""
 	@echo "  make run START_OFFSET_MINUTES=5"
+	@echo "  make run SENDER_START_DELAY_SECONDS=30"
 	@echo "  make get-logs"
 	@echo "  make summarize-logs"
 	@echo "  make clean-run"
@@ -388,15 +394,20 @@ run:
 	echo "Run ID: $$RUN_ID (UTC)"; \
 	echo "$$RUN_ID" > $(RECEIVER_LOG_DIR)/RUN_ID; \
 	if BASE_TIME=$$(date -u -d "$$RUN_ID" +"%s" 2>/dev/null); then \
-		START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
+		RX_START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
 	else \
 		BASE_TIME=$$(date -u -j -f "%Y%m%d_%H%M%S" "$$RUN_ID" +%s 2>/dev/null); \
-		START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
+		RX_START_TIME=$$((BASE_TIME + $(START_OFFSET_MINUTES) * 60)); \
 	fi; \
-	export START_TIME; \
+	TX_START_TIME=$$((RX_START_TIME + $(SENDER_START_DELAY_SECONDS))); \
+	export RX_START_TIME; \
+	export TX_START_TIME; \
 	echo "Start offset: $(START_OFFSET_MINUTES) minutes"; \
-	echo "Target start time: $$(date -u -d @$$START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $$START_TIME +"%Y-%m-%d %H:%M:%S UTC")"; \
-	echo "$$START_TIME" > $(RECEIVER_LOG_DIR)/START_TIME; \
+	echo "Sender delay: $(SENDER_START_DELAY_SECONDS) seconds"; \
+	echo "Receiver start time: $$(date -u -d @$$RX_START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $$RX_START_TIME +"%Y-%m-%d %H:%M:%S UTC")"; \
+	echo "Sender start time:   $$(date -u -d @$$TX_START_TIME +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null || date -u -r $$TX_START_TIME +"%Y-%m-%d %H:%M:%S UTC") (+$(SENDER_START_DELAY_SECONDS)s)"; \
+	echo "$$RX_START_TIME" > $(RECEIVER_LOG_DIR)/RX_START_TIME; \
+	echo "$$TX_START_TIME" > $(RECEIVER_LOG_DIR)/TX_START_TIME; \
 	echo ""; \
 	echo "Step 1: Reserving load balancer..."; \
 	echo "------------------------------------------------------------------------"; \
@@ -419,14 +430,14 @@ run:
 	echo ""; \
 	echo "Step 2: Starting receivers on all DTN nodes..."; \
 	echo "------------------------------------------------------------------------"; \
-	$(MAKE) receive RUN_ID=$$RUN_ID START_TIME=$$START_TIME; \
+	$(MAKE) receive RUN_ID=$$RUN_ID START_TIME=$$RX_START_TIME; \
 	echo ""; \
 	echo "Waiting 5 seconds for receivers to initialize..."; \
 	sleep 5; \
 	echo ""; \
 	echo "Step 3: Starting sender..."; \
 	echo "------------------------------------------------------------------------"; \
-	$(MAKE) send RUN_ID=$$RUN_ID START_TIME=$$START_TIME; \
+	$(MAKE) send RUN_ID=$$RUN_ID START_TIME=$$TX_START_TIME; \
 	echo ""; \
 	echo "========================================================================"; \
 	echo "Workflow Started Successfully!"; \
