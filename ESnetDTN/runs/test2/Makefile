@@ -71,7 +71,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free overview receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run
+.PHONY: help reserve free overview receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -84,6 +84,7 @@ help:
 	@echo ""
 	@echo "TARGETS:"
 	@echo "  help              Display this help message"
+	@echo "  calculate-runtime Calculate expected experiment runtime and data volume"
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  overview          Monitor load balancer status (lbadm --overview)"
@@ -146,6 +147,12 @@ help:
 	@echo "  make tcpdump-commands"
 	@echo ""
 	@echo "========================================================================"
+
+calculate-runtime:
+	@echo "========================================================================"
+	@echo "Calculating Experiment Runtime"
+	@echo "========================================================================"
+	@$(SCRIPT_DIR)/calculate_sender_duration --config $(SENDER_CONFIG) --makefile $(CURDIR)/Makefile
 
 reserve:
 	@if [ -z "$(EJFAT_URI_BETA)" ]; then \
