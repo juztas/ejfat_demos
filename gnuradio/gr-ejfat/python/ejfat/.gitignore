@@ -1,5 +1,3 @@
 *~
-*.pyc
-*.pyo
-build*/
+# Python cache and build dirs now handled by root .gitignore
 examples/grc/*.py

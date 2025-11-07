@@ -1,4 +1,3 @@
-run_output/*
-*.log
+# run_output and *.log now handled by root .gitignore
 
 

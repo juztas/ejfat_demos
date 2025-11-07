@@ -16,6 +16,20 @@ gnuradio/demos/fm_mod/
 gnuradio/demos/gr_video/
 gnuradio/demos/small/
 
+# Build directories
+build*/
+_build/
+dist/
+*.egg-info/
+
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.py[cod]
+*$py.class
+*.so
+
+# EJFAT run output
+run_output/
+*.log

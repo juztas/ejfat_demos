@@ -1,9 +1,3 @@
-# Ignore run_output directory contents (logs, configs, etc.)
-run_output/*
-
-# But keep the .archive files tracked
+# run_output now handled by root .gitignore
+# Keep the .archive files tracked
 !run_output/*.archive
-
-# Ignore run summary directories inside run_output (format: YYYYMMDD_HHMMSS)
-# These are created by summarize-logs
-run_output/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]/

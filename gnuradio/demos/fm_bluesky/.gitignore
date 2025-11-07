@@ -1,10 +1,8 @@
 # Dashboard runtime logs
 dashboard.log
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
+# Python cache - now handled by root .gitignore
+# (keeping .pyd and .Python as they're less common)
 *.pyd
 .Python
 

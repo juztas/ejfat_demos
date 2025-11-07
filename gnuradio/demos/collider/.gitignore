@@ -11,5 +11,4 @@ streaming_data/
 test/
 test_streaming/
 
-# macOS system files
-.DS_Store
+# macOS system files - now handled by root .gitignore
