@@ -972,16 +972,40 @@ def main():
 
         # Filter files by latest run ID
         filtered_tx_files = []
+        tx_files_without_run_id = []
         for tx_file in tx_files:
             tx_data = parse_tx_log(tx_file)
-            if tx_data and tx_data.get('run_id') == latest_run_id:
-                filtered_tx_files.append(tx_file)
+            if tx_data:
+                if tx_data.get('run_id') == latest_run_id:
+                    filtered_tx_files.append(tx_file)
+                elif tx_data.get('run_id') is None:
+                    tx_files_without_run_id.append(tx_file)
 
         filtered_rx_files = []
         for rx_file in rx_files:
             rx_data = parse_rx_log(rx_file)
             if rx_data and rx_data.get('run_id') == latest_run_id:
                 filtered_rx_files.append(rx_file)
+
+        # Warn if TX files are missing Run IDs
+        if tx_files_without_run_id:
+            print()
+            print_separator('!', 80)
+            print(f"{'WARNING: TX FILES MISSING RUN ID':^80}")
+            print_separator('!', 80)
+            print()
+            print(f"  {len(tx_files_without_run_id)} transmitter log file(s) are missing Run ID:")
+            for tx_file in tx_files_without_run_id:
+                print(f"    - {tx_file.name}")
+            print()
+            print("  These files will be EXCLUDED from analysis.")
+            print()
+            print("  Run ID is set when using 'make run'. If you ran 'make send' directly,")
+            print("  the TX logs will not have a Run ID and will be filtered out.")
+            print()
+            print("  To include these files, use 'make run' instead of 'make send'.")
+            print_separator('!', 80)
+            print()
 
         # Use filtered files for the rest of the analysis
         tx_files = filtered_tx_files
