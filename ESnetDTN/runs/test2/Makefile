@@ -15,15 +15,16 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
-		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
-
 #SENDERS_LIST ?= $(HOSTS)
+#SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+#		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
+#		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
+SENDERS_LIST ?= wash-dtn1-mgt.es.net
+
 
 # List of DTN nodes for receivers (in priority order)
-# RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-RECEIVERS_LIST ?= $(HOSTS) $(HOSTS)
+# RECEIVERS_LIST ?= $(HOSTS) $(HOSTS)
+RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))

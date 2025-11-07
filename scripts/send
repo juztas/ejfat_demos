@@ -308,13 +308,14 @@ cd "$WORK_DIR"
 if [ -z "$MY_IP" ]; then
     if [ "$IP_VERSION" = "4" ]; then
         LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+        MY_IP=$(ip -4 route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
     else
         LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+        MY_IP=$(ip -6 route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
     fi
-    MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
-lbadm lbadm --addsenders $MY_IP $IP_VERSION_DASH
+lbadm --addsenders $MY_IP $IP_VERSION_DASH
 sleep 1
 
 #------------------------------------------------------------------------------------------------
@@ -519,7 +520,7 @@ echo "  Add a little hang time to flush the packet pipeline before deregistering
 echo "==========================================================================="
 
 sleep 10
-lbadm --removesenders $MY_IP -v $IP_VERSION_DASH
+lbadm --removesenders $MY_IP $IP_VERSION_DASH
 
 echo ""
 echo "========================================================================"
