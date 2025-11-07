@@ -251,12 +251,17 @@ if [ "$RX_DURATION" = "-1" ]; then
         LONGEST_DURATION=$LONGEST_SENDER_DURATION
 
         if [ "$LONGEST_DURATION" != "0" ] && [ -n "$LONGEST_DURATION" ]; then
-            # Add 30 second buffer for sender completion and cleanup
-            BUFFER_SECONDS=30
-            RX_DURATION=$(echo "$LONGEST_DURATION + $BUFFER_SECONDS" | bc)
-            RX_DURATION=$(printf "%.0f" "$RX_DURATION")  # Round to integer
+            # Add buffer: 25% or 4 minutes (240s), whichever is greater
+            BUFFER_PERCENT=$(echo "$LONGEST_DURATION * 0.25" | bc)
+            BUFFER_MIN_SECONDS=240
 
-            echo "Calculated receiver duration: ${RX_DURATION}s (longest sender: ${LONGEST_DURATION}s + ${BUFFER_SECONDS}s buffer)"
+            # Use the larger of the two buffers
+            BUFFER_AMOUNT=$(echo "if ($BUFFER_PERCENT > $BUFFER_MIN_SECONDS) $BUFFER_PERCENT else $BUFFER_MIN_SECONDS" | bc)
+            RX_DURATION=$(echo "$LONGEST_DURATION + $BUFFER_AMOUNT" | bc)
+            RX_DURATION=$(printf "%.0f" "$RX_DURATION")  # Round to integer
+            BUFFER_AMOUNT=$(printf "%.0f" "$BUFFER_AMOUNT")  # Round buffer display
+
+            echo "Calculated receiver duration: ${RX_DURATION}s (longest sender: ${LONGEST_DURATION}s + ${BUFFER_AMOUNT}s buffer)"
             AUTO_CALCULATED_DURATION="true"
         else
             # Fallback to default if calculation failed

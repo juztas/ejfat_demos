@@ -19,17 +19,11 @@ SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 
 
-
-
-
 #SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
 # RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
-RECEIVERS_LIST ?= cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net  \
-		  cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net hous-dtn1-mgt.es.net sunn-dtn1-mgt.es.net wash-dtn1-mgt.es.net star-dtn1-mgt.es.net
-
-#RECEIVERS_LIST ?= $(HOSTS)
+RECEIVERS_LIST ?= $(HOSTS) $(HOSTS)
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -125,6 +119,7 @@ help:
 	@echo "  SENDER_START_DELAY_SECONDS  Additional seconds for senders to wait after receiver start (default: $(SENDER_START_DELAY_SECONDS))"
 	@echo ""
 	@echo "USAGE:"
+	@echo "  make calculate-runtime"
 	@echo "  make reserve EJFAT_URI_BETA=ejfat://useless@192.168.100.1:18347/lb/1"
 	@echo "  make reserve EJFAT_URI_BETA=\$$EJFAT_URI_BETA LB_NAME=my_test"
 	@echo "  make free"
