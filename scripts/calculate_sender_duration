@@ -24,13 +24,13 @@ calculate_duration() {
     local tx_rate=$3
 
     # Total data in bytes
-    local total_bytes=$(echo "$nframes * $tx_length" | bc)
+    local total_bytes=$(awk "BEGIN {print $nframes * $tx_length}")
 
     # Total bits
-    local total_bits=$(echo "$total_bytes * 8" | bc)
+    local total_bits=$(awk "BEGIN {print $total_bytes * 8}")
 
     # Duration in seconds = total_bits / (rate_gbps * 10^9)
-    local duration=$(echo "scale=2; $total_bits / ($tx_rate * 1000000000)" | bc)
+    local duration=$(awk "BEGIN {printf \"%.2f\", $total_bits / ($tx_rate * 1000000000)}")
 
     echo "$duration"
 }
@@ -39,10 +39,10 @@ calculate_duration() {
 format_duration() {
     local total_seconds=$1
 
-    local hours=$(echo "$total_seconds / 3600" | bc)
-    local remainder=$(echo "$total_seconds % 3600" | bc)
-    local minutes=$(echo "$remainder / 60" | bc)
-    local seconds=$(echo "scale=1; $remainder % 60" | bc)
+    local hours=$(awk "BEGIN {print int($total_seconds / 3600)}")
+    local remainder=$(awk "BEGIN {print $total_seconds % 3600}")
+    local minutes=$(awk "BEGIN {print int($remainder / 60)}")
+    local seconds=$(awk "BEGIN {printf \"%.1f\", $remainder % 60}")
 
     if [ "$hours" -gt 0 ]; then
         printf "%dh %dm %.1fs" "$hours" "$minutes" "$seconds"
@@ -167,9 +167,9 @@ DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
 FORMATTED=$(format_duration "$DURATION")
 
 # Calculate total data size
-TOTAL_BYTES=$(echo "$NFRAMES * $TX_LENGTH" | bc)
-TOTAL_GB=$(echo "scale=2; $TOTAL_BYTES / 1073741824" | bc)
-TOTAL_TB=$(echo "scale=3; $TOTAL_BYTES / 1099511627776" | bc)
+TOTAL_BYTES=$(awk "BEGIN {print $NFRAMES * $TX_LENGTH}")
+TOTAL_GB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_BYTES / 1073741824}")
+TOTAL_TB=$(awk "BEGIN {printf \"%.3f\", $TOTAL_BYTES / 1099511627776}")
 
 # Try to find Makefile if not specified
 if [ -z "$MAKEFILE" ] && [ -n "$CONFIG_FILE" ]; then
@@ -196,10 +196,10 @@ fi
 # Display results
 if [ "$NUM_SENDERS" -gt 1 ]; then
     # Multiple senders - show comprehensive experiment view
-    TOTAL_EXP_GB=$(echo "scale=2; $TOTAL_GB * $NUM_SENDERS" | bc)
-    TOTAL_EXP_TB=$(echo "scale=3; $TOTAL_TB * $NUM_SENDERS" | bc)
-    AGGREGATE_THROUGHPUT=$(echo "$TX_RATE * $NUM_SENDERS" | bc)
-    TOTAL_TIME_MIN=$(echo "scale=0; ($DURATION / 60) + 2" | bc)
+    TOTAL_EXP_GB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_GB * $NUM_SENDERS}")
+    TOTAL_EXP_TB=$(awk "BEGIN {printf \"%.3f\", $TOTAL_TB * $NUM_SENDERS}")
+    AGGREGATE_THROUGHPUT=$(awk "BEGIN {print $TX_RATE * $NUM_SENDERS}")
+    TOTAL_TIME_MIN=$(awk "BEGIN {print int(($DURATION / 60) + 2)}")
 
     echo "========================================================================"
     echo "EJFAT Experiment Run Time Calculation"
@@ -208,7 +208,7 @@ if [ "$NUM_SENDERS" -gt 1 ]; then
     echo "Configuration:"
     echo "  Number of Sender Jobs:   $NUM_SENDERS"
     echo "  Frames per Sender:       $NFRAMES"
-    echo "  Frame Size:              $TX_LENGTH bytes ($(echo "scale=1; $TX_LENGTH / 1048576" | bc) MB)"
+    echo "  Frame Size:              $TX_LENGTH bytes ($(awk "BEGIN {printf \"%.1f\", $TX_LENGTH / 1048576}") MB)"
     echo "  Rate per Sender:         $TX_RATE Gbps"
     echo ""
     echo "========================================================================"

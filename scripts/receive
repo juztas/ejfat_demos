@@ -419,7 +419,7 @@ if [ -n "$START_TIME" ]; then
         {
             echo "Time AFTER sleep (epoch):   $AFTER_SLEEP_TIME"
             echo "Time AFTER sleep (UTC):     $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
-            echo "Actual sleep duration:      $(echo "$AFTER_SLEEP_TIME - $BEFORE_SLEEP_TIME" | bc) seconds"
+            echo "Actual sleep duration:      $(awk "BEGIN {printf \"%.3f\", $AFTER_SLEEP_TIME - $BEFORE_SLEEP_TIME}") seconds"
             echo "======================================================="
         } >> "$LOG_DIR/rx_${RX_INDEX}_timing_debug.log"
 

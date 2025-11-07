@@ -60,13 +60,13 @@ calculate_duration() {
     local tx_rate=$3
 
     # Total data in bytes
-    local total_bytes=$(echo "$nframes * $tx_length" | bc)
+    local total_bytes=$(awk "BEGIN {print $nframes * $tx_length}")
 
     # Total bits
-    local total_bits=$(echo "$total_bytes * 8" | bc)
+    local total_bits=$(awk "BEGIN {print $total_bytes * 8}")
 
     # Duration in seconds = total_bits / (rate_gbps * 10^9)
-    local duration=$(echo "scale=2; $total_bits / ($tx_rate * 1000000000)" | bc)
+    local duration=$(awk "BEGIN {printf \"%.2f\", $total_bits / ($tx_rate * 1000000000)}")
 
     echo "$duration"
 }
@@ -76,11 +76,11 @@ calculate_duration() {
 format_duration() {
     local total_seconds=$1
 
-    # Use bc for floating point arithmetic
-    local hours=$(echo "$total_seconds / 3600" | bc)
-    local remainder=$(echo "$total_seconds % 3600" | bc)
-    local minutes=$(echo "$remainder / 60" | bc)
-    local seconds=$(echo "scale=1; $remainder % 60" | bc)
+    # Use awk for floating point arithmetic
+    local hours=$(awk "BEGIN {print int($total_seconds / 3600)}")
+    local remainder=$(awk "BEGIN {print $total_seconds % 3600}")
+    local minutes=$(awk "BEGIN {print int($remainder / 60)}")
+    local seconds=$(awk "BEGIN {printf \"%.1f\", $remainder % 60}")
 
     if [ "$hours" -gt 0 ]; then
         printf "%dh %dm %.1fs" "$hours" "$minutes" "$seconds"
@@ -333,7 +333,7 @@ echo "Generating segmenter_config_tx_${TX_INDEX}.ini..."
 # Calculate expected duration for documentation in INI file
 EXPECTED_DURATION=$(calculate_duration "$NFRAMES" "$TX_LENGTH" "$TX_RATE")
 FORMATTED_DURATION=$(format_duration "$EXPECTED_DURATION")
-TOTAL_DATA_GB=$(echo "scale=2; $NFRAMES * $TX_LENGTH / 1073741824" | bc)
+TOTAL_DATA_GB=$(awk "BEGIN {printf \"%.2f\", $NFRAMES * $TX_LENGTH / 1073741824}")
 
 cat > segmenter_config_tx_${TX_INDEX}.ini << EOF
 ; ============================================================================
@@ -469,7 +469,7 @@ if [ -n "$START_TIME" ]; then
         {
             echo "Time AFTER sleep (epoch):    $AFTER_SLEEP_TIME"
             echo "Time AFTER sleep (UTC):      $(date -u +"%Y-%m-%d %H:%M:%S.%N UTC")"
-            echo "Actual sleep duration:       $(echo "$AFTER_SLEEP_TIME - $BEFORE_SLEEP_TIME" | bc) seconds"
+            echo "Actual sleep duration:       $(awk "BEGIN {printf \"%.3f\", $AFTER_SLEEP_TIME - $BEFORE_SLEEP_TIME}") seconds"
             echo "======================================================="
         } >> "tx_${TX_INDEX}_timing_debug.log"
 
