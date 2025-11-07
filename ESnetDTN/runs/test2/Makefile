@@ -716,12 +716,12 @@ clean-run:
 	done; \
 	for node in $$all_nodes; do \
 		echo "------------------------------------------------------------------------"; \
-		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/"; \
-		ssh $$node "rm -rf $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/* 2>/dev/null || true" && \
+		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/ (excluding INSTANCE_URI)"; \
+		ssh $$node "find $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/ -mindepth 1 -maxdepth 1 ! -name 'INSTANCE_URI' -exec rm -rf {} + 2>/dev/null || true" && \
 			echo "  ✓ Receiver log directory cleaned" || \
 			echo "  ✗ Failed to clean receiver log directory"; \
-		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/"; \
-		ssh $$node "rm -rf $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/* 2>/dev/null || true" && \
+		echo "Cleaning $$node:$(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/ (excluding INSTANCE_URI)"; \
+		ssh $$node "find $(REMOTE_WORK_DIR)/$(SENDER_LOG_DIR)/ -mindepth 1 -maxdepth 1 ! -name 'INSTANCE_URI' -exec rm -rf {} + 2>/dev/null || true" && \
 			echo "  ✓ Sender log directory cleaned" || \
 			echo "  ✗ Failed to clean sender log directory"; \
 		echo ""; \
@@ -734,13 +734,20 @@ clean-run:
 	@echo "Cleaning Local Run Output Directory"
 	@echo "========================================================================"
 	@if [ -d "$(RECEIVER_LOG_DIR)" ]; then \
-		echo "Removing local log and INI files from $(RECEIVER_LOG_DIR)/"; \
-		rm -f $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.ini 2>/dev/null && \
-			echo "  ✓ Local log and INI files removed" || \
-			echo "  ✗ No local log/INI files to remove"; \
+		echo "Removing local log, INI, and CSV files from $(RECEIVER_LOG_DIR)/ (excluding INSTANCE_URI)"; \
+		rm -f $(RECEIVER_LOG_DIR)/*.log $(RECEIVER_LOG_DIR)/*.ini $(RECEIVER_LOG_DIR)/*.csv 2>/dev/null && \
+			echo "  ✓ Local log, INI, and CSV files removed" || \
+			echo "  ✗ No local log/INI/CSV files to remove"; \
 	else \
 		echo "  Local $(RECEIVER_LOG_DIR)/ directory does not exist"; \
 	fi
+	@echo ""
+	@echo "Removing local timing and ID files (excluding INSTANCE_URI)..."
+	@rm -f RUN_ID RX_START_TIME TX_START_TIME START_TIME 2>/dev/null && \
+		echo "  ✓ RUN_ID, RX_START_TIME, TX_START_TIME, START_TIME removed" || \
+		echo "  ✗ No timing/ID files to remove"
+	@echo ""
+	@echo "Note: INSTANCE_URI files are preserved on both local and remote systems"
 	@echo ""
 	@echo "========================================================================"
 	@echo "Cleanup Complete!"
