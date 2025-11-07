@@ -314,7 +314,7 @@ if [ -z "$MY_IP" ]; then
     MY_IP=$(ip route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
 fi
 
-lbadm lbadm --addsenders $MY_IP
+lbadm lbadm --addsenders $MY_IP $IP_VERSION_DASH
 sleep 1
 
 #------------------------------------------------------------------------------------------------
@@ -519,7 +519,7 @@ echo "  Add a little hang time to flush the packet pipeline before deregistering
 echo "==========================================================================="
 
 sleep 10
-lbadm --removesenders $MY_IP -v
+lbadm --removesenders $MY_IP -v $IP_VERSION_DASH
 
 echo ""
 echo "========================================================================"

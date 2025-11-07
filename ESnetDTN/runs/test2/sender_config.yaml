@@ -74,7 +74,7 @@ tx_length: 2097152
 #   Result: Each instance runs for different duration
 #
 
-nframes: 2680000  
+nframes: 100000
 
 # Number of send sockets to use
 # Default: 8

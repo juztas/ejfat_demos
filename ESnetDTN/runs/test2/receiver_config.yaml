@@ -54,7 +54,7 @@ ip_version: 6
 # The auto-calculation ensures receivers run long enough to capture all data from the
 # slowest sender, preventing premature receiver shutdown.
 #
-rx_duration: -1
+rx_duration: 120
 
 # Number of receiver threads
 # Default: 16
