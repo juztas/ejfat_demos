@@ -306,16 +306,22 @@ cd "$WORK_DIR"
 #------------------------------------------------------------------------------------------------
 
 if [ -z "$MY_IP" ]; then
+    echo "DEBUG: IP_VERSION = '$IP_VERSION'"
     if [ "$IP_VERSION" = "4" ]; then
         LB_IP=$(dig +short ejfat-lb.es.net A | tail -1)
+        echo "DEBUG: IPv4 mode, LB_IP = $LB_IP"
         MY_IP=$(ip -4 route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
     else
         LB_IP=$(dig +short ejfat-lb.es.net AAAA | tail -1)
+        echo "DEBUG: IPv6 mode, LB_IP = $LB_IP"
+        echo "DEBUG: Running: ip -6 route get $LB_IP"
         MY_IP=$(ip -6 route get $LB_IP | head -1 | sed 's/^.*src//' | awk '{ print $1 }')
     fi
+    echo "DEBUG: Detected MY_IP = $MY_IP"
 fi
 
-lbadm --addsenders $MY_IP $IP_VERSION_DASH
+echo "DEBUG: Registering with: lbadm --addsenders -a $MY_IP $IP_VERSION_DASH"
+lbadm --addsenders -a $MY_IP $IP_VERSION_DASH
 sleep 1
 
 #------------------------------------------------------------------------------------------------
@@ -520,7 +526,7 @@ echo "  Add a little hang time to flush the packet pipeline before deregistering
 echo "==========================================================================="
 
 sleep 10
-lbadm --removesenders $MY_IP $IP_VERSION_DASH
+lbadm --removesenders -a $MY_IP $IP_VERSION_DASH
 
 echo ""
 echo "========================================================================"
