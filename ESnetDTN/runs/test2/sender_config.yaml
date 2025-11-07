@@ -50,7 +50,7 @@ ip_version: 6
 #   tx_rate_1: 15       # Medium
 #   tx_rate_2: 25       # Faster
 #
-tx_rate: 25
+tx_rate: 10
 
 # Transmission length (packet size in bytes)
 # Supports instance-specific values: tx_length_0, tx_length_1, etc.

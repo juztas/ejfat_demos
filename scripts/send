@@ -506,9 +506,9 @@ ls -la segmenter_config_tx_${TX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
 # Use --cores if TX_CORES is specified, otherwise use --sockets
 if [ -n "$TX_CORES" ]; then
-    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH"
+    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip 0.0.0.0 --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH"
 else
-    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
+    echo "e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip 0.0.0.0 --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH"
 fi
 echo "========================================================================"
 echo ""
@@ -516,9 +516,9 @@ echo ""
 # e2sar_perf will use the segmenter_config_tx_${TX_INDEX}.ini we generated
 # Use --cores if TX_CORES is specified, otherwise use --sockets
 if [ -n "$TX_CORES" ]; then
-    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH
+    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip 0.0.0.0 --cores $TX_CORES --dataid $DATA_ID --length $TX_LENGTH
 else
-    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip $MY_IP --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
+    e2sar_perf --send --withcp --ini segmenter_config_tx_${TX_INDEX}.ini $IP_VERSION_DASH --rate $TX_RATE -n $NFRAMES --ip 0.0.0.0 --sockets $SEND_SOCKETS --dataid $DATA_ID --length $TX_LENGTH
 fi
 
 echo "==========================================================================="

@@ -13,18 +13,11 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import pandas as pd
+import configparser
 
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
-try:
-    import configparser
-    CONFIGPARSER_AVAILABLE = True
-except ImportError:
-    CONFIGPARSER_AVAILABLE = False
+PANDAS_AVAILABLE = True
+CONFIGPARSER_AVAILABLE = True
 
 
 def parse_tx_log(log_path: Path) -> Optional[Dict]:
