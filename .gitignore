@@ -1,3 +1,21 @@
 *~
 INSTANCE_URI*
 #*#
+
+# Binary data files
+*.wav
+*.h5
+*.hdf5
+.DS_Store
+*.msgpack
+
+# Scan data directories
+gnuradio/demos/fm/fm_scan_*/
+gnuradio/temp/
+gnuradio/demos/fm_mod/
+gnuradio/demos/gr_video/
+gnuradio/demos/small/
+
+# Python cache
+__pycache__/
+*.pyc

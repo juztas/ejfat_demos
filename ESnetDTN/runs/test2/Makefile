@@ -56,7 +56,7 @@ START_OFFSET_MINUTES ?= 2
 
 # Sender start delay - additional seconds to wait after receiver start time
 # This gives receivers time to initialize before senders start transmitting
-SENDER_START_DELAY_SECONDS ?= 10
+SENDER_START_DELAY_SECONDS ?= 60
 
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
