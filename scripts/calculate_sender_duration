@@ -60,20 +60,25 @@ Calculate Expected Sender Duration
 
 Usage:
   calculate_sender_duration --config <config.yaml>
+  calculate_sender_duration --config <config.yaml> --makefile <Makefile>
   calculate_sender_duration --nframes N --length L --rate R
 
 Options:
-  --config <file>    Read parameters from sender config YAML file
-  --nframes <N>      Number of frames to send
-  --length <L>       Frame size in bytes
-  --rate <R>         Transmission rate in Gbps
-  --help             Display this help message
+  --config <file>     Read parameters from sender config YAML file
+  --makefile <file>   Path to Makefile (auto-detected if in same dir as config)
+  --nframes <N>       Number of frames to send
+  --length <L>        Frame size in bytes
+  --rate <R>          Transmission rate in Gbps
+  --help              Display this help message
 
 Examples:
-  # From config file
+  # From config file (auto-detects Makefile for multi-sender experiments)
   calculate_sender_duration --config sender_config.yaml
 
-  # Direct parameters
+  # Explicit Makefile path
+  calculate_sender_duration --config sender_config.yaml --makefile Makefile
+
+  # Direct parameters (single sender only)
   calculate_sender_duration --nframes 100000 --length 2097152 --rate 25
 
   # Calculate for different rates
@@ -84,6 +89,10 @@ Examples:
 Formula:
   Duration (seconds) = (Frames × Length × 8 bits/byte) / (Rate × 10^9 bits/Gbps)
 
+Note:
+  When a Makefile is detected, the script will calculate total experiment
+  statistics including all sender jobs, aggregate throughput, and total data volume.
+
 EOF
 }
 
@@ -92,11 +101,16 @@ CONFIG_FILE=""
 NFRAMES=""
 TX_LENGTH=""
 TX_RATE=""
+MAKEFILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --config)
             CONFIG_FILE="$2"
+            shift 2
+            ;;
+        --makefile)
+            MAKEFILE="$2"
             shift 2
             ;;
         --nframes)
@@ -157,14 +171,87 @@ TOTAL_BYTES=$(echo "$NFRAMES * $TX_LENGTH" | bc)
 TOTAL_GB=$(echo "scale=2; $TOTAL_BYTES / 1073741824" | bc)
 TOTAL_TB=$(echo "scale=3; $TOTAL_BYTES / 1099511627776" | bc)
 
+# Try to find Makefile if not specified
+if [ -z "$MAKEFILE" ] && [ -n "$CONFIG_FILE" ]; then
+    CONFIG_DIR=$(dirname "$CONFIG_FILE")
+    if [ -f "$CONFIG_DIR/Makefile" ]; then
+        MAKEFILE="$CONFIG_DIR/Makefile"
+    fi
+fi
+
+# If Makefile exists, calculate experiment-wide statistics
+NUM_SENDERS=0
+if [ -n "$MAKEFILE" ] && [ -f "$MAKEFILE" ]; then
+    # Count senders from SENDERS_LIST (handles multi-line with backslashes)
+    # Extract SENDERS_LIST lines, remove backslashes and newlines, then count DTN hosts
+    NUM_SENDERS=$(awk '/^SENDERS_LIST \?=/{flag=1} flag{print} /^$/{flag=0}' "$MAKEFILE" | \
+        grep -v "^#" | \
+        tr '\n' ' ' | \
+        tr '\\' ' ' | \
+        tr '\t' ' ' | \
+        tr -s ' ' '\n' | \
+        grep -c "dtn1-mgt.es.net" 2>/dev/null || echo "0")
+fi
+
 # Display results
-echo "========================================================================"
-echo "Sender Duration Calculation"
-echo "========================================================================"
-echo "Frames:             $NFRAMES"
-echo "Frame Size:         $TX_LENGTH bytes"
-echo "Transmission Rate:  $TX_RATE Gbps"
-echo ""
-echo "Total Data:         ${TOTAL_GB} GB (${TOTAL_TB} TB)"
-echo "Expected Duration:  ${FORMATTED} (${DURATION} seconds)"
-echo "========================================================================"
+if [ "$NUM_SENDERS" -gt 1 ]; then
+    # Multiple senders - show comprehensive experiment view
+    TOTAL_EXP_GB=$(echo "scale=2; $TOTAL_GB * $NUM_SENDERS" | bc)
+    TOTAL_EXP_TB=$(echo "scale=3; $TOTAL_TB * $NUM_SENDERS" | bc)
+    AGGREGATE_THROUGHPUT=$(echo "$TX_RATE * $NUM_SENDERS" | bc)
+    TOTAL_TIME_MIN=$(echo "scale=0; ($DURATION / 60) + 2" | bc)
+
+    echo "========================================================================"
+    echo "EJFAT Experiment Run Time Calculation"
+    echo "========================================================================"
+    echo ""
+    echo "Configuration:"
+    echo "  Number of Sender Jobs:   $NUM_SENDERS"
+    echo "  Frames per Sender:       $NFRAMES"
+    echo "  Frame Size:              $TX_LENGTH bytes ($(echo "scale=1; $TX_LENGTH / 1048576" | bc) MB)"
+    echo "  Rate per Sender:         $TX_RATE Gbps"
+    echo ""
+    echo "========================================================================"
+    echo "PER-SENDER JOB ANALYSIS"
+    echo "========================================================================"
+    echo "Each sender job transmits:"
+    echo "  Data Volume:        ${TOTAL_GB} GB (${TOTAL_TB} TB)"
+    echo "  Expected Duration:  ${FORMATTED} (${DURATION} seconds)"
+    echo "  Throughput:         $TX_RATE Gbps"
+    echo ""
+    echo "Individual Sender Jobs:"
+    for i in $(seq 0 $(($NUM_SENDERS - 1))); do
+        echo "  Job $i: ${TOTAL_GB} GB in ${FORMATTED} @ $TX_RATE Gbps"
+    done
+    echo ""
+    echo "========================================================================"
+    echo "TOTAL EXPERIMENT SUMMARY"
+    echo "========================================================================"
+    echo "  Total Sender Jobs:       $NUM_SENDERS (running in parallel)"
+    echo "  Total Data Transmitted:  ${TOTAL_EXP_GB} GB (${TOTAL_EXP_TB} TB)"
+    echo "  Aggregate Throughput:    ${AGGREGATE_THROUGHPUT} Gbps ($TX_RATE Gbps × $NUM_SENDERS senders)"
+    echo "  Transmission Duration:   ${FORMATTED} (${DURATION} seconds)"
+    echo ""
+    echo "Timeline:"
+    echo "  1. Setup Phase:          ~2 minutes (synchronized start)"
+    echo "  2. Receiver Startup:     Receivers start at synchronized time"
+    echo "  3. Sender Startup:       Senders start 10 seconds after receivers"
+    echo "  4. Transmission:         ~${FORMATTED} (all senders in parallel)"
+    echo "  5. Total Experiment:     ~${TOTAL_TIME_MIN} minutes"
+    echo ""
+    echo "Note: All sender jobs run simultaneously, so experiment duration is"
+    echo "      determined by a single sender's transmission time, not the sum."
+    echo "========================================================================"
+else
+    # Single sender - show simple view
+    echo "========================================================================"
+    echo "Sender Duration Calculation"
+    echo "========================================================================"
+    echo "Frames:             $NFRAMES"
+    echo "Frame Size:         $TX_LENGTH bytes"
+    echo "Transmission Rate:  $TX_RATE Gbps"
+    echo ""
+    echo "Total Data:         ${TOTAL_GB} GB (${TOTAL_TB} TB)"
+    echo "Expected Duration:  ${FORMATTED} (${DURATION} seconds)"
+    echo "========================================================================"
+fi
