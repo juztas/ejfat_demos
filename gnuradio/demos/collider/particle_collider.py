@@ -334,7 +334,7 @@ class ParticleCollider:
         self.calorimeter_counts = np.zeros(self.num_calorimeter_segments, dtype=int)
 
         # Pixel detector tracking
-        self.recent_pixel_hits = deque(maxlen=5)  # Keep last 5 pixel hits
+        self.recent_pixel_hits = deque(maxlen=30)  # Keep last 30 pixel hits
 
         # Initialize Calorimeter DAQ
         self.calorimeter_daq = CalorimeterDAQ(
@@ -806,16 +806,23 @@ class ColliderVisualizer:
 
     def __init__(self, collider):
         self.collider = collider
-        self.fig = plt.figure(figsize=(14, 10))
+        # Fixed size: 1024x512 pixels at 100 DPI = 10.24 x 5.12 inches
+        self.fig = plt.figure(figsize=(10.24, 5.12), dpi=100)
 
-        # Create bar chart area (calorimeter histogram) - leftmost
-        self.ax_hist = plt.axes([0.02, 0.30, 0.13, 0.65])
+        # Layout with white space at top and bottom
+        # Top margin, main plots, gap, sliders, bottom margin
+        plot_top_margin = 0.05  # White space at top
+        plot_bottom = 0.18  # Start plots above slider area
+        plot_height = 0.77  # Height of main visualization areas (0.95 - 0.18 = 0.77)
 
-        # Create main plot area (collider visualization) - center
-        self.ax = plt.axes([0.20, 0.30, 0.50, 0.65])
+        # Create bar chart area (calorimeter histogram) - leftmost with left margin
+        self.ax_hist = plt.axes([0.03, plot_bottom, 0.11, plot_height])
 
-        # Create DAQ waterfall display area - rightmost
-        self.ax_daq = plt.axes([0.75, 0.30, 0.22, 0.65])
+        # Create main plot area (collider visualization) - tight to histogram
+        self.ax = plt.axes([0.15, plot_bottom, 0.54, plot_height])
+
+        # Create DAQ waterfall display area - tight to collider plot
+        self.ax_daq = plt.axes([0.70, plot_bottom, 0.17, plot_height])
 
         self.setup_plot()
         self.setup_histogram()
@@ -833,8 +840,6 @@ class ColliderVisualizer:
         self.ax.set_ylim(-2.5, 2.5)
         self.ax.set_aspect('equal')
         self.ax.grid(True, alpha=0.3)
-        self.ax.set_xlabel('X Position')
-        self.ax.set_ylabel('Y Position')
         self.ax.set_title('Particle Collider Simulation')
 
         # Draw deflection angle range from origin (0,0)
@@ -1089,56 +1094,76 @@ class ColliderVisualizer:
         # Control panel area
         control_color = 'lightgoldenrodyellow'
 
-        # Vertical sliders between Hits and Collider plots
-        slider_width = 0.02  # Slider thickness
-        slider_height = 0.65  # Match plot height
-        slider_bottom = 0.30  # Match plot bottom
+        # Horizontal sliders side-by-side at bottom with gap above main plots
+        slider_left = 0.03  # Start at left margin
+        slider_right = 0.97  # End at right margin
+        slider_gap = 0.02  # Gap between the two sliders
+        slider_width = (slider_right - slider_left - slider_gap) / 2  # Half width each
+        slider_height = 0.04  # Height of each horizontal slider
+        slider_y = 0.08  # Position with white space below (0.08) and gap above to plots (0.18 - 0.08 - 0.04 = 0.06)
 
-        # Speed range slider (vertical, leftmost)
-        ax_speed_range = plt.axes([0.16, slider_bottom, slider_width, slider_height])
+        # Speed range slider (left)
+        ax_speed_range = plt.axes([slider_left, slider_y, slider_width, slider_height])
         self.slider_speed_range = RangeSlider(
-            ax_speed_range, 'Speed\nRange', 0.1, 1.5,
+            ax_speed_range, 'Speed Range', 0.1, 1.5,
             valinit=(self.collider.speed_min, self.collider.speed_max),
             valstep=0.05,
-            orientation='vertical'
+            orientation='horizontal'
         )
         self.slider_speed_range.on_changed(self.update_speed_range)
+        # Hide the value text on the slider itself
+        self.slider_speed_range.valtext.set_visible(False)
+        # Position label below slider on left side
+        self.slider_speed_range.label.set_position((0.0, -0.5))
+        self.slider_speed_range.label.set_verticalalignment('top')
+        self.slider_speed_range.label.set_horizontalalignment('left')
+        # Add value display next to label
+        self.speed_range_text = ax_speed_range.text(0.6, -0.5, '', transform=ax_speed_range.transAxes,
+                                                     fontsize=9, verticalalignment='top', horizontalalignment='left')
 
-        # Interval range slider (vertical, rightmost before collider plot)
-        ax_interval_range = plt.axes([0.19, slider_bottom, slider_width, slider_height])
+        # Interval range slider (right)
+        slider_interval_left = slider_left + slider_width + slider_gap
+        ax_interval_range = plt.axes([slider_interval_left, slider_y, slider_width, slider_height])
         self.slider_interval_range = RangeSlider(
-            ax_interval_range, 'Interval\nRange', 0.1, 2.0,
+            ax_interval_range, 'Interval Range (s)', 0.1, 2.0,
             valinit=(self.collider.interval_min, self.collider.interval_max),
             valstep=0.1,
-            orientation='vertical'
+            orientation='horizontal'
         )
         self.slider_interval_range.on_changed(self.update_interval_range)
+        # Hide the value text on the slider itself
+        self.slider_interval_range.valtext.set_visible(False)
+        # Position label below slider on left side
+        self.slider_interval_range.label.set_position((0.0, -0.5))
+        self.slider_interval_range.label.set_verticalalignment('top')
+        self.slider_interval_range.label.set_horizontalalignment('left')
+        # Add value display next to label
+        self.interval_range_text = ax_interval_range.text(0.6, -0.5, '', transform=ax_interval_range.transAxes,
+                                                           fontsize=9, verticalalignment='top', horizontalalignment='left')
 
-        # Buttons (horizontal row) - positioned below simulation plot, left of pixel detector
+
+        # Column layout parameters (updated for horizontal sliders at bottom with gap)
+        column_bottom = 0.18  # Bottom of all columns (matches plots)
+        column_height = 0.77  # Height of all columns (matches plots)
+        column_top = column_bottom + column_height  # 0.95
+
+        # Pixel detector hits window - right of calorimeter events with spacing
+        pixel_x = 0.89  # Right of DAQ waterfall (which ends at 0.70 + 0.17 = 0.87) with spacing
+        pixel_width = 0.08  # Column for pixel hits readability (ends at 0.97, leaving 0.03 margin on right)
+
+        # Calculate button dimensions
         button_height = 0.04
-        button_width = 0.12
-        button_y = 0.19  # Below simulation plot (0.30), above pixel detector (0.14)
-        button_x_start = 0.20  # Aligned with left edge of simulation plot
+        button_width = 0.08  # Match pixel column width
+        button_spacing = 0.01  # Small spacing between buttons
+        total_button_height = 3 * button_height + 2 * button_spacing  # 3 buttons + 2 gaps
 
-        # Pause/Resume button
-        ax_pause = plt.axes([button_x_start, button_y, button_width, button_height])
-        self.button_pause = Button(ax_pause, 'Pause', color=control_color, hovercolor='0.975')
-        self.button_pause.on_clicked(self.toggle_pause)
+        # Pixel hits takes remaining height above buttons
+        pixel_height = column_height - total_button_height - 0.02  # 0.02 gap between pixel box and buttons
+        button_y_start = column_bottom + total_button_height  # Bottom button starts here
 
-        # Reset button
-        ax_reset = plt.axes([button_x_start + 0.14, button_y, button_width, button_height])
-        self.button_reset = Button(ax_reset, 'Reset', color=control_color, hovercolor='0.975')
-        self.button_reset.on_clicked(self.reset_simulation)
-
-        # Save summary button (if data logger exists)
-        if self.collider.data_logger:
-            ax_save = plt.axes([button_x_start + 0.28, button_y, button_width, button_height])
-            self.button_save = Button(ax_save, 'Save', color=control_color, hovercolor='0.975')
-            self.button_save.on_clicked(self.save_summary)
-
-        # Pixel detector hits textbox - right-aligned under Calorimeter Events
+        # Pixel detector hits textbox - top portion of right column
         from matplotlib.widgets import TextBox
-        ax_pixel_text = plt.axes([0.75, 0.14, 0.22, 0.09])  # Match waterfall x position and width
+        ax_pixel_text = plt.axes([pixel_x, button_y_start + 0.02, pixel_width, pixel_height])  # Above buttons with small gap
         ax_pixel_text.axis('off')
         self.pixel_text = ax_pixel_text.text(
             0.05, 0.95, '',
@@ -1148,6 +1173,23 @@ class ColliderVisualizer:
             transform=ax_pixel_text.transAxes,
             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8)
         )
+
+        # Buttons below pixel hits window - stacked vertically at bottom of column
+        # Save button (bottom)
+        if self.collider.data_logger:
+            ax_save = plt.axes([pixel_x, column_bottom, button_width, button_height])
+            self.button_save = Button(ax_save, 'Save', color=control_color, hovercolor='0.975')
+            self.button_save.on_clicked(self.save_summary)
+
+        # Reset button (middle)
+        ax_reset = plt.axes([pixel_x, column_bottom + button_height + button_spacing, button_width, button_height])
+        self.button_reset = Button(ax_reset, 'Reset', color=control_color, hovercolor='0.975')
+        self.button_reset.on_clicked(self.reset_simulation)
+
+        # Pause/Resume button (top of button stack)
+        ax_pause = plt.axes([pixel_x, column_bottom + 2 * (button_height + button_spacing), button_width, button_height])
+        self.button_pause = Button(ax_pause, 'Pause', color=control_color, hovercolor='0.975')
+        self.button_pause.on_clicked(self.toggle_pause)
 
     def update_speed_range(self, val):
         """Update speed range (min and max)"""
@@ -1351,7 +1393,7 @@ class ColliderVisualizer:
         # Update pixel detector text box
         if self.collider.recent_pixel_hits:
             pixel_text_lines = ['Pixel Detector Hits:']
-            for hit in list(self.collider.recent_pixel_hits)[-5:]:
+            for hit in list(self.collider.recent_pixel_hits)[-30:]:  # Show last 30 hits
                 pixel_text_lines.append(
                     f"Pixel {hit['pixel']:4d} @ t={hit['time']:.2f}s"
                 )
@@ -1383,6 +1425,10 @@ class ColliderVisualizer:
             self.slider_interval_range.eventson = False
             self.slider_interval_range.set_val(desired_interval_range)
             self.slider_interval_range.eventson = True
+
+        # Update slider value text displays
+        self.speed_range_text.set_text(f'({self.collider.speed_min:.2f}, {self.collider.speed_max:.2f})')
+        self.interval_range_text.set_text(f'({self.collider.interval_min:.1f}, {self.collider.interval_max:.1f})')
 
         # Update DAQ waterfall display
         # Get the waterfall buffer from DAQ (already decimated to 10 FPS)

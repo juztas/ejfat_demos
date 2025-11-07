@@ -69,7 +69,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
         ##################################################
         self.samp_rate = samp_rate = 2400000
         self.volume = volume = 1
-        self.freq = freq = 98.5e6
+        self.freq = freq = 106.1e6
         self.channel_width = channel_width = 200000
         self.channel_rate = channel_rate = samp_rate/5
         self.audio_rate = audio_rate = 48000
@@ -81,7 +81,7 @@ class fm_receiver_stereo(gr.top_block, Qt.QWidget):
         self._volume_range = qtgui.Range(0, 10, 0.1, 1, 200)
         self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volume", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._volume_win)
-        self._freq_range = qtgui.Range(88e6, 108e6, 100e3, 98.5e6, 200)
+        self._freq_range = qtgui.Range(88e6, 108e6, 100e3, 106.1e6, 200)
         self._freq_win = qtgui.RangeWidget(self._freq_range, self.set_freq, "Frequency", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._freq_win)
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(

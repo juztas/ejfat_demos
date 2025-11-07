@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/msgpack-lite@0.1.26/dist/msgpack.min.js"></script>
+</head>
+<body>
+    <h1>MessagePack Test</h1>
+    <div id="output"></div>
+    <script>
+        async function test() {
+            const output = document.getElementById('output');
+            output.innerHTML += '<p>Fetching scan list...</p>';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/scans');
+                const scans = await response.json();
+                output.innerHTML += `<p>Found ${scans.length} scan directories</p>`;
+                output.innerHTML += `<pre>${JSON.stringify(scans, null, 2)}</pre>`;
+
+                if (scans.length > 0) {
+                    const scanInfo = scans[0];
+                    const filename = scanInfo.files[0];
+                    output.innerHTML += `<p>Loading ${scanInfo.directory}/${filename}...</p>`;
+
+                    const scanResponse = await fetch(`http://localhost:8000/api/scan/${scanInfo.directory}/${filename}`);
+                    const arrayBuffer = await scanResponse.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+
+                    output.innerHTML += `<p>File size: ${uint8Array.length} bytes</p>`;
+                    output.innerHTML += `<p>First 10 bytes: ${Array.from(uint8Array.slice(0, 10))}</p>`;
+
+                    const documents = msgpack.decode(uint8Array);
+                    output.innerHTML += `<p>Decoded ${documents.length} documents</p>`;
+
+                    for (let i = 0; i < Math.min(5, documents.length); i++) {
+                        const [docType, doc] = documents[i];
+                        output.innerHTML += `<p>Document ${i}: ${docType}</p>`;
+                        if (docType === 'start') {
+                            output.innerHTML += `<pre>  uid: ${doc.uid}</pre>`;
+                            output.innerHTML += `<pre>  time: ${doc.time}</pre>`;
+                        }
+                    }
+                }
+            } catch (error) {
+                output.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+                output.innerHTML += `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        test();
+    </script>
+</body>
+</html>

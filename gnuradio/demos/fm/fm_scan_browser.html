@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FM Digital Detection Scan Browser</title>
+    <script src="https://cdn.jsdelivr.net/npm/msgpack-lite@0.1.26/dist/msgpack.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .scan-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scan-selector select {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .metadata {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .metadata-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metadata-item .label {
+            font-size: 0.85em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .metadata-item .value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .stations-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+        }
+
+        .stations-table h3 {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            margin: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .digital-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .digital-yes {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .digital-no {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .signal-bar {
+            display: inline-block;
+            height: 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .signal-strong {
+            background: #28a745; /* Green for > -25 dB */
+        }
+
+        .signal-medium {
+            background: #ffc107; /* Yellow for -40 to -25 dB */
+        }
+
+        .signal-weak {
+            background: #fd7e14; /* Orange for -55 to -40 dB */
+        }
+
+        .signal-very-weak {
+            background: #dc3545; /* Red for < -55 dB */
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .charts {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📻 FM Digital Detection Scan Browser</h1>
+            <p>View and analyze FM station scans with HD Radio detection</p>
+        </div>
+
+        <div class="controls">
+            <div class="file-input-wrapper">
+                <div>
+                    <label for="scanDirectory">Or Browse for Directory:</label>
+                    <input type="file" id="scanDirectory" webkitdirectory directory multiple>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <div class="loading">
+                <h2>🔍 Loading available scans...</h2>
+                <p>Searching current directory for fm_scan_* folders</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scans = [];
+        let currentScan = null;
+        const API_BASE = window.location.origin;
+
+        // Helper function to get signal strength class based on dB level
+        function getSignalClass(signalLevel) {
+            if (signalLevel > -25) return 'signal-strong';
+            if (signalLevel > -40) return 'signal-medium';
+            if (signalLevel > -55) return 'signal-weak';
+            return 'signal-very-weak';
+        }
+
+        // Load available scans on page load
+        window.addEventListener('DOMContentLoaded', loadAvailableScans);
+
+        document.getElementById('scanDirectory').addEventListener('change', handleDirectorySelect);
+
+        async function handleDirectorySelect(event) {
+            const files = Array.from(event.target.files);
+            const msgpackFiles = files.filter(f => f.name.endsWith('.msgpack'));
+
+            if (msgpackFiles.length === 0) {
+                showError('No .msgpack files found in selected directory');
+                return;
+            }
+
+            scans = [];
+            for (const file of msgpackFiles) {
+                try {
+                    const data = await loadMsgpackFile(file);
+                    scans.push({
+                        filename: file.name,
+                        uid: data.uid,
+                        data: data
+                    });
+                } catch (error) {
+                    console.error(`Error loading ${file.name}:`, error);
+                }
+            }
+
+            if (scans.length > 0) {
+                updateScanSelector();
+                loadScan(0);
+            }
+        }
+
+        async function loadMsgpackFile(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            // Decode stream of msgpack objects
+            const decoder = msgpack.Decoder();
+            const documents = decoder.decode(uint8Array);
+
+            // Parse Bluesky documents
+            let startDoc = null;
+            let descriptorDoc = null;
+            const events = [];
+
+            for (const [docType, doc] of documents) {
+                if (docType === 'start') {
+                    startDoc = doc;
+                } else if (docType === 'descriptor') {
+                    descriptorDoc = doc;
+                } else if (docType === 'event') {
+                    events.push(doc);
+                } else if (docType === 'event_page') {
+                    // Convert event_page to individual events
+                    const numEvents = doc.data[Object.keys(doc.data)[0]].length;
+                    for (let i = 0; i < numEvents; i++) {
+                        const event = {
+                            data: {},
+                            timestamps: {},
+                            seq_num: Array.isArray(doc.seq_num) ? doc.seq_num[i] : doc.seq_num,
+                            time: Array.isArray(doc.time) ? doc.time[i] : doc.time,
+                            uid: doc.uid,
+                            descriptor: doc.descriptor
+                        };
+                        for (const key in doc.data) {
+                            event.data[key] = doc.data[key][i];
+                            event.timestamps[key] = doc.timestamps[key][i];
+                        }
+                        events.push(event);
+                    }
+                }
+            }
+
+            return {
+                uid: startDoc?.uid || 'unknown',
+                start: startDoc,
+                descriptor: descriptorDoc,
+                events: events
+            };
+        }
+
+        function updateScanSelector() {
+            const selector = document.getElementById('scanSelector');
+            const select = document.getElementById('scanList');
+
+            select.innerHTML = '';
+            scans.forEach((scan, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                const timestamp = scan.start?.time ? new Date(scan.start.time * 1000).toLocaleString() : 'Unknown';
+                option.textContent = `${scan.filename.replace('.msgpack', '')} - ${timestamp}`;
+                select.appendChild(option);
+            });
+
+            selector.style.display = 'flex';
+        }
+
+        function handleScanSelect(event) {
+            loadScan(parseInt(event.target.value));
+        }
+
+        function loadScan(index) {
+            currentScan = scans[index];
+
+            // Update selected state
+            document.querySelectorAll('.scan-card').forEach((card, i) => {
+                if (i === index) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+
+            // Display in preview pane
+            const previewPane = document.getElementById('scanPreview');
+            if (previewPane) {
+                displayScanInPane(currentScan.data, previewPane);
+            } else {
+                // Full page display (when opened from file browser)
+                displayScan(currentScan);
+            }
+        }
+
+        function displayScanInPane(scan, pane) {
+            // Extract metadata
+            const metadata = scan.start?.metadata || {};
+            const events = scan.events || [];
+            const startTime = scan.start?.time ? new Date(scan.start.time * 1000) : new Date();
+
+            // Separate digital and analog stations
+            const digitalStations = [];
+            const analogStations = [];
+            const allStations = [];
+
+            events.forEach(event => {
+                const data = event.data;
+                const station = {
+                    frequency: data.frequency,
+                    signal_level: data.signal_level,
+                    digital: data.digital_detected,
+                    name: data.station_name,
+                    format: data.station_format,
+                    location: data.station_location,
+                    audio_file: data.audio_file || null
+                };
+                allStations.push(station);
+
+                if (data.digital_detected) {
+                    digitalStations.push(station);
+                } else {
+                    analogStations.push(station);
+                }
+            });
+
+            // Calculate averages
+            const avgDigitalSignal = digitalStations.length > 0
+                ? digitalStations.reduce((sum, s) => sum + s.signal_level, 0) / digitalStations.length
+                : 0;
+            const avgAnalogSignal = analogStations.length > 0
+                ? analogStations.reduce((sum, s) => sum + s.signal_level, 0) / analogStations.length
+                : 0;
+
+            pane.innerHTML = `
+                <div class="metadata">
+                    <div class="metadata-item">
+                        <div class="label">Scan Date</div>
+                        <div class="value">${startTime.toLocaleString()}</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Total Stations</div>
+                        <div class="value">${events.length}</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Digital Stations</div>
+                        <div class="value">${digitalStations.length} (${(digitalStations.length/events.length*100).toFixed(0)}%)</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Analog Stations</div>
+                        <div class="value">${analogStations.length} (${(analogStations.length/events.length*100).toFixed(0)}%)</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Avg Digital Signal</div>
+                        <div class="value">${avgDigitalSignal.toFixed(1)} dB</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Avg Analog Signal</div>
+                        <div class="value">${avgAnalogSignal.toFixed(1)} dB</div>
+                    </div>
+                </div>
+
+                <div class="charts">
+                    <div class="chart-container">
+                        <h3>Digital vs Analog</h3>
+                        <canvas id="previewPieChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Signal Levels</h3>
+                        <canvas id="previewSignalChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stations-table">
+                    <h3>Station Details</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Frequency</th>
+                                <th>Station</th>
+                                <th>Signal Level</th>
+                                <th>Digital</th>
+                                <th>Audio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${allStations.map(station => {
+                                const audioCell = station.audio_file
+                                    ? `<audio controls style="height: 30px;"><source src="${API_BASE}/api/audio/${currentScan.directory}/audio/${station.audio_file}" type="audio/wav"></audio>`
+                                    : '<span style="color: #999;">N/A</span>';
+                                return `
+                                <tr>
+                                    <td><strong>${station.frequency.toFixed(1)} MHz</strong></td>
+                                    <td>${station.name}</td>
+                                    <td style="text-align: right;">
+                                        ${station.signal_level.toFixed(1)} dB
+                                        <span class="signal-bar ${getSignalClass(station.signal_level)}" style="width: ${Math.max(0, (station.signal_level + 80) * 1.5)}px;"></span>
+                                    </td>
+                                    <td>
+                                        <span class="digital-badge ${station.digital ? 'digital-yes' : 'digital-no'}">
+                                            ${station.digital ? '✓ DIGITAL' : '✗ Analog'}
+                                        </span>
+                                    </td>
+                                    <td>${audioCell}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Create charts with preview IDs
+            createPreviewPieChart(digitalStations.length, analogStations.length);
+            createPreviewSignalChart(allStations);
+        }
+
+        function createPreviewPieChart(digital, analog) {
+            const ctx = document.getElementById('previewPieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Digital FM', 'Analog Only'],
+                    datasets: [{
+                        data: [digital, analog],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPreviewSignalChart(stations) {
+            const ctx = document.getElementById('previewSignalChart').getContext('2d');
+
+            const digitalData = stations.filter(s => s.digital);
+            const analogData = stations.filter(s => !s.digital);
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Digital FM',
+                        data: digitalData.map(s => ({x: s.frequency, y: s.signal_level})),
+                        backgroundColor: '#28a745',
+                        borderColor: '#28a745',
+                        pointRadius: 6
+                    }, {
+                        label: 'Analog Only',
+                        data: analogData.map(s => ({x: s.frequency, y: s.signal_level})),
+                        backgroundColor: '#dc3545',
+                        borderColor: '#dc3545',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Frequency (MHz)'
+                            },
+                            min: 88,
+                            max: 108
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Signal Level (dB)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const station = context.dataset.label === 'Digital FM'
+                                        ? digitalData[context.dataIndex]
+                                        : analogData[context.dataIndex];
+                                    return [
+                                        station.name,
+                                        `${station.frequency.toFixed(1)} MHz`,
+                                        `${station.signal_level.toFixed(1)} dB`
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayScan(scanObj) {
+            const content = document.getElementById('content');
+
+            // Extract scan data (handle both full scan object and data-only)
+            const scan = scanObj.data || scanObj;
+            const directory = scanObj.directory || '';
+
+            // Extract metadata
+            const metadata = scan.start?.metadata || {};
+            const events = scan.events || [];
+            const startTime = scan.start?.time ? new Date(scan.start.time * 1000) : new Date();
+
+            // Separate digital and analog stations
+            const digitalStations = [];
+            const analogStations = [];
+            const allStations = [];
+
+            events.forEach(event => {
+                const data = event.data;
+                const station = {
+                    frequency: data.frequency,
+                    signal_level: data.signal_level,
+                    digital: data.digital_detected,
+                    name: data.station_name,
+                    format: data.station_format,
+                    location: data.station_location,
+                    audio_file: data.audio_file || null
+                };
+                allStations.push(station);
+
+                if (data.digital_detected) {
+                    digitalStations.push(station);
+                } else {
+                    analogStations.push(station);
+                }
+            });
+
+            // Calculate averages
+            const avgDigitalSignal = digitalStations.length > 0
+                ? digitalStations.reduce((sum, s) => sum + s.signal_level, 0) / digitalStations.length
+                : 0;
+            const avgAnalogSignal = analogStations.length > 0
+                ? analogStations.reduce((sum, s) => sum + s.signal_level, 0) / analogStations.length
+                : 0;
+
+            content.innerHTML = `
+                <div class="metadata">
+                    <div class="metadata-item">
+                        <div class="label">Scan Date</div>
+                        <div class="value">${startTime.toLocaleString()}</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Total Stations</div>
+                        <div class="value">${events.length}</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Digital Stations</div>
+                        <div class="value">${digitalStations.length} (${(digitalStations.length/events.length*100).toFixed(0)}%)</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Analog Stations</div>
+                        <div class="value">${analogStations.length} (${(analogStations.length/events.length*100).toFixed(0)}%)</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Avg Digital Signal</div>
+                        <div class="value">${avgDigitalSignal.toFixed(1)} dB</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Avg Analog Signal</div>
+                        <div class="value">${avgAnalogSignal.toFixed(1)} dB</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Dwell Time</div>
+                        <div class="value">${metadata.dwell_time || 'N/A'} sec</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="label">Run UID</div>
+                        <div class="value" style="font-size: 0.9em;">${scan.uid.substring(0, 8)}...</div>
+                    </div>
+                </div>
+
+                <div class="charts">
+                    <div class="chart-container">
+                        <h3>Digital vs Analog Distribution</h3>
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Signal Levels by Frequency</h3>
+                        <canvas id="signalChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stations-table">
+                    <h3>Station Details</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Frequency</th>
+                                <th>Station</th>
+                                <th>Format</th>
+                                <th>Location</th>
+                                <th>Signal Level</th>
+                                <th>Digital</th>
+                                <th>Audio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${allStations.map(station => {
+                                const audioCell = station.audio_file
+                                    ? `<audio controls style="height: 30px;"><source src="${API_BASE}/api/audio/${directory}/audio/${station.audio_file}" type="audio/wav"></audio>`
+                                    : '<span style="color: #999;">N/A</span>';
+                                return `
+                                <tr>
+                                    <td><strong>${station.frequency.toFixed(1)} MHz</strong></td>
+                                    <td>${station.name}</td>
+                                    <td>${station.format}</td>
+                                    <td>${station.location}</td>
+                                    <td style="text-align: right;">
+                                        ${station.signal_level.toFixed(1)} dB
+                                        <span class="signal-bar ${getSignalClass(station.signal_level)}" style="width: ${Math.max(0, (station.signal_level + 80) * 1.5)}px;"></span>
+                                    </td>
+                                    <td>
+                                        <span class="digital-badge ${station.digital ? 'digital-yes' : 'digital-no'}">
+                                            ${station.digital ? '✓ DIGITAL' : '✗ Analog'}
+                                        </span>
+                                    </td>
+                                    <td>${audioCell}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Create charts
+            createPieChart(digitalStations.length, analogStations.length);
+            createSignalChart(allStations);
+        }
+
+        function createPieChart(digital, analog) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Digital FM', 'Analog Only'],
+                    datasets: [{
+                        data: [digital, analog],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSignalChart(stations) {
+            const ctx = document.getElementById('signalChart').getContext('2d');
+
+            const digitalData = stations.filter(s => s.digital);
+            const analogData = stations.filter(s => !s.digital);
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Digital FM',
+                        data: digitalData.map(s => ({x: s.frequency, y: s.signal_level})),
+                        backgroundColor: '#28a745',
+                        borderColor: '#28a745',
+                        pointRadius: 6
+                    }, {
+                        label: 'Analog Only',
+                        data: analogData.map(s => ({x: s.frequency, y: s.signal_level})),
+                        backgroundColor: '#dc3545',
+                        borderColor: '#dc3545',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Frequency (MHz)'
+                            },
+                            min: 88,
+                            max: 108
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Signal Level (dB)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const station = context.dataset.label === 'Digital FM'
+                                        ? digitalData[context.dataIndex]
+                                        : analogData[context.dataIndex];
+                                    return [
+                                        station.name,
+                                        `${station.frequency.toFixed(1)} MHz`,
+                                        `${station.signal_level.toFixed(1)} dB`
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showError(message) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="error">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        async function loadAvailableScans() {
+            try {
+                const response = await fetch(`${API_BASE}/api/scans`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch scans');
+                }
+
+                const availableScans = await response.json();
+
+                if (availableScans.length === 0) {
+                    showNoScansMessage();
+                    return;
+                }
+
+                // Load all scans
+                scans = [];
+                for (const scanInfo of availableScans) {
+                    for (const filename of scanInfo.files) {
+                        try {
+                            const data = await loadScanFromServer(scanInfo.directory, filename);
+                            scans.push({
+                                filename: filename,
+                                directory: scanInfo.directory,
+                                uid: data.uid,
+                                timestamp: scanInfo.timestamp,
+                                data: data
+                            });
+                        } catch (error) {
+                            console.error(`Error loading ${scanInfo.directory}/${filename}:`, error);
+                        }
+                    }
+                }
+
+                if (scans.length > 0) {
+                    displayScanSelector();
+                    loadScan(0);
+                } else {
+                    showNoScansMessage();
+                }
+
+            } catch (error) {
+                console.error('Error loading scans:', error);
+                showManualLoadMessage();
+            }
+        }
+
+        async function loadScanFromServer(directory, filename) {
+            const response = await fetch(`${API_BASE}/api/scan/${directory}/${filename}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load scan: ${response.statusText}`);
+            }
+
+            // Server now returns JSON instead of msgpack
+            const documents = await response.json();
+
+            // Parse Bluesky documents
+            let startDoc = null;
+            let descriptorDoc = null;
+            const events = [];
+
+            for (const [docType, doc] of documents) {
+                if (docType === 'start') {
+                    startDoc = doc;
+                } else if (docType === 'descriptor') {
+                    descriptorDoc = doc;
+                } else if (docType === 'event') {
+                    events.push(doc);
+                } else if (docType === 'event_page') {
+                    // Convert event_page to individual events
+                    const numEvents = doc.data[Object.keys(doc.data)[0]].length;
+                    for (let i = 0; i < numEvents; i++) {
+                        const event = {
+                            data: {},
+                            timestamps: {},
+                            seq_num: Array.isArray(doc.seq_num) ? doc.seq_num[i] : doc.seq_num,
+                            time: Array.isArray(doc.time) ? doc.time[i] : doc.time,
+                            uid: doc.uid,
+                            descriptor: doc.descriptor
+                        };
+                        for (const key in doc.data) {
+                            event.data[key] = doc.data[key][i];
+                            event.timestamps[key] = doc.timestamps[key][i];
+                        }
+                        events.push(event);
+                    }
+                }
+            }
+
+            return {
+                uid: startDoc?.uid || 'unknown',
+                start: startDoc,
+                descriptor: descriptorDoc,
+                events: events
+            };
+        }
+
+        function displayScanSelector() {
+            const content = document.getElementById('content');
+
+            // Create scan selector UI
+            const scanOptions = scans.map((scan, index) => {
+                const timestamp = scan.data.start?.time ? new Date(scan.data.start.time * 1000).toLocaleString() : 'Unknown';
+                const numStations = scan.data.events?.length || 0;
+                const numDigital = scan.data.events?.filter(e => e.data.digital_detected).length || 0;
+
+                return `
+                    <div class="scan-card ${index === 0 ? 'selected' : ''}" onclick="loadScan(${index})">
+                        <div class="scan-header">
+                            <h3>📡 ${scan.directory}</h3>
+                            <span class="scan-time">${timestamp}</span>
+                        </div>
+                        <div class="scan-stats">
+                            <span><strong>${numStations}</strong> stations</span>
+                            <span><strong>${numDigital}</strong> digital</span>
+                            <span><strong>${numStations - numDigital}</strong> analog</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            content.innerHTML = `
+                <div class="scan-selector-grid">
+                    <div class="available-scans">
+                        <h2>📂 Available Scans (${scans.length})</h2>
+                        <div class="scan-list">
+                            ${scanOptions}
+                        </div>
+                    </div>
+                    <div class="scan-preview" id="scanPreview">
+                        <div class="loading">Select a scan to view details</div>
+                    </div>
+                </div>
+                <style>
+                    .scan-selector-grid {
+                        display: grid;
+                        grid-template-columns: 350px 1fr;
+                        gap: 20px;
+                        height: calc(100vh - 300px);
+                    }
+                    .available-scans h2 {
+                        margin-bottom: 15px;
+                        color: #333;
+                    }
+                    .scan-list {
+                        max-height: calc(100vh - 350px);
+                        overflow-y: auto;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+                    .scan-card {
+                        background: #f8f9fa;
+                        border: 2px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 15px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .scan-card:hover {
+                        border-color: #667eea;
+                        transform: translateX(5px);
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+                    }
+                    .scan-card.selected {
+                        border-color: #667eea;
+                        background: #e7f0ff;
+                    }
+                    .scan-header h3 {
+                        margin: 0 0 5px 0;
+                        font-size: 1em;
+                        color: #333;
+                    }
+                    .scan-time {
+                        font-size: 0.85em;
+                        color: #6c757d;
+                    }
+                    .scan-stats {
+                        display: flex;
+                        gap: 15px;
+                        margin-top: 10px;
+                        font-size: 0.9em;
+                    }
+                    .scan-preview {
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        padding: 20px;
+                        overflow-y: auto;
+                    }
+                </style>
+            `;
+        }
+
+        function showNoScansMessage() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="loading">
+                    <h2>📭 No scans found</h2>
+                    <p>Run a scan using: <code>python scan_and_detect_digital.py</code></p>
+                    <p style="margin-top: 20px;">Or use the file browser above to manually select a scan directory</p>
+                </div>
+            `;
+        }
+
+        function showManualLoadMessage() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="loading">
+                    <h2>🌐 Server not detected</h2>
+                    <p>Start the server with: <code>python scan_server.py</code></p>
+                    <p style="margin-top: 20px;">Or use the file browser above to manually select a scan directory</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

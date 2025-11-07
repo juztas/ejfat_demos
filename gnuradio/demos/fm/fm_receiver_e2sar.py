@@ -26,10 +26,26 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
-import sip
+from xmlrpc.server import SimpleXMLRPCServer
 import threading
+import fm_receiver_e2sar_switchable_wav_sink_0 as switchable_wav_sink_0  # embedded python block
+import sip
 
 
+def snipfcn_snippet_wav_control(self):
+    import pmt
+
+    def set_wav_filename(self, filename):
+        """Send filename message to switchable WAV sink."""
+        msg = pmt.intern(filename)
+        self.switchable_wav_sink_0.to_basic_block()._post(pmt.intern('filename'), msg)
+        return True
+
+    self.set_wav_filename = lambda filename: set_wav_filename(self, filename)
+
+
+def snippets_main_after_init(tb):
+    snipfcn_snippet_wav_control(tb)
 
 class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
 
@@ -84,6 +100,12 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
         self._volume_range = qtgui.Range(0, 10, 0.1, 1, 200)
         self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volume", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._volume_win)
+        self.xmlrpc_server_0 = SimpleXMLRPCServer(('localhost', 8081), allow_none=True)
+        self.xmlrpc_server_0.register_instance(self)
+        self.xmlrpc_server_0_thread = threading.Thread(target=self.xmlrpc_server_0.serve_forever)
+        self.xmlrpc_server_0_thread.daemon = True
+        self.xmlrpc_server_0_thread.start()
+        self.switchable_wav_sink_0 = switchable_wav_sink_0.switchable_wav_sink(sample_rate=audio_rate, channels=2)
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
                 interpolation=1,
                 decimation=5,
@@ -190,14 +212,6 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
             min_factor=0.5,
             max_factor=2.0
         )
-        self.blocks_wavfile_sink_0 = blocks.wavfile_sink(
-            'fm_e2sar.wav',
-            2,
-            audio_rate,
-            blocks.FORMAT_WAV,
-            blocks.FORMAT_PCM_16,
-            False
-            )
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_gr_complex*1, vlen)
         self.blocks_multiply_const_vxx_1 = blocks.multiply_const_ff(volume)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(volume)
@@ -215,9 +229,9 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
         self.connect((self.analog_wfm_rcv_pll_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.analog_wfm_rcv_pll_0, 1), (self.blocks_multiply_const_vxx_1, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_wavfile_sink_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.switchable_wav_sink_0, 0))
         self.connect((self.blocks_multiply_const_vxx_1, 0), (self.audio_sink_0, 1))
-        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.blocks_wavfile_sink_0, 1))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.switchable_wav_sink_0, 1))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.qtgui_waterfall_sink_x_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.rational_resampler_xxx_0, 0))
@@ -291,6 +305,7 @@ class fm_receiver_e2sar(gr.top_block, Qt.QWidget):
 
     def set_audio_rate(self, audio_rate):
         self.audio_rate = audio_rate
+        self.switchable_wav_sink_0.sample_rate = self.audio_rate
 
 
 
@@ -300,7 +315,7 @@ def main(top_block_cls=fm_receiver_e2sar, options=None):
     qapp = Qt.QApplication(sys.argv)
 
     tb = top_block_cls()
-
+    snippets_main_after_init(tb)
     tb.start()
     tb.flowgraph_started.set()
 

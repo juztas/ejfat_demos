@@ -150,6 +150,43 @@ blocks:
     coordinate: [864, 12.0]
     rotation: 0
     state: enabled
+- name: xmlrpc_server_0
+  id: xmlrpc_server
+  parameters:
+    addr: localhost
+    alias: ''
+    comment: 'XML-RPC Server for remote control
+
+      Port 8081 (detector uses 8080)'
+    port: '8081'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1000, 12.0]
+    rotation: 0
+    state: enabled
+- name: snippet_wav_control
+  id: snippet
+  parameters:
+    alias: ''
+    code: "import pmt\n\ndef set_wav_filename(self, filename):\n    \"\"\"Send filename\
+      \ message to switchable WAV sink.\"\"\"\n    msg = pmt.intern(filename)\n  \
+      \  self.switchable_wav_sink_0.to_basic_block()._post(pmt.intern('filename'),\
+      \ msg)\n    return True\n\nself.set_wav_filename = lambda filename: set_wav_filename(self,\
+      \ filename)"
+    comment: 'Adds set_wav_filename() method
+
+      Callable via XML-RPC to switch output files'
+    priority: '0'
+    section: main_after_init
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1000, 100.0]
+    rotation: 0
+    state: enabled
 - name: analog_wfm_rcv_pll_0
   id: analog_wfm_rcv_pll
   parameters:
@@ -241,22 +278,24 @@ blocks:
     coordinate: [72, 260.0]
     rotation: 0
     state: enabled
-- name: blocks_wavfile_sink_0
-  id: blocks_wavfile_sink
+- name: switchable_wav_sink_0
+  id: epy_block
   parameters:
+    _source_code: "import sys\nsys.path.append('.')\nfrom switchable_wav_sink import\
+      \ switchable_wav_sink\n"
     affinity: ''
     alias: ''
-    append: 'False'
-    bits_per_sample1: FORMAT_PCM_16
-    bits_per_sample2: FORMAT_PCM_16
-    bits_per_sample3: FORMAT_VORBIS
-    bits_per_sample4: FORMAT_PCM_16
-    comment: ''
-    file: fm_e2sar.wav
-    format: FORMAT_WAV
-    nchan: '2'
-    samp_rate: audio_rate
+    channels: '2'
+    comment: 'Custom WAV sink that switches files via messages
+
+      Send filename via XML-RPC'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    sample_rate: audio_rate
   states:
+    _io_cache: ('switchable WAV File Sink', 'switchable_wav_sink', [('sample_rate',
+      '48000'), ('channels', '2')], [('0', 'float', 1), ('1', 'float', 1)], [('filename',
+      'message', 1)], '', ['channels', 'sample_rate'])
     bus_sink: false
     bus_source: false
     bus_structure: null
@@ -466,9 +505,9 @@ connections:
 - [analog_wfm_rcv_pll_0, '0', blocks_multiply_const_vxx_0, '0']
 - [analog_wfm_rcv_pll_0, '1', blocks_multiply_const_vxx_1, '0']
 - [blocks_multiply_const_vxx_0, '0', audio_sink_0, '0']
-- [blocks_multiply_const_vxx_0, '0', blocks_wavfile_sink_0, '0']
+- [blocks_multiply_const_vxx_0, '0', switchable_wav_sink_0, '0']
 - [blocks_multiply_const_vxx_1, '0', audio_sink_0, '1']
-- [blocks_multiply_const_vxx_1, '0', blocks_wavfile_sink_0, '1']
+- [blocks_multiply_const_vxx_1, '0', switchable_wav_sink_0, '1']
 - [blocks_vector_to_stream_0, '0', qtgui_freq_sink_x_0, '0']
 - [blocks_vector_to_stream_0, '0', qtgui_waterfall_sink_x_0, '0']
 - [blocks_vector_to_stream_0, '0', rational_resampler_xxx_0, '0']
