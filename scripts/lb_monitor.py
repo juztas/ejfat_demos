@@ -182,6 +182,10 @@ class LBMonitor:
             self.start_time = datetime.now()
             alert = f"🟢 SENDERS ACTIVE: {sender_count} sender(s) started"
 
+        # Check if receivers dropped to zero while senders still active
+        if self.senders_seen and sender_count > 0 and worker_count == 0:
+            alert = f"💀 OH OH.. BAD NEWS BEARS - Receivers dropped to 0 while {sender_count} sender(s) still active!"
+
         # Check if senders dropped to zero (after being active)
         if self.senders_seen and self.last_sender_count > 0 and sender_count == 0:
             elapsed = ""
@@ -243,6 +247,37 @@ class LBMonitor:
         else:
             table.add_row("Status", "[yellow]Waiting for data...[/yellow]")
 
+        # IP address tables
+        ip_tables = Table.grid(padding=(0, 2))
+
+        # Receivers table
+        receivers_table = Table(title="Receivers", box=box.ROUNDED, show_header=True, width=40)
+        receivers_table.add_column("#", style="dim", width=3)
+        receivers_table.add_column("IP Address", style="green")
+
+        if data and data.get('workers'):
+            for i, ip in enumerate(data['workers'], 1):
+                receivers_table.add_row(str(i), ip)
+        elif data and data['worker_count'] == 0:
+            receivers_table.add_row("", "[dim]No receivers[/dim]")
+        else:
+            receivers_table.add_row("", "[dim]Waiting...[/dim]")
+
+        # Senders table
+        senders_table = Table(title="Senders", box=box.ROUNDED, show_header=True, width=40)
+        senders_table.add_column("#", style="dim", width=3)
+        senders_table.add_column("IP Address", style="yellow")
+
+        if data and data.get('senders'):
+            for i, ip in enumerate(data['senders'], 1):
+                senders_table.add_row(str(i), ip)
+        elif data and data['sender_count'] == 0:
+            senders_table.add_row("", "[dim]No senders[/dim]")
+        else:
+            senders_table.add_row("", "[dim]Waiting...[/dim]")
+
+        ip_tables.add_row(receivers_table, senders_table)
+
         # State indicators
         state_text = Text()
         if self.receivers_seen:
@@ -259,11 +294,20 @@ class LBMonitor:
         display = Table.grid()
         display.add_row(table)
         display.add_row("")
+        display.add_row(ip_tables)
+        display.add_row("")
         display.add_row(Panel(state_text, title="State Tracking", border_style="blue"))
 
         if alert:
             display.add_row("")
-            if "TIME TO KILL" in alert:
+            if "BAD NEWS BEARS" in alert:
+                display.add_row(Panel(
+                    Text(alert, style="bold white on red", justify="center"),
+                    border_style="red",
+                    box=box.DOUBLE,
+                    title="[bold red]💀  ERROR  💀[/bold red]"
+                ))
+            elif "TIME TO KILL" in alert:
                 display.add_row(Panel(
                     Text(alert, style="bold white on red", justify="center"),
                     border_style="red",
