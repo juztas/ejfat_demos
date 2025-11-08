@@ -7,7 +7,10 @@ Tracks state transitions and alerts when senders complete.
 
 Usage:
   cd ESnetDTN/runs/test2
-  python3 ~/ejfat_demos/scripts/lb_monitor.py
+  python3 ~/ejfat_demos/scripts/lb_monitor.py [--debug]
+
+Options:
+  --debug    Enable debug mode (writes raw output to lb_monitor_debug.log)
 """
 
 import subprocess
@@ -24,13 +27,17 @@ from rich.text import Text
 from rich import box
 
 class LBMonitor:
-    def __init__(self):
+    def __init__(self, debug=False):
         self.console = Console()
         self.receivers_seen = False
         self.senders_seen = False
         self.last_sender_count = 0
         self.start_time = None
         self.iteration = 0
+        self.debug = debug
+        if self.debug:
+            self.debug_file = open('lb_monitor_debug.log', 'w')
+            self.debug_file.write(f"=== Debug log started at {datetime.now()} ===\n\n")
 
     def run_make_overview(self):
         """Run 'make overview' command locally (non-interactive)"""
@@ -75,6 +82,12 @@ class LBMonitor:
         """Parse lbadm --overview output"""
         if not output:
             return None
+
+        if self.debug:
+            self.debug_file.write(f"\n=== Iteration {self.iteration} at {datetime.now()} ===\n")
+            self.debug_file.write(output)
+            self.debug_file.write("\n" + "="*80 + "\n")
+            self.debug_file.flush()
 
         data = {
             'timestamp': datetime.now().strftime('%H:%M:%S'),
@@ -364,7 +377,11 @@ class LBMonitor:
 
 
 def main():
-    monitor = LBMonitor()
+    debug = '--debug' in sys.argv
+    if debug:
+        print("Debug mode enabled - writing to lb_monitor_debug.log")
+
+    monitor = LBMonitor(debug=debug)
     monitor.run()
 
 
