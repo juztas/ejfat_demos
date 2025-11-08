@@ -59,8 +59,10 @@ class LBMonitor:
 
             # Run the overview script directly (it returns one snapshot)
             # The script reads EJFAT_URI from INSTANCE_URI and IP_VERSION from env
+            # Need to activate conda environment first (like make overview does)
             ssh_command = (
-                'bash -l -c "cd ~/ejfat_demos/ESnetDTN/runs/test2 && '
+                'bash -i -c "conda activate e2sar && '
+                'cd ~/ejfat_demos/ESnetDTN/runs/test2 && '
                 'source INSTANCE_URI && '
                 'export IP_VERSION=-6 && '
                 '../../../scripts/overview"'
