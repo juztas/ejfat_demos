@@ -7,7 +7,7 @@
 #
 
 # Bar width in characters
-BAR_WIDTH=50
+BAR_WIDTH=40
 
 # Color codes
 GREEN='\033[42m'
