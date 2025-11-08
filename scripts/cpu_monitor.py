@@ -2,7 +2,7 @@
 """
 CPU Utilization Monitor with Real-time Bar Charts
 Displays per-core CPU usage using rich library
-Highlights e2sar_perf process usage
+Highlights e2sar_perf process usage with unique colors per process
 """
 
 import time
@@ -15,6 +15,29 @@ from rich.panel import Panel
 from rich.layout import Layout
 from rich.text import Text
 from collections import defaultdict
+
+
+# Color palette for e2sar_perf processes (bright, distinct colors)
+PROCESS_COLORS = [
+    "magenta",
+    "cyan",
+    "bright_blue",
+    "bright_magenta",
+    "bright_cyan",
+    "blue",
+    "purple",
+    "bright_green"
+]
+
+
+def assign_process_colors(e2sar_processes):
+    """Assign a unique color to each e2sar_perf process"""
+    color_map = {}
+    for idx, proc_info in enumerate(e2sar_processes):
+        pid = proc_info['pid']
+        # Cycle through colors if we have more than 8 processes
+        color_map[pid] = PROCESS_COLORS[idx % len(PROCESS_COLORS)]
+    return color_map
 
 
 def get_e2sar_processes():
@@ -57,43 +80,61 @@ def get_cpu_color(percentage):
         return "red"
 
 
-def create_hybrid_bar(total_percent, e2sar_percent, width=25):
-    """Create a visual bar with e2sar_perf usage highlighted
+def create_stacked_bar(total_percent, e2sar_processes, process_colors, per_core_dist, width=25):
+    """Create a visual bar with stacked segments for each e2sar_perf process
 
     Args:
         total_percent: Total CPU usage on this core
-        e2sar_percent: Estimated e2sar_perf CPU usage on this core
+        e2sar_processes: List of e2sar_perf process info
+        process_colors: Dict mapping PID to color
+        per_core_dist: List of (pid, percent) tuples for this core
         width: Width of the bar in characters
     """
-    # Calculate filled portions
     total_filled = int((total_percent / 100) * width)
-    e2sar_filled = int((e2sar_percent / 100) * width)
 
-    # Ensure e2sar doesn't exceed total
-    e2sar_filled = min(e2sar_filled, total_filled)
-    other_filled = total_filled - e2sar_filled
+    # Build segments for each process
+    segments = []
+    filled_so_far = 0
+
+    for pid, proc_percent in per_core_dist:
+        proc_filled = int((proc_percent / 100) * width)
+        proc_filled = min(proc_filled, total_filled - filled_so_far)
+        if proc_filled > 0:
+            color = process_colors.get(pid, "magenta")
+            segments.append((color, proc_filled))
+            filled_so_far += proc_filled
+
+    # Other processes (non-e2sar)
+    other_filled = total_filled - filled_so_far
     empty = width - total_filled
 
-    # Build the bar with e2sar in magenta, other in normal color, empty in gray
+    # Build the bar
     color = get_cpu_color(total_percent)
-
     bar = ""
-    if e2sar_filled > 0:
-        bar += f"[magenta]{'█' * e2sar_filled}[/magenta]"
+
+    # Add e2sar process segments
+    for seg_color, seg_size in segments:
+        bar += f"[{seg_color}]{'█' * seg_size}[/{seg_color}]"
+
+    # Add other processes
     if other_filled > 0:
         bar += f"[{color}]{'█' * other_filled}[/{color}]"
+
+    # Add empty space
     if empty > 0:
         bar += f"[{color}]{'░' * empty}[/{color}]"
 
     return bar
 
 
-def create_cpu_table(cpu_percentages, e2sar_per_core):
+def create_cpu_table(cpu_percentages, e2sar_processes, process_colors, e2sar_per_core_dist):
     """Create a table with CPU usage bars for each core
 
     Args:
         cpu_percentages: List of CPU usage per core
-        e2sar_per_core: List of estimated e2sar_perf usage per core
+        e2sar_processes: List of e2sar_perf process info
+        process_colors: Dict mapping PID to color
+        e2sar_per_core_dist: List of per-core process distributions
     """
     table = Table(show_header=True, header_style="bold magenta", expand=True)
     table.add_column("Core", style="cyan", width=8)
@@ -102,8 +143,8 @@ def create_cpu_table(cpu_percentages, e2sar_per_core):
 
     for i, percent in enumerate(cpu_percentages):
         color = get_cpu_color(percent)
-        e2sar_pct = e2sar_per_core[i] if i < len(e2sar_per_core) else 0
-        bar = create_hybrid_bar(percent, e2sar_pct, width=25)
+        per_core_dist = e2sar_per_core_dist[i] if i < len(e2sar_per_core_dist) else []
+        bar = create_stacked_bar(percent, e2sar_processes, process_colors, per_core_dist, width=25)
 
         table.add_row(
             f"Core {i}",
@@ -114,13 +155,14 @@ def create_cpu_table(cpu_percentages, e2sar_per_core):
     return table
 
 
-def create_e2sar_process_table(e2sar_processes):
-    """Create a table showing e2sar_perf processes (Option 2)"""
+def create_e2sar_process_table(e2sar_processes, process_colors):
+    """Create a table showing e2sar_perf processes without borders"""
     if not e2sar_processes:
         return Text("No e2sar_perf processes found", style="dim")
 
-    table = Table(show_header=True, header_style="bold cyan", expand=True)
-    table.add_column("PID", style="cyan", width=8)
+    # Table without borders
+    table = Table(show_header=True, header_style="bold cyan", expand=True,
+                  show_edge=False, box=None, padding=(0, 1))
     table.add_column("Mode", style="yellow", width=6)
     table.add_column("CPU %", justify="right", width=10)
 
@@ -128,11 +170,18 @@ def create_e2sar_process_table(e2sar_processes):
     sorted_procs = sorted(e2sar_processes, key=lambda x: x['cpu_percent'], reverse=True)
 
     for proc_info in sorted_procs:
-        mode_display = f"[{'green' if proc_info['mode'] == 'rcv' else 'blue'}]{proc_info['mode']}[/]" if proc_info['mode'] else "[dim]-[/dim]"
+        pid = proc_info['pid']
+        color = process_colors.get(pid, "white")
+
+        # Mode with background color matching bar
+        if proc_info['mode']:
+            mode_display = Text(proc_info['mode'], style=f"black on {color}")
+        else:
+            mode_display = Text("-", style="dim")
+
         cpu_color = get_cpu_color(proc_info['cpu_percent'])
 
         table.add_row(
-            f"{proc_info['pid']}",
             mode_display,
             f"[{cpu_color}]{proc_info['cpu_percent']:.1f}%[/{cpu_color}]"
         )
@@ -165,7 +214,7 @@ def create_overall_stats(cpu_percentages, cpu_freq, total_e2sar_cpu):
     return stats
 
 
-def generate_display(cpu_percentages, e2sar_processes, e2sar_per_core):
+def generate_display(cpu_percentages, e2sar_processes, process_colors, e2sar_per_core_dist):
     """Generate the complete display layout"""
     try:
         cpu_freq = psutil.cpu_freq()
@@ -199,28 +248,36 @@ def generate_display(cpu_percentages, e2sar_processes, e2sar_per_core):
                                   title="Overall Statistics", border_style="blue"))
 
     # e2sar_perf processes table (right side)
-    layout["e2sar_procs"].update(Panel(create_e2sar_process_table(e2sar_processes),
+    layout["e2sar_procs"].update(Panel(create_e2sar_process_table(e2sar_processes, process_colors),
                                        title="e2sar_perf Processes", border_style="magenta"))
 
-    # CPU bars (Option 3 - hybrid view)
-    layout["bars"].update(Panel(create_cpu_table(cpu_percentages, e2sar_per_core),
-                                title="Per-Core Usage (magenta=e2sar_perf)", border_style="green"))
+    # CPU bars with stacked process colors
+    layout["bars"].update(Panel(create_cpu_table(cpu_percentages, e2sar_processes, process_colors, e2sar_per_core_dist),
+                                title="Per-Core Usage (colored by process)", border_style="green"))
 
     return layout
 
 
-def estimate_e2sar_per_core(e2sar_processes, num_cores):
-    """Estimate e2sar_perf CPU usage per core
+def estimate_e2sar_per_core_distribution(e2sar_processes, num_cores):
+    """Estimate per-core CPU distribution for each e2sar_perf process
 
-    Simple distribution: divide total e2sar CPU across all cores equally
-    This is an approximation since we can't easily get exact per-core per-process data
+    Returns a list where each element is a list of (pid, percent) tuples for that core
+    This is an approximation - we distribute each process's CPU evenly across cores
     """
-    total_e2sar_cpu = sum(p['cpu_percent'] for p in e2sar_processes)
+    per_core_dist = [[] for _ in range(num_cores)]
 
-    # Simple approach: distribute evenly
-    per_core = total_e2sar_cpu / num_cores if num_cores > 0 else 0
+    for proc_info in e2sar_processes:
+        pid = proc_info['pid']
+        total_cpu = proc_info['cpu_percent']
 
-    return [per_core] * num_cores
+        # Distribute this process's CPU evenly across all cores
+        per_core = total_cpu / num_cores if num_cores > 0 else 0
+
+        for core_idx in range(num_cores):
+            if per_core > 0:
+                per_core_dist[core_idx].append((pid, per_core))
+
+    return per_core_dist
 
 
 def main():
@@ -236,9 +293,13 @@ def main():
         num_cores = psutil.cpu_count()
         cpu_percentages = psutil.cpu_percent(interval=0.1, percpu=True)
         e2sar_processes = get_e2sar_processes()
-        e2sar_per_core = estimate_e2sar_per_core(e2sar_processes, num_cores)
 
-        with Live(generate_display(cpu_percentages, e2sar_processes, e2sar_per_core),
+        # Sort processes by PID to maintain consistent color assignment
+        e2sar_processes = sorted(e2sar_processes, key=lambda x: x['pid'])
+        process_colors = assign_process_colors(e2sar_processes)
+        e2sar_per_core_dist = estimate_e2sar_per_core_distribution(e2sar_processes, num_cores)
+
+        with Live(generate_display(cpu_percentages, e2sar_processes, process_colors, e2sar_per_core_dist),
                   refresh_per_second=0.5, console=console) as live:
             while True:
                 # Collect CPU samples over time
@@ -255,10 +316,14 @@ def main():
 
                 # Get e2sar_perf processes
                 e2sar_processes = get_e2sar_processes()
-                e2sar_per_core = estimate_e2sar_per_core(e2sar_processes, num_cores)
+
+                # Sort by PID to maintain consistent colors
+                e2sar_processes = sorted(e2sar_processes, key=lambda x: x['pid'])
+                process_colors = assign_process_colors(e2sar_processes)
+                e2sar_per_core_dist = estimate_e2sar_per_core_distribution(e2sar_processes, num_cores)
 
                 # Update display
-                live.update(generate_display(avg_cpu_percentages, e2sar_processes, e2sar_per_core))
+                live.update(generate_display(avg_cpu_percentages, e2sar_processes, process_colors, e2sar_per_core_dist))
 
     except KeyboardInterrupt:
         console.print("\n\n[bold yellow]Monitor stopped.[/bold yellow]")
