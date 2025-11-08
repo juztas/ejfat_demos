@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# kill_e2sar - Kill all e2sar processes on specified host(s)
+#
+# Usage: kill_e2sar [hostname]
+#
+# Arguments:
+#   hostname  Optional hostname to kill processes on (default: localhost)
+#
+# Examples:
+#   kill_e2sar                              # Kill on localhost
+#   kill_e2sar star-dtn1-mgt.es.net         # Kill on specific host
+#
+
+set -e
+
+# Get hostname from argument or default to localhost
+HOST="${1:-localhost}"
+
+echo "========================================"
+echo "Killing e2sar processes on $HOST..."
+echo "========================================"
+
+if [ "$HOST" = "localhost" ]; then
+    # Kill locally
+    if pkill -9 e2sar 2>/dev/null; then
+        echo "✓ Processes killed on localhost"
+    else
+        echo "No processes found or already stopped"
+    fi
+else
+    # Kill remotely via SSH
+    if ssh "$HOST" "pkill -9 e2sar" 2>/dev/null; then
+        echo "✓ Processes killed on $HOST"
+    else
+        echo "No processes found or already stopped on $HOST"
+    fi
+fi
+
+echo ""

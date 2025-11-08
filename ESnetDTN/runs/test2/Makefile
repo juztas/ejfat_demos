@@ -14,22 +14,24 @@ HOSTS := cern773-dtn1-mgt.es.net \
          sunn-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
-HOSTS_1 := cern773-dtn1-mgt.es.net \
-          denv-dtn1-mgt.es.net \
-          hous-dtn1-mgt.es.net
+HOSTS_tx := cern773-dtn1-mgt.es.net \
+            denv-dtn1-mgt.es.net \
+            hous-dtn1-mgt.es.net
 
-HOSTS_2 := star-dtn1-mgt.es.net \
-          sunn-dtn1-mgt.es.net \
-          wash-dtn1-mgt.es.net
+HOSTS_rx := star-dtn1-mgt.es.net \
+            wash-dtn1-mgt.es.net \
+            sunn-dtn1-mgt.es.net \
+	    sunn-dtn1-mgt.es.net
+
 
 # List of DTN nodes for senders (in priority order)
 #SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS) 
-SENDERS_LIST ?= $(HOSTS_1) $(HOSTS_1) $(HOSTS_1) 
+SENDERS_LIST ?= $(HOSTS_tx) $(HOSTS_tx) $(HOSTS_tx) $(HOSTS_tx) 
 #SENDERS_LIST ?= wash-dtn1-mgt.es.net
 
 
 # List of DTN nodes for receivers (in priority order)
-RECEIVERS_LIST ?= $(HOSTS_2) $(HOSTS_2) $(HOSTS_2) 
+RECEIVERS_LIST ?= $(HOSTS_rx) $(HOSTS_rx)
 #RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
 
 # Get the first DTN from the senders list for reservation operations
@@ -75,7 +77,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime
+.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime kill-e2sar
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -102,6 +104,7 @@ help:
 	@echo "  sync-scripts      Update scripts on all nodes via git pull"
 	@echo "  survey-hardware   Compare CPU hardware across all DTN nodes using lscpu"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
+	@echo "  kill-e2sar        Kill all e2sar processes on all HOSTS or specific node"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  SENDERS_LIST:     $(SENDERS_LIST)"
@@ -129,6 +132,7 @@ help:
 	@echo "  START_OFFSET_MINUTES  Minutes to add to RUN_ID for synchronized start (default: $(START_OFFSET_MINUTES))"
 	@echo "  SENDER_START_DELAY_SECONDS  Additional seconds for senders to wait after receiver start (default: $(SENDER_START_DELAY_SECONDS))"
 	@echo "  CPU_MONITOR_NODE  DTN node to run cpu-monitor on (default: $(CPU_MONITOR_NODE))"
+	@echo "  NODE              Specific node for kill-e2sar (default: all HOSTS)"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make calculate-runtime"
@@ -154,6 +158,8 @@ help:
 	@echo "  make sync-scripts"
 	@echo "  make survey-hardware"
 	@echo "  make tcpdump-commands"
+	@echo "  make kill-e2sar"
+	@echo "  make kill-e2sar NODE=star-dtn1-mgt.es.net"
 	@echo ""
 	@echo "========================================================================"
 
@@ -777,5 +783,27 @@ clean-run:
 	@echo ""
 	@echo "========================================================================"
 	@echo "Cleanup Complete!"
+	@echo "========================================================================"
+	@echo ""
+
+kill-e2sar:
+	@echo "========================================================================"
+	@echo "Killing e2sar Processes"
+	@echo "========================================================================"
+	@if [ -n "$(NODE)" ]; then \
+		echo "Target node: $(NODE)"; \
+		echo "========================================================================"; \
+		echo ""; \
+		$(SCRIPT_DIR)/kill_e2sar $(NODE); \
+	else \
+		echo "Target nodes: $(HOSTS)"; \
+		echo "========================================================================"; \
+		echo ""; \
+		for node in $(HOSTS); do \
+			$(SCRIPT_DIR)/kill_e2sar $$node; \
+		done; \
+	fi
+	@echo "========================================================================"
+	@echo "Kill Complete!"
 	@echo "========================================================================"
 	@echo ""
