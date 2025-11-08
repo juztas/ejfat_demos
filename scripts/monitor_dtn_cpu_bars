@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# monitor_dtn_cpu_bars - Monitor CPU utilization across DTN nodes using htop
+# monitor_dtn_cpu_bars - Open interactive bash shells across DTN nodes
 #
-# Uses tmux to display multiple hosts in horizontal layout.
+# Uses tmux to display multiple SSH sessions in horizontal layout.
 #
 # Usage: monitor_dtn_cpu_bars [host1 host2 ...]
-#        If no hosts specified, monitors default DTN nodes
+#        If no hosts specified, connects to default DTN nodes
 #
 
 # Use system tmux to avoid conda environment issues
@@ -31,16 +31,9 @@ SESSION="dtn-cpu-bars"
 # Kill existing session if it exists
 $TMUX has-session -t $SESSION 2>/dev/null && $TMUX kill-session -t $SESSION
 
-# Function to get the monitoring command for a host
-get_monitor_cmd() {
-    local host=$1
-    echo "ssh $host 'bash -i -c \"if command -v htop >/dev/null 2>&1; then htop; else top; fi\"'"
-}
-
 # Create new tmux session with first host
 echo "Creating tmux session with ${#HOSTS[@]} hosts in horizontal layout..."
-CMD=$(get_monitor_cmd "${HOSTS[0]}")
-$TMUX new-session -d -s $SESSION "$CMD" || {
+$TMUX new-session -d -s $SESSION "ssh ${HOSTS[0]}" || {
     echo "Error: Failed to create tmux session (exit code: $?)"
     exit 1
 }
@@ -52,14 +45,12 @@ sleep 0.5
 if ! $TMUX has-session -t $SESSION 2>/dev/null; then
     echo "Error: Session creation appeared to succeed but session doesn't exist"
     echo "This may happen if the SSH connection fails immediately"
-    echo "Try running: $CMD manually to debug"
     exit 1
 fi
 
 # Split horizontally to create columns (all in one row)
 for ((i=1; i<${#HOSTS[@]}; i++)); do
-    CMD=$(get_monitor_cmd "${HOSTS[$i]}")
-    $TMUX split-window -h -t $SESSION "$CMD"
+    $TMUX split-window -h -t $SESSION "ssh ${HOSTS[$i]}"
     $TMUX select-layout -t $SESSION even-horizontal
 done
 
