@@ -31,7 +31,7 @@ for host in "${HOSTS[@]}"; do
 
     osascript <<EOF
 tell application "Terminal"
-    do script "ssh -t $host 'chmod +x /tmp/cpu_bars && /tmp/cpu_bars'"
+    do script "ssh -t $host 'chmod +x /tmp/cpu_bars && watch -n 1 --color /tmp/cpu_bars'"
     set custom title of front window to "$hostname"
 end tell
 EOF

@@ -3,6 +3,7 @@
 # cpu_bars - Simple horizontal CPU bar chart display
 #
 # Shows one bar per CPU core with utilization percentage
+# Use with: watch -n 1 --color cpu_bars
 #
 
 # Bar width in characters
@@ -35,20 +36,15 @@ draw_bar() {
     printf "] %5.1f%%\n" $percent
 }
 
-# Main loop
-while true; do
-    clear
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║  $(hostname -s) CPU Utilization - $(date +'%H:%M:%S')$(printf '%*s' $((43 - ${#HOSTNAME})) '')║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
+# Single frame output
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║  $(hostname -s) CPU Utilization - $(date +'%H:%M:%S')$(printf '%*s' $((43 - ${#HOSTNAME})) '')║"
+echo "╠════════════════════════════════════════════════════════════════╣"
 
-    # Get CPU stats
-    mpstat -P ALL 1 1 | awk '/Average:/ && $2 ~ /^[0-9]+$/ {printf "%d %.1f\n", $2, 100-$NF}' | \
-    while read cpu usage; do
-        draw_bar $cpu $usage
-    done
-
-    echo "╚════════════════════════════════════════════════════════════════╝"
-
-    sleep 1
+# Get CPU stats
+mpstat -P ALL 1 1 | awk '/Average:/ && $2 ~ /^[0-9]+$/ {printf "%d %.1f\n", $2, 100-$NF}' | \
+while read cpu usage; do
+    draw_bar $cpu $usage
 done
+
+echo "╚════════════════════════════════════════════════════════════════╝"
