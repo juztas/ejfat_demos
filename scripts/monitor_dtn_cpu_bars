@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# monitor_dtn_cpu_bars - Monitor CPU utilization with visual bars across DTN nodes
+# monitor_dtn_cpu_bars - Monitor CPU utilization across DTN nodes using htop
 #
-# Shows only CPU meter bars for each core, no process list.
-# Uses tmux to display multiple hosts in vertically stacked panes.
+# Uses tmux to display multiple hosts in horizontal layout.
 #
 # Usage: monitor_dtn_cpu_bars [host1 host2 ...]
 #        If no hosts specified, monitors default DTN nodes
@@ -29,75 +28,13 @@ SESSION="dtn-cpu-bars"
 # Kill existing session if it exists
 tmux has-session -t $SESSION 2>/dev/null && tmux kill-session -t $SESSION
 
-# Function to create the monitoring command for a host
-create_monitor_cmd() {
-    local host=$1
-    local hostname=$(echo $host | cut -d'-' -f1)
-
-    cat << 'MONITOR_SCRIPT' | sed "s/HOSTNAME_PLACEHOLDER/$hostname/g"
-ssh HOSTNAME_PLACEHOLDER-dtn1-mgt.es.net 'bash -s' << 'EOF'
-# Get number of online CPUs
-NUM_CPUS=$(nproc --all)
-ONLINE_CPUS=$(cat /sys/devices/system/cpu/online)
-
-# Function to draw a CPU bar
-draw_bar() {
-    local cpu=$1
-    local percent=$2
-    local width=50
-    local filled=$(echo "$percent * $width / 100" | bc)
-    local empty=$((width - filled))
-
-    # Color codes
-    local GREEN="\033[42m"
-    local YELLOW="\033[43m"
-    local RED="\033[41m"
-    local RESET="\033[0m"
-
-    # Choose color based on usage
-    local color=$GREEN
-    if (( $(echo "$percent >= 80" | bc -l) )); then
-        color=$RED
-    elif (( $(echo "$percent >= 50" | bc -l) )); then
-        color=$YELLOW
-    fi
-
-    printf "CPU%2d [" $cpu
-    printf "${color}%${filled}s${RESET}" | tr ' ' '█'
-    printf "%${empty}s" | tr ' ' '░'
-    printf "] %5.1f%%\n" $percent
-}
-
-# Main loop
-while true; do
-    clear
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║  HOSTNAME_PLACEHOLDER CPU Utilization - $(date +'%H:%M:%S')                       ║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
-
-    # Get CPU stats
-    mpstat -P ALL 1 1 | awk '/Average:/ && $2 ~ /^[0-9]+$/ {printf "%d %.1f\n", $2, 100-$NF}' | \
-    while read cpu usage; do
-        draw_bar $cpu $usage
-    done
-
-    echo "╚════════════════════════════════════════════════════════════════╝"
-
-    sleep 1
-done
-EOF
-MONITOR_SCRIPT
-}
-
 # Create new tmux session with first host
 echo "Creating tmux session with ${#HOSTS[@]} hosts in horizontal layout..."
-CMD=$(create_monitor_cmd "${HOSTS[0]}")
-tmux new-session -d -s $SESSION "$CMD"
+tmux new-session -d -s $SESSION "ssh ${HOSTS[0]} 'htop -C --tree=off'"
 
 # Split horizontally to create columns (all in one row)
 for ((i=1; i<${#HOSTS[@]}; i++)); do
-    CMD=$(create_monitor_cmd "${HOSTS[$i]}")
-    tmux split-window -h -t $SESSION "$CMD"
+    tmux split-window -h -t $SESSION "ssh ${HOSTS[$i]} 'htop -C --tree=off'"
     tmux select-layout -t $SESSION even-horizontal
 done
 
@@ -115,7 +52,7 @@ tmux set-option -t $SESSION pane-border-format "#{pane_title}"
 echo "Attaching to session '$SESSION'..."
 echo ""
 echo "tmux Controls:"
-echo "  Ctrl-b ↑/↓    Navigate between panes"
+echo "  Ctrl-b ←/→    Navigate between panes"
 echo "  Ctrl-b d      Detach (keeps running)"
 echo "  Ctrl-b x      Close current pane"
 echo "  Ctrl-b z      Zoom current pane (toggle fullscreen)"
