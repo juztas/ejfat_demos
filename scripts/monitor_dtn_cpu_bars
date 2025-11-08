@@ -33,7 +33,7 @@ $TMUX has-session -t $SESSION 2>/dev/null && $TMUX kill-session -t $SESSION
 
 # Create new tmux session with first host
 echo "Creating tmux session with ${#HOSTS[@]} hosts in horizontal layout..."
-$TMUX new-session -d -s $SESSION "ssh ${HOSTS[0]} htop" || {
+$TMUX new-session -d -s $SESSION "ssh ${HOSTS[0]} 'bash -l -c htop'" || {
     echo "Error: Failed to create tmux session (exit code: $?)"
     exit 1
 }
@@ -45,13 +45,13 @@ sleep 0.5
 if ! $TMUX has-session -t $SESSION 2>/dev/null; then
     echo "Error: Session creation appeared to succeed but session doesn't exist"
     echo "This may happen if the SSH connection fails immediately"
-    echo "Try running: ssh ${HOSTS[0]} htop manually to debug"
+    echo "Try running: ssh ${HOSTS[0]} 'bash -l -c htop' manually to debug"
     exit 1
 fi
 
 # Split horizontally to create columns (all in one row)
 for ((i=1; i<${#HOSTS[@]}; i++)); do
-    $TMUX split-window -h -t $SESSION "ssh ${HOSTS[$i]} htop"
+    $TMUX split-window -h -t $SESSION "ssh ${HOSTS[$i]} 'bash -l -c htop'"
     $TMUX select-layout -t $SESSION even-horizontal
 done
 
