@@ -25,9 +25,13 @@ echo "Opening ${#HOSTS[@]} Terminal windows..."
 
 for host in "${HOSTS[@]}"; do
     hostname=$(echo $host | cut -d'-' -f1)
+
+    # Copy the cpu_bars script to the remote host
+    scp -q $(dirname "$0")/cpu_bars $host:/tmp/cpu_bars
+
     osascript <<EOF
 tell application "Terminal"
-    do script "ssh -t $host 'if command -v btop >/dev/null 2>&1; then btop; elif command -v htop >/dev/null 2>&1; then htop; else top; fi'"
+    do script "ssh -t $host 'chmod +x /tmp/cpu_bars && /tmp/cpu_bars'"
     set custom title of front window to "$hostname"
 end tell
 EOF
