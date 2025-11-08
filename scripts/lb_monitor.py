@@ -125,72 +125,65 @@ class LBMonitor:
         }
 
         lines = output.split('\n')
-        in_workers_section = False
-        in_senders_section = False
 
-        for line in lines:
+        # Parse line by line
+        i = 0
+        while i < len(lines):
+            line = lines[i]
             stripped = line.strip()
 
-            # Parse session info
-            if 'session' in line.lower() and ':' in line:
-                match = re.search(r':\s*(\S+)', line)
+            # Parse LB name and ID
+            if 'LB' in line and 'ID:' in line:
+                # Extract name (e.g., "LB yk_testing ID: 20")
+                match = re.search(r'LB\s+(\S+)\s+ID:\s*(\d+)', line)
                 if match:
-                    data['session_id'] = match.group(1)
+                    data['name'] = match.group(1)
+                    data['session_id'] = match.group(2)
 
-            elif re.search(r'\bname\b.*:', line, re.IGNORECASE):
-                match = re.search(r':\s*(.+)', line)
-                if match:
-                    data['name'] = match.group(1).strip()
+            # Parse registered sender addresses
+            elif 'Registered sender addresses:' in line:
+                # Extract all IPs from this line and potentially next lines
+                sender_text = line.split('Registered sender addresses:')[1]
+                # Get all IPs from this line
+                sender_ips = re.findall(r'(?:\d+\.\d+\.\d+\.\d+|[0-9a-f:]+:[0-9a-f:]+)', sender_text, re.IGNORECASE)
+                data['senders'].extend(sender_ips)
 
-            elif re.search(r'\bstatus\b.*:', line, re.IGNORECASE):
-                match = re.search(r':\s*(\w+)', line)
-                if match:
-                    data['status'] = match.group(1)
+                # Check if senders continue on next lines (lines that start with whitespace and contain IPs)
+                j = i + 1
+                while j < len(lines) and lines[j].startswith(' ') and not 'Registered workers' in lines[j]:
+                    more_ips = re.findall(r'(?:\d+\.\d+\.\d+\.\d+|[0-9a-f:]+:[0-9a-f:]+)', lines[j], re.IGNORECASE)
+                    data['senders'].extend(more_ips)
+                    j += 1
 
-            elif re.search(r'\bduration\b.*:', line, re.IGNORECASE):
-                match = re.search(r':\s*(.+)', line)
+                data['sender_count'] = len(data['senders'])
+
+            # Parse registered workers
+            elif 'Registered workers:' in line:
+                # Workers are on subsequent lines with [ name=..., ... ] format
+                j = i + 1
+                while j < len(lines) and '[ name=' in lines[j]:
+                    worker_line = lines[j]
+                    # Extract hostname from name=hostname
+                    name_match = re.search(r'name=([^,\]]+)', worker_line)
+                    if name_match:
+                        hostname = name_match.group(1).strip()
+                        data['workers'].append(hostname)
+                    j += 1
+
+                data['worker_count'] = len(data['workers'])
+
+            # Parse LB details
+            elif 'expiresat=' in line.lower():
+                match = re.search(r'expiresat=([^,]+)', line, re.IGNORECASE)
                 if match:
                     data['duration'] = match.group(1).strip()
 
-            elif re.search(r'\b(workers|receivers)\b.*:', line, re.IGNORECASE):
-                match = re.search(r':\s*(\d+)', line)
-                if match:
-                    data['worker_count'] = int(match.group(1))
-                in_workers_section = True
-                in_senders_section = False
-
-            elif re.search(r'\bsenders\b.*:', line, re.IGNORECASE):
-                match = re.search(r':\s*(\d+)', line)
-                if match:
-                    data['sender_count'] = int(match.group(1))
-                in_workers_section = False
-                in_senders_section = True
-
-            elif 'syncCount' in line or 'sync_count' in line.lower():
-                match = re.search(r':\s*(\d+)', line)
-                if match:
-                    data['sync_count'] = int(match.group(1))
-
-            elif 'stateEpoch' in line or 'state_epoch' in line.lower():
-                match = re.search(r':\s*(\d+)', line)
+            elif 'currentepoch' in line.lower():
+                match = re.search(r'currentepoch=(\d+)', line, re.IGNORECASE)
                 if match:
                     data['state_epoch'] = int(match.group(1))
 
-            elif 'sendStateEpoch' in line or 'send_state_epoch' in line.lower():
-                match = re.search(r':\s*(\d+)', line)
-                if match:
-                    data['send_state_epoch'] = int(match.group(1))
-
-            # Parse IP addresses
-            elif re.search(r'^\s*\d+\.\d+\.\d+\.\d+', stripped) or \
-                 re.search(r'^\s*[0-9a-f:]+:[0-9a-f:]+', stripped, re.IGNORECASE):
-                ip_match = re.search(r'(\d+\.\d+\.\d+\.\d+|[0-9a-f:]+:[0-9a-f:]+)', stripped, re.IGNORECASE)
-                if ip_match:
-                    ip = ip_match.group(1)
-                    if in_workers_section:
-                        data['workers'].append(ip)
-                    elif in_senders_section:
-                        data['senders'].append(ip)
+            i += 1
 
         return data
 
@@ -283,23 +276,23 @@ class LBMonitor:
         # IP address tables
         ip_tables = Table.grid(padding=(0, 2))
 
-        # Receivers table
-        receivers_table = Table(title="Receivers", box=box.ROUNDED, show_header=True, width=40)
+        # Receivers table (shows hostnames)
+        receivers_table = Table(title="Receivers", box=box.ROUNDED, show_header=True, width=45)
         receivers_table.add_column("#", style="dim", width=3)
-        receivers_table.add_column("IP Address", style="green")
+        receivers_table.add_column("Hostname", style="green")
 
         if data and data.get('workers'):
-            for i, ip in enumerate(data['workers'], 1):
-                receivers_table.add_row(str(i), ip)
+            for i, hostname in enumerate(data['workers'], 1):
+                receivers_table.add_row(str(i), hostname)
         elif data and data['worker_count'] == 0:
             receivers_table.add_row("", "[dim]No receivers[/dim]")
         else:
             receivers_table.add_row("", "[dim]Waiting...[/dim]")
 
-        # Senders table
-        senders_table = Table(title="Senders", box=box.ROUNDED, show_header=True, width=40)
+        # Senders table (shows IP addresses)
+        senders_table = Table(title="Senders", box=box.ROUNDED, show_header=True, width=45)
         senders_table.add_column("#", style="dim", width=3)
-        senders_table.add_column("IP Address", style="yellow")
+        senders_table.add_column("IP Address", style="yellow", width=40)
 
         if data and data.get('senders'):
             for i, ip in enumerate(data['senders'], 1):
