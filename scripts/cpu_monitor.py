@@ -48,18 +48,12 @@ def get_e2sar_processes():
             if proc.info['name'] and 'e2sar_perf' in proc.info['name']:
                 cmdline = proc.info['cmdline'] or []
 
-                # DEBUG: Print cmdline to help diagnose mode detection
-                print(f"DEBUG: PID {proc.info['pid']} cmdline: {cmdline}")
-
                 # Determine if it's receive or send
                 mode = ''
-                if '--receive' in cmdline or '-r' in cmdline:
+                if '--recv' in cmdline or '--receive' in cmdline or '-r' in cmdline:
                     mode = 'rx'
                 elif '--send' in cmdline or '-s' in cmdline:
                     mode = 'tx'
-
-                # DEBUG: Print detected mode
-                print(f"DEBUG: PID {proc.info['pid']} detected mode: '{mode}'")
 
                 # Get CPU percent (may need to call cpu_percent() to get non-zero value)
                 cpu_pct = proc.cpu_percent(interval=0.1)
