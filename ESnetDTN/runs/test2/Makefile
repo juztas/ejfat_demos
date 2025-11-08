@@ -15,7 +15,7 @@ HOSTS := cern773-dtn1-mgt.es.net \
          wash-dtn1-mgt.es.net
 
 # List of DTN nodes for senders (in priority order)
-SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS)
+SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS) 
 #SENDERS_LIST ?= wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net \
 		wash-dtn1-mgt.es.net star-dtn1-mgt.es.net 

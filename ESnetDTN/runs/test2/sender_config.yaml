@@ -50,7 +50,7 @@ ip_version: 6
 #   tx_rate_1: 15       # Medium
 #   tx_rate_2: 25       # Faster
 #
-tx_rate: 10
+tx_rate: 30
 
 # Transmission length (packet size in bytes)
 # Supports instance-specific values: tx_length_0, tx_length_1, etc.
@@ -124,13 +124,53 @@ send_sockets: 8
 #
 
 # Hostname+Instance CPU core assignments (most specific - customize for your setup)
+#
+
+# INTEL.  48 cores.  Maybe 24 active ? without hyperthreading
+# NUMA 0 for NIC affinity
+
 tx_cores_wash-dtn1_0:  0  1  2  3  4  5  6  7
 tx_cores_wash-dtn1_1:  8  9 10 11 12 13 14 15
 tx_cores_wash-dtn1_2: 16 17 18 19 20 21 22 23
+tx_cores_wash-dtn1_3:  0  1  2  3  4  5  6  7
+tx_cores_wash-dtn1_4:  8  9 10 11 12 13 14 15
+tx_cores_wash-dtn1_5: 16 17 18 19 20 21 22 23
 
 tx_cores_star-dtn1_0:  0  1  2  3  4  5  6  7
 tx_cores_star-dtn1_1:  8  9 10 11 12 13 14 15
 tx_cores_star-dtn1_2: 16 17 18 19 20 21 22 23
+tx_cores_star-dtn1_3:  0  1  2  3  4  5  6  7
+tx_cores_star-dtn1_4:  8  9 10 11 12 13 14 15
+tx_cores_star-dtn1_5: 16 17 18 19 20 21 22 23
+
+
+# AMD.  32 cores.
+# NUMA 1 for NIC affinity
+
+tx_cores_cern773-dtn1_0: 16 17 18 19 20 21 22 23
+tx_cores_cern773-dtn1_1: 24 25 26 27 28 29 30 31
+tx_cores_cern773-dtn1_2:  0  1  2  3  4  5  6  7  # compromise choice.
+tx_cores_cern773-dtn1_3:  8  9 10 11 12 13 14 15
+
+tx_cores_hous-dtn1_0: 16 17 18 19 20 21 22 23
+tx_cores_hous-dtn1_1: 24 25 26 27 28 29 30 31
+tx_cores_hous-dtn1_2:  0  1  2  3  4  5  6  7  # compromise choice.
+tx_cores_hous-dtn1_3:  8  9 10 11 12 13 14 15
+
+tx_cores_sunn-dtn1_0: 16 17 18 19 20 21 22 23
+tx_cores_sunn-dtn1_1: 24 25 26 27 28 29 30 31
+tx_cores_sunn-dtn1_2:  0  1  2  3  4  5  6  7  # compromise choice.
+tx_cores_sunn-dtn1_3:  8  9 10 11 12 13 14 15
+
+# AMD.  32 cores.
+# Oddball : NUMA 7 for NIC affinity only 4 cores.
+
+tx_cores_denv-dtn1_0: 24 25 26 27 28 29 30 31  # only half good.
+tx_cores_denv-dtn1_1: 16 17 18 19 20 21 22 23
+tx_cores_denv-dtn1_2:  0  1  2  3  4  5  6  7  # compromise choice.
+tx_cores_denv-dtn1_3:  8  9 10 11 12 13 14 15
+
+
 
 # Hostname-based CPU core assignments (all instances use same cores)
 # tx_cores_cern773-dtn1: 0 1 2 3 4 5 6 7

@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# monitor_dtn_htop - Monitor CPU utilization across DTN nodes using htop in tmux
+#
+# Usage: monitor_dtn_htop [host1 host2 ...]
+#        If no hosts specified, monitors default DTN nodes
+#
+
+# Get hosts from command line or use defaults
+if [ $# -gt 0 ]; then
+    HOSTS=("$@")
+else
+    # Default DTN nodes
+    HOSTS=(
+        "wash-dtn1-mgt.es.net"
+        "star-dtn1-mgt.es.net"
+        "cern773-dtn1-mgt.es.net"
+        "hous-dtn1-mgt.es.net"
+        "sunn-dtn1-mgt.es.net"
+        "denv-dtn1-mgt.es.net"
+    )
+fi
+
+SESSION="dtn-cpu-monitor"
+
+# Kill existing session if it exists
+tmux has-session -t $SESSION 2>/dev/null && tmux kill-session -t $SESSION
+
+# Create new tmux session with first host
+echo "Creating tmux session with ${#HOSTS[@]} hosts..."
+tmux new-session -d -s $SESSION "ssh ${HOSTS[0]} 'htop -C --tree=off'"
+
+# Add vertical splits for remaining hosts
+for ((i=1; i<${#HOSTS[@]}; i++)); do
+    tmux split-window -v -t $SESSION "ssh ${HOSTS[$i]} 'htop -C --tree=off'"
+    # Balance the panes to make them equal size
+    tmux select-layout -t $SESSION even-vertical
+done
+
+# Optional: Set pane titles to show hostname
+# (This requires tmux 2.6+)
+for ((i=0; i<${#HOSTS[@]}; i++)); do
+    hostname=$(echo ${HOSTS[$i]} | cut -d'-' -f1)
+    tmux select-pane -t $SESSION:0.$i -T "$hostname"
+done
+
+# Enable pane titles display
+tmux set-option -t $SESSION pane-border-status top
+tmux set-option -t $SESSION pane-border-format "#{pane_title}"
+
+# Attach to the session
+echo "Attaching to session '$SESSION'..."
+echo "Use Ctrl-b then arrow keys to navigate between panes"
+echo "Use Ctrl-b d to detach, Ctrl-b x to close a pane"
+echo ""
+tmux attach-session -t $SESSION
