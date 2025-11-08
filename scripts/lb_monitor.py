@@ -40,25 +40,9 @@ class LBMonitor:
             self.debug_file.write(f"=== Debug log started at {datetime.now()} ===\n\n")
 
     def run_make_overview(self):
-        """Run lbadm --overview via SSH to PRIMARY_DTN (like make overview does)"""
+        """Run overview script via SSH to PRIMARY_DTN"""
         try:
-            # Get EJFAT_URI from INSTANCE_URI file
-            ejfat_uri = os.environ.get('EJFAT_URI_BETA')
-
-            if not ejfat_uri and os.path.exists('INSTANCE_URI'):
-                with open('INSTANCE_URI', 'r') as f:
-                    for line in f:
-                        if 'EJFAT_URI' in line:
-                            match = re.search(r'export EJFAT_URI=["\']?([^"\']+)["\']?', line)
-                            if match:
-                                ejfat_uri = match.group(1)
-                                break
-
-            if not ejfat_uri:
-                return None, "EJFAT_URI not found. Set EJFAT_URI_BETA or ensure INSTANCE_URI exists."
-
             # Get PRIMARY_DTN from Makefile or use default
-            # Simple approach: read from Makefile
             primary_dtn = None
             if os.path.exists('Makefile'):
                 with open('Makefile', 'r') as f:
@@ -73,12 +57,13 @@ class LBMonitor:
             if not primary_dtn:
                 primary_dtn = 'cern773-dtn1-mgt.es.net'  # Default fallback
 
-            # Run lbadm --overview via SSH to the DTN (where it can reach the LB)
-            # Similar to what make overview does, but without watch
+            # Run the overview script directly (it returns one snapshot)
+            # The script reads EJFAT_URI from INSTANCE_URI and IP_VERSION from env
             ssh_command = (
-                f'bash -l -c "cd ~/ejfat_demos/ESnetDTN/runs/test2 && '
-                f'export EJFAT_URI=\\"{ejfat_uri}\\" && '
-                f'lbadm -u \\"$EJFAT_URI\\" -6 --overview"'
+                'bash -l -c "cd ~/ejfat_demos/ESnetDTN/runs/test2 && '
+                'source INSTANCE_URI && '
+                'export IP_VERSION=-6 && '
+                '../../../scripts/overview"'
             )
 
             result = subprocess.run(
@@ -89,7 +74,7 @@ class LBMonitor:
             )
 
             if result.returncode != 0:
-                return None, f"SSH/lbadm error: {result.stderr.strip()}"
+                return None, f"SSH/overview error: {result.stderr.strip()}"
 
             return result.stdout, None
 
