@@ -58,10 +58,17 @@ def get_e2sar_processes():
                 # Get CPU percent (may need to call cpu_percent() to get non-zero value)
                 cpu_pct = proc.cpu_percent(interval=0.1)
 
+                # Get CPU affinity (which cores this process can run on)
+                try:
+                    affinity = proc.cpu_affinity()
+                except (psutil.AccessDenied, AttributeError):
+                    affinity = None
+
                 processes.append({
                     'pid': proc.info['pid'],
                     'mode': mode,
                     'cpu_percent': cpu_pct,
+                    'affinity': affinity,
                     'proc': proc
                 })
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -262,20 +269,29 @@ def estimate_e2sar_per_core_distribution(e2sar_processes, num_cores):
     """Estimate per-core CPU distribution for each e2sar_perf process
 
     Returns a list where each element is a list of (pid, percent) tuples for that core
-    This is an approximation - we distribute each process's CPU evenly across cores
+    Uses CPU affinity to distribute each process's CPU only across cores it can run on
     """
     per_core_dist = [[] for _ in range(num_cores)]
 
     for proc_info in e2sar_processes:
         pid = proc_info['pid']
         total_cpu = proc_info['cpu_percent']
+        affinity = proc_info.get('affinity')
 
-        # Distribute this process's CPU evenly across all cores
-        per_core = total_cpu / num_cores if num_cores > 0 else 0
+        # If we have affinity info, distribute only across those cores
+        if affinity:
+            num_allowed_cores = len(affinity)
+            per_core = total_cpu / num_allowed_cores if num_allowed_cores > 0 else 0
 
-        for core_idx in range(num_cores):
-            if per_core > 0:
-                per_core_dist[core_idx].append((pid, per_core))
+            for core_idx in affinity:
+                if core_idx < num_cores and per_core > 0:
+                    per_core_dist[core_idx].append((pid, per_core))
+        else:
+            # Fallback: distribute evenly across all cores if affinity unknown
+            per_core = total_cpu / num_cores if num_cores > 0 else 0
+            for core_idx in range(num_cores):
+                if per_core > 0:
+                    per_core_dist[core_idx].append((pid, per_core))
 
     return per_core_dist
 
