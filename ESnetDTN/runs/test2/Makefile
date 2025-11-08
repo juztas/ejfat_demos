@@ -301,13 +301,17 @@ receive:
 	@echo ""
 	@echo "Starting receivers on all receiver nodes..."
 	@i=0; \
+	nodes_seen=""; \
 	for node in $(RECEIVERS_LIST); do \
 		log_file="rx_$$i.log"; \
 		hostname=$$(echo $$node | cut -d'-' -f1); \
+		ordinal=$$(echo " $$nodes_seen " | grep -o " $$node " | wc -l | tr -d ' '); \
+		nodes_seen="$$nodes_seen $$node"; \
 		echo "------------------------------------------------------------------------"; \
 		echo "Starting receiver $$i on $$node..."; \
 		echo "  Log file: $(RECEIVER_LOG_DIR)/$$log_file"; \
 		echo "  RX Index: $$i"; \
+		echo "  Ordinal:  $$ordinal ($$((ordinal + 1))th receiver on $$hostname)"; \
 		echo "  Creating remote directories..."; \
 		ssh $$node "mkdir -p $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)"; \
 		if [ "$(SKIP_UPLOADS)" != "true" ]; then \
@@ -325,6 +329,7 @@ receive:
 			export WORK_DIR=$(RECEIVER_LOG_DIR) && \
 			export RUN_ID=\"$(RUN_ID)\" && \
 			export START_TIME=\"$(START_TIME)\" && \
+			export RX_ORDINAL=$$ordinal && \
 			nohup $(SCRIPT_DIR)/receive --rx-index $$i $(REMOTE_WORK_DIR)/$(RECEIVER_LOG_DIR)/$(RECEIVER_CONFIG)_$$hostname > $(RECEIVER_LOG_DIR)/$$log_file 2>&1 & \
 			echo \"Receiver started in background (PID: \$$!)\"'"; \
 		echo ""; \

@@ -157,7 +157,52 @@ RX_BUFSIZE="${RX_BUFSIZE:-400000000}"
 RX_TIMEOUT=$(parse_yaml "$CONFIG_FILE" "rx_timeout")
 RX_TIMEOUT="${RX_TIMEOUT:-7000}"
 
-RX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "rx_cores" "$RX_INDEX")
+# Get short hostname (without domain)
+SHORT_HOSTNAME=$(hostname -s)
+
+# Try cores configuration with priority:
+# 1. rx_cores_<hostname>_<ordinal> - Most specific (hostname AND ordinal position)
+# 2. rx_cores_<hostname>           - Hostname-based (all instances on this host)
+# 3. rx_cores_<index>              - Instance-based (this instance on any host)
+# 4. rx_cores                      - Default (all instances, all hosts)
+#
+# Note: RX_ORDINAL is the ordinal position (0, 1, 2, ...) of this receiver on this DTN,
+#       set by the Makefile based on the order of receivers for this node.
+#       If not set, falls back to using RX_INDEX.
+
+# Determine which index to use for hostname+instance lookup
+# Use RX_ORDINAL if set (ordinal position on this DTN), otherwise use RX_INDEX
+LOOKUP_INDEX="${RX_ORDINAL:-$RX_INDEX}"
+
+# Priority 1: hostname + ordinal (or index if ordinal not set)
+RX_CORES=$(parse_yaml "$CONFIG_FILE" "rx_cores_${SHORT_HOSTNAME}_${LOOKUP_INDEX}")
+if [ -n "$RX_CORES" ]; then
+    if [ -n "$RX_ORDINAL" ]; then
+        RX_CORES_SOURCE="hostname+ordinal (rx_cores_${SHORT_HOSTNAME}_${RX_ORDINAL}, ordinal=$RX_ORDINAL for RX_INDEX=$RX_INDEX)"
+    else
+        RX_CORES_SOURCE="hostname+instance (rx_cores_${SHORT_HOSTNAME}_${RX_INDEX})"
+    fi
+else
+    # Priority 2: hostname only
+    RX_CORES=$(parse_yaml "$CONFIG_FILE" "rx_cores_${SHORT_HOSTNAME}")
+    if [ -n "$RX_CORES" ]; then
+        RX_CORES_SOURCE="hostname (rx_cores_${SHORT_HOSTNAME})"
+    else
+        # Priority 3 & 4: instance or default (handled by parse_yaml_instance)
+        RX_CORES=$(parse_yaml_instance "$CONFIG_FILE" "rx_cores" "$RX_INDEX")
+        if [ -n "$RX_CORES" ] && [ "$RX_CORES" != "1" ]; then
+            # Check if it came from instance-specific or default
+            instance_cores=$(parse_yaml "$CONFIG_FILE" "rx_cores_${RX_INDEX}")
+            if [ -n "$instance_cores" ]; then
+                RX_CORES_SOURCE="instance (rx_cores_${RX_INDEX})"
+            else
+                RX_CORES_SOURCE="default (rx_cores)"
+            fi
+        else
+            RX_CORES_SOURCE="builtin default"
+        fi
+    fi
+fi
 RX_CORES="${RX_CORES:-1}"
 
 RX_DEQ=$(parse_yaml_instance "$CONFIG_FILE" "rx_dequeue" "$RX_INDEX")
@@ -357,8 +402,16 @@ echo "Monitor Ports:      $MONITOR_PORTS ($RX_THREADS ports)"
 echo "RX Duration:        $RX_DURATION sec"
 echo "RX Buffer Size:     $RX_BUFSIZE bytes"
 echo "RX Timeout:         $RX_TIMEOUT ms"
-echo "RX Cores:           $RX_CORES"
-echo "RX Dequeue:         $RX_DEQ"
+echo ""
+if [ -n "$RX_CORES" ]; then
+    echo "Thread Mode:        Core pinning (--cores)"
+    echo "RX Cores:           $RX_CORES"
+    echo "RX Cores Source:    $RX_CORES_SOURCE"
+else
+    echo "Thread Mode:        Dequeue-based (--deq)"
+    echo "RX Dequeue:         $RX_DEQ"
+fi
+echo ""
 echo "Monitor Interval:   $MONITOR_INTERVAL sec"
 echo "Stats Period:       $STATS_PERIOD_MS ms"
 echo "Use Control Plane:  $REASSEM_USE_CP"
@@ -454,12 +507,22 @@ ls -la
 echo "DEBUG: reassembler_config_rx_${RX_INDEX}.ini location:"
 ls -la reassembler_config_rx_${RX_INDEX}.ini 2>&1
 echo "DEBUG: e2sar_perf command:"
-echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini"
+# Use --cores if RX_CORES is specified, otherwise use --deq
+if [ -n "$RX_CORES" ]; then
+    echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini"
+else
+    echo "e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini"
+fi
 echo "========================================================================"
 echo ""
 
 # e2sar_perf will use the reassembler_config_rx_${RX_INDEX}.ini we generated and the --port option for dataPort
-e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini
+# Use --cores if RX_CORES is specified, otherwise use --deq
+if [ -n "$RX_CORES" ]; then
+    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --cores $RX_CORES --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini
+else
+    e2sar_perf --recv --withcp --duration $RX_DURATION $IP_VERSION_DASH --ip $MY_IP --bufsize $RX_BUFSIZE --timeout $RX_TIMEOUT --deq $RX_DEQ --port $REASSEM_DATA_PORT --period $STATS_PERIOD_MS -i reassembler_config_rx_${RX_INDEX}.ini
+fi
 
 #------------------------------------------------------------------------------------------------
 # CLEANUP
