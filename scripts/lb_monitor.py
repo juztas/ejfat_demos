@@ -40,17 +40,16 @@ class LBMonitor:
             self.debug_file.write(f"=== Debug log started at {datetime.now()} ===\n\n")
 
     def run_make_overview(self):
-        """Run 'make overview' command locally (non-interactive)"""
+        """Run lbadm --overview via SSH to PRIMARY_DTN (like make overview does)"""
         try:
-            # We need to run the lbadm command directly since make overview uses watch
-            # First, get EJFAT_URI_BETA from environment or INSTANCE_URI file
+            # Get EJFAT_URI from INSTANCE_URI file
             ejfat_uri = os.environ.get('EJFAT_URI_BETA')
 
             if not ejfat_uri and os.path.exists('INSTANCE_URI'):
                 with open('INSTANCE_URI', 'r') as f:
                     for line in f:
                         if 'EJFAT_URI' in line:
-                            match = re.search(r'export EJFAT_URI="?([^"\s]+)"?', line)
+                            match = re.search(r'export EJFAT_URI=["\']?([^"\']+)["\']?', line)
                             if match:
                                 ejfat_uri = match.group(1)
                                 break
@@ -58,21 +57,42 @@ class LBMonitor:
             if not ejfat_uri:
                 return None, "EJFAT_URI not found. Set EJFAT_URI_BETA or ensure INSTANCE_URI exists."
 
-            # Run lbadm --overview directly
+            # Get PRIMARY_DTN from Makefile or use default
+            # Simple approach: read from Makefile
+            primary_dtn = None
+            if os.path.exists('Makefile'):
+                with open('Makefile', 'r') as f:
+                    for line in f:
+                        if line.startswith('HOSTS_tx') and ':=' in line:
+                            # Extract first host
+                            match = re.search(r':=\s*(\S+)', line)
+                            if match:
+                                primary_dtn = match.group(1)
+                                break
+
+            if not primary_dtn:
+                primary_dtn = 'cern773-dtn1-mgt.es.net'  # Default fallback
+
+            # Run lbadm --overview via SSH to the DTN (where it can reach the LB)
+            # Similar to what make overview does, but without watch
+            ssh_command = (
+                f'bash -l -c "cd ~/ejfat_demos/ESnetDTN/runs/test2 && '
+                f'export EJFAT_URI=\\"{ejfat_uri}\\" && '
+                f'lbadm -u \\"$EJFAT_URI\\" -6 --overview"'
+            )
+
             result = subprocess.run(
-                ['lbadm', '-u', ejfat_uri, '-6', '--overview'],
+                ['ssh', primary_dtn, ssh_command],
                 capture_output=True,
                 text=True,
-                timeout=3
+                timeout=5
             )
 
             if result.returncode != 0:
-                return None, f"lbadm error: {result.stderr.strip()}"
+                return None, f"SSH/lbadm error: {result.stderr.strip()}"
 
             return result.stdout, None
 
-        except FileNotFoundError as e:
-            return None, f"Command not found: {e.filename}. Ensure lbadm is in PATH."
         except subprocess.TimeoutExpired:
             return None, "Command timeout"
         except Exception as e:
