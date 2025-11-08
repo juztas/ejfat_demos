@@ -59,6 +59,9 @@ START_OFFSET_MINUTES ?= 0
 # This gives receivers time to initialize before senders start transmitting
 SENDER_START_DELAY_SECONDS ?= 10
 
+# CPU monitor node - which DTN to run cpu-monitor on
+CPU_MONITOR_NODE ?= $(PRIMARY_DTN)
+
 # Determine remote working directory dynamically based on current location
 # This makes the Makefile relocatable within the ejfat_demos directory tree
 # On remote nodes, ejfat_demos is located under the user's home directory
@@ -66,7 +69,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free overview receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime
+.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -83,6 +86,7 @@ help:
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  overview          Monitor load balancer status (lbadm --overview)"
+	@echo "  cpu-monitor       Monitor CPU usage across cores"
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send"
@@ -118,6 +122,7 @@ help:
 	@echo "  SKIP_UPLOADS      Skip uploading config files: true or false (default: $(SKIP_UPLOADS))"
 	@echo "  START_OFFSET_MINUTES  Minutes to add to RUN_ID for synchronized start (default: $(START_OFFSET_MINUTES))"
 	@echo "  SENDER_START_DELAY_SECONDS  Additional seconds for senders to wait after receiver start (default: $(SENDER_START_DELAY_SECONDS))"
+	@echo "  CPU_MONITOR_NODE  DTN node to run cpu-monitor on (default: $(CPU_MONITOR_NODE))"
 	@echo ""
 	@echo "USAGE:"
 	@echo "  make calculate-runtime"
@@ -126,6 +131,8 @@ help:
 	@echo "  make free"
 	@echo "  make free IP_VERSION=4"
 	@echo "  make overview EJFAT_URI_BETA=\$$EJFAT_URI_BETA"
+	@echo "  make cpu-monitor"
+	@echo "  make cpu-monitor CPU_MONITOR_NODE=star-dtn1-mgt.es.net"
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make receive SKIP_UPLOADS=true"
@@ -234,6 +241,19 @@ overview:
 		export EJFAT_URI=\"$(EJFAT_URI_BETA)\" && \
 		export IP_VERSION=\"-$(IP_VERSION)\" && \
 		watch -n 1 $(SCRIPT_DIR)/overview'"
+
+cpu-monitor:
+	@echo "========================================================================"
+	@echo "CPU Monitor"
+	@echo "========================================================================"
+	@echo "Running on:          $(CPU_MONITOR_NODE)"
+	@echo ""
+	@echo "Press Ctrl-C to stop monitoring"
+	@echo "========================================================================"
+	@echo ""
+	@ssh -t $(CPU_MONITOR_NODE) bash -i -c "'conda activate e2sar && \
+		cd $(REMOTE_WORK_DIR) && \
+		python3 $(SCRIPT_DIR)/cpu_monitor.py'"
 
 receive:
 	@echo "========================================================================"

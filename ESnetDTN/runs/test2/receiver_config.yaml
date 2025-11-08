@@ -90,7 +90,7 @@ rx_timeout: 7000
 #   rx_cores_0: 8 9 10 11         # Instance 0: cores 8-11
 #   rx_cores_1: 12 13 14 15       # Instance 1: cores 12-15
 #
-rx_cores: 8
+rx_cores: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
 
 # Dequeue parameter
 # Supports instance-specific values: rx_dequeue_0, rx_dequeue_1, etc.

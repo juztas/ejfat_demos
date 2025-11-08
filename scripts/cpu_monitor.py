@@ -75,10 +75,8 @@ def create_overall_stats(cpu_percentages, cpu_freq):
     return stats
 
 
-def generate_display():
+def generate_display(cpu_percentages):
     """Generate the complete display layout"""
-    cpu_percentages = psutil.cpu_percent(interval=0.1, percpu=True)
-
     try:
         cpu_freq = psutil.cpu_freq()
     except:
@@ -116,10 +114,29 @@ def main():
         console.print("[dim]Press Ctrl+C to exit[/dim]\n")
         time.sleep(1)
 
-        with Live(generate_display(), refresh_per_second=4, console=console) as live:
+        # Collect initial sample
+        num_cores = psutil.cpu_count()
+        samples = []
+
+        # Initial display with first sample
+        cpu_percentages = psutil.cpu_percent(interval=0.1, percpu=True)
+
+        with Live(generate_display(cpu_percentages), refresh_per_second=0.5, console=console) as live:
             while True:
-                time.sleep(0.25)
-                live.update(generate_display())
+                # Collect 8 samples over 2 seconds (0.25 second intervals)
+                samples = []
+                for _ in range(8):
+                    sample = psutil.cpu_percent(interval=0.25, percpu=True)
+                    samples.append(sample)
+
+                # Calculate average across all samples for each core
+                avg_cpu_percentages = []
+                for core_idx in range(len(samples[0])):
+                    core_avg = sum(sample[core_idx] for sample in samples) / len(samples)
+                    avg_cpu_percentages.append(core_avg)
+
+                # Update display with averaged values
+                live.update(generate_display(avg_cpu_percentages))
 
     except KeyboardInterrupt:
         console.print("\n\n[bold yellow]Monitor stopped.[/bold yellow]")
