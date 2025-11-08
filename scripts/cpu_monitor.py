@@ -17,16 +17,16 @@ from rich.text import Text
 from collections import defaultdict
 
 
-# Color palette for e2sar_perf processes (bright, distinct colors)
+# Color palette for e2sar_perf processes (light, distinct colors)
 PROCESS_COLORS = [
-    "magenta",
-    "cyan",
-    "bright_blue",
     "bright_magenta",
     "bright_cyan",
-    "blue",
-    "purple",
-    "bright_green"
+    "bright_yellow",
+    "bright_green",
+    "bright_blue",
+    "bright_red",
+    "bright_white",
+    "yellow"
 ]
 
 
@@ -51,9 +51,9 @@ def get_e2sar_processes():
                 # Determine if it's receive or send
                 mode = ''
                 if '--receive' in cmdline or '-r' in cmdline:
-                    mode = 'rcv'
+                    mode = 'rx'
                 elif '--send' in cmdline or '-s' in cmdline:
-                    mode = 'snd'
+                    mode = 'tx'
 
                 # Get CPU percent (may need to call cpu_percent() to get non-zero value)
                 cpu_pct = proc.cpu_percent(interval=0.1)
@@ -163,7 +163,7 @@ def create_e2sar_process_table(e2sar_processes, process_colors):
     # Table without borders
     table = Table(show_header=True, header_style="bold cyan", expand=True,
                   show_edge=False, box=None, padding=(0, 1))
-    table.add_column("Mode", style="yellow", width=6)
+    table.add_column("Mode", style="yellow", width=12)
     table.add_column("CPU %", justify="right", width=10)
 
     # Sort by CPU usage descending
@@ -173,11 +173,11 @@ def create_e2sar_process_table(e2sar_processes, process_colors):
         pid = proc_info['pid']
         color = process_colors.get(pid, "white")
 
-        # Mode with background color matching bar
+        # Mode with PID and background color matching bar
         if proc_info['mode']:
-            mode_display = Text(proc_info['mode'], style=f"black on {color}")
+            mode_display = Text(f"{proc_info['mode']}:{pid}", style=f"black on {color}")
         else:
-            mode_display = Text("-", style="dim")
+            mode_display = Text(f"-:{pid}", style="dim")
 
         cpu_color = get_cpu_color(proc_info['cpu_percent'])
 
