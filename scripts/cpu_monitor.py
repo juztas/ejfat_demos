@@ -6,6 +6,7 @@ Highlights e2sar_perf process usage
 """
 
 import time
+import socket
 import psutil
 from rich.console import Console
 from rich.live import Live
@@ -178,22 +179,28 @@ def generate_display(cpu_percentages, e2sar_processes, e2sar_per_core):
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=3),
-        Layout(name="e2sar_procs", size=None),
-        Layout(name="stats", size=8),
+        Layout(name="stats_row", size=12),
         Layout(name="bars")
     )
 
+    # Split stats row into two columns
+    layout["stats_row"].split_row(
+        Layout(name="stats"),
+        Layout(name="e2sar_procs")
+    )
+
     # Header
-    header_text = Text("CPU Utilization Monitor - e2sar_perf Tracking", style="bold white on blue", justify="center")
+    hostname = socket.gethostname()
+    header_text = Text(f"CPU Utilization - {hostname}", style="bold white on blue", justify="center")
     layout["header"].update(Panel(header_text))
 
-    # e2sar_perf processes table (Option 2)
-    layout["e2sar_procs"].update(Panel(create_e2sar_process_table(e2sar_processes),
-                                       title="e2sar_perf Processes", border_style="magenta"))
-
-    # Stats
+    # Stats (left side)
     layout["stats"].update(Panel(create_overall_stats(cpu_percentages, cpu_freq, total_e2sar_cpu),
                                   title="Overall Statistics", border_style="blue"))
+
+    # e2sar_perf processes table (right side)
+    layout["e2sar_procs"].update(Panel(create_e2sar_process_table(e2sar_processes),
+                                       title="e2sar_perf Processes", border_style="magenta"))
 
     # CPU bars (Option 3 - hybrid view)
     layout["bars"].update(Panel(create_cpu_table(cpu_percentages, e2sar_per_core),
