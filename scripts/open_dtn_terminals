@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# open_dtn_terminals - Open separate macOS Terminal windows for each DTN node
+#
+# Usage: open_dtn_terminals [host1 host2 ...]
+#        If no hosts specified, opens terminals for default DTN nodes
+#
+
+# Get hosts from command line or use defaults
+if [ $# -gt 0 ]; then
+    HOSTS=("$@")
+else
+    # Default DTN nodes
+    HOSTS=(
+        "wash-dtn1-mgt.es.net"
+        "star-dtn1-mgt.es.net"
+        "cern773-dtn1-mgt.es.net"
+        "hous-dtn1-mgt.es.net"
+        "sunn-dtn1-mgt.es.net"
+        "denv-dtn1-mgt.es.net"
+    )
+fi
+
+echo "Opening ${#HOSTS[@]} Terminal windows..."
+
+for host in "${HOSTS[@]}"; do
+    hostname=$(echo $host | cut -d'-' -f1)
+    osascript <<EOF
+tell application "Terminal"
+    do script "ssh $host"
+    set custom title of front window to "$hostname"
+end tell
+EOF
+done
+
+echo "Done! Opened ${#HOSTS[@]} Terminal windows."
