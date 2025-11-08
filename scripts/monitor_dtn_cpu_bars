@@ -31,9 +31,16 @@ SESSION="dtn-cpu-bars"
 # Kill existing session if it exists
 $TMUX has-session -t $SESSION 2>/dev/null && $TMUX kill-session -t $SESSION
 
+# Function to get the monitoring command for a host
+get_monitor_cmd() {
+    local host=$1
+    echo "ssh $host 'bash -i -c \"if command -v htop >/dev/null 2>&1; then htop; else top; fi\"'"
+}
+
 # Create new tmux session with first host
 echo "Creating tmux session with ${#HOSTS[@]} hosts in horizontal layout..."
-$TMUX new-session -d -s $SESSION "ssh ${HOSTS[0]} 'bash -i -c htop'" || {
+CMD=$(get_monitor_cmd "${HOSTS[0]}")
+$TMUX new-session -d -s $SESSION "$CMD" || {
     echo "Error: Failed to create tmux session (exit code: $?)"
     exit 1
 }
@@ -45,13 +52,14 @@ sleep 0.5
 if ! $TMUX has-session -t $SESSION 2>/dev/null; then
     echo "Error: Session creation appeared to succeed but session doesn't exist"
     echo "This may happen if the SSH connection fails immediately"
-    echo "Try running: ssh ${HOSTS[0]} 'bash -i -c htop' manually to debug"
+    echo "Try running: $CMD manually to debug"
     exit 1
 fi
 
 # Split horizontally to create columns (all in one row)
 for ((i=1; i<${#HOSTS[@]}; i++)); do
-    $TMUX split-window -h -t $SESSION "ssh ${HOSTS[$i]} 'bash -i -c htop'"
+    CMD=$(get_monitor_cmd "${HOSTS[$i]}")
+    $TMUX split-window -h -t $SESSION "$CMD"
     $TMUX select-layout -t $SESSION even-horizontal
 done
 
