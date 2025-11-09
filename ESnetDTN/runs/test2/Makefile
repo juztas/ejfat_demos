@@ -23,16 +23,13 @@ HOSTS_rx := star-dtn1-mgt.es.net \
             sunn-dtn1-mgt.es.net \
 	    sunn-dtn1-mgt.es.net
 
+# Include host configuration from run_output directory
+# This file defines SENDERS_LIST and RECEIVERS_LIST
+-include run_output/Makefile.hosts
 
-# List of DTN nodes for senders (in priority order)
-#SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS)
-#SENDERS_LIST ?= wash-dtn1-mgt.es.net
-
+# Fallback defaults if Makefile.hosts is not found
 SENDERS_LIST ?= $(HOSTS)
-
-# List of DTN nodes for receivers (in priority order)
-RECEIVERS_LIST ?= $(HOSTS_rx) $(HOSTS_rx)
-#RECEIVERS_LIST ?= wash-dtn1-mgt.es.net
+RECEIVERS_LIST ?= $(HOSTS_rx)
 
 # Get the first DTN from the senders list for reservation operations
 PRIMARY_DTN := $(word 1,$(SENDERS_LIST))
@@ -77,7 +74,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime kill-e2sar kill-receivers kill-senders
+.PHONY: help reserve free overview cpu-monitor cpu-monitor-remote receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime kill-e2sar kill-receivers kill-senders
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -94,7 +91,8 @@ help:
 	@echo "  reserve           Reserve a load balancer on primary DTN"
 	@echo "  free              Free the load balancer on primary DTN"
 	@echo "  overview          Monitor load balancer status (lbadm --overview)"
-	@echo "  cpu-monitor       Monitor CPU usage across cores"
+	@echo "  cpu-monitor       Monitor CPU usage across cores on remote node"
+	@echo "  cpu-monitor-remote Monitor CPU remotely with local display (all DTNs by default)"
 	@echo "  receive           Start receivers on nodes in RECEIVERS_LIST"
 	@echo "  send              Start senders on nodes in SENDERS_LIST"
 	@echo "  run               Run complete workflow: reserve, receive, send"
@@ -133,7 +131,9 @@ help:
 	@echo "  SKIP_UPLOADS      Skip uploading config files: true or false (default: $(SKIP_UPLOADS))"
 	@echo "  START_OFFSET_MINUTES  Minutes to add to RUN_ID for synchronized start (default: $(START_OFFSET_MINUTES))"
 	@echo "  SENDER_START_DELAY_SECONDS  Additional seconds for senders to wait after receiver start (default: $(SENDER_START_DELAY_SECONDS))"
-	@echo "  CPU_MONITOR_NODE  DTN node to run cpu-monitor on (default: $(CPU_MONITOR_NODE))"
+	@echo "  CPU_MONITOR_NODE  DTN node for cpu-monitor (single node)"
+	@echo "  NODES             Space-separated list of DTN nodes for cpu-monitor-remote"
+	@echo "                    If not specified, monitors all HOSTS (default)"
 	@echo "  NODE              Specific node for kill-e2sar (default: all HOSTS)"
 	@echo ""
 	@echo "USAGE:"
@@ -145,6 +145,8 @@ help:
 	@echo "  make overview EJFAT_URI_BETA=\$$EJFAT_URI_BETA"
 	@echo "  make cpu-monitor"
 	@echo "  make cpu-monitor CPU_MONITOR_NODE=star-dtn1-mgt.es.net"
+	@echo "  make cpu-monitor-remote"
+	@echo "  make cpu-monitor-remote NODES=\"star-dtn1-mgt.es.net wash-dtn1-mgt.es.net\""
 	@echo "  make receive"
 	@echo "  make receive RECEIVERS_LIST=\"wash-dtn1-mgt.es.net sunn-dtn1-mgt.es.net\""
 	@echo "  make receive SKIP_UPLOADS=true"
@@ -270,6 +272,23 @@ cpu-monitor:
 	@ssh -t $(CPU_MONITOR_NODE) bash -i -c "'conda activate e2sar && \
 		cd $(REMOTE_WORK_DIR) && \
 		python3 $(SCRIPT_DIR)/cpu_monitor.py'"
+
+cpu-monitor-remote:
+	@echo "========================================================================"
+	@echo "CPU Monitor (Remote)"
+	@echo "========================================================================"
+	@if [ -n "$(NODES)" ]; then \
+		TARGET_NODES="$(NODES)"; \
+	else \
+		TARGET_NODES="$(HOSTS)"; \
+	fi; \
+	echo "Monitoring:          $$TARGET_NODES"; \
+	echo "Display:             Local"; \
+	echo ""; \
+	echo "Press Ctrl-C to stop monitoring"; \
+	echo "========================================================================"; \
+	echo ""; \
+	python3 $(SCRIPT_DIR)/cpu_monitor_remote.py --host $$TARGET_NODES
 
 receive:
 	@echo "========================================================================"
