@@ -25,10 +25,10 @@ HOSTS_rx := star-dtn1-mgt.es.net \
 
 
 # List of DTN nodes for senders (in priority order)
-#SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS) 
-SENDERS_LIST ?= $(HOSTS_tx) $(HOSTS_tx) $(HOSTS_tx) $(HOSTS_tx) 
+#SENDERS_LIST ?= $(HOSTS) $(HOSTS) $(HOSTS)
 #SENDERS_LIST ?= wash-dtn1-mgt.es.net
 
+SENDERS_LIST ?= $(HOSTS)
 
 # List of DTN nodes for receivers (in priority order)
 RECEIVERS_LIST ?= $(HOSTS_rx) $(HOSTS_rx)
@@ -77,7 +77,7 @@ CURRENT_DIR := $(shell pwd)
 RELATIVE_PATH := $(shell echo $(CURRENT_DIR) | sed 's|.*/ejfat_demos/||')
 REMOTE_WORK_DIR := ~/ejfat_demos/$(RELATIVE_PATH)
 
-.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime kill-e2sar
+.PHONY: help reserve free overview cpu-monitor receive send run tcpdump-commands get-logs summarize-logs sync-scripts survey-hardware clean-run calculate-runtime kill-e2sar kill-receivers kill-senders
 
 #------------------------------------------------------------------------------------------------
 # TARGETS
@@ -105,6 +105,8 @@ help:
 	@echo "  survey-hardware   Compare CPU hardware across all DTN nodes using lscpu"
 	@echo "  tcpdump-commands  Generate tcpdump commands for manual packet capture"
 	@echo "  kill-e2sar        Kill all e2sar processes on all HOSTS or specific node"
+	@echo "  kill-receivers    Kill only receiver (e2sar_perf -recv) processes on nodes"
+	@echo "  kill-senders      Kill only sender (e2sar_perf -send) processes on nodes"
 	@echo ""
 	@echo "CONFIGURATION:"
 	@echo "  SENDERS_LIST:     $(SENDERS_LIST)"
@@ -160,6 +162,8 @@ help:
 	@echo "  make tcpdump-commands"
 	@echo "  make kill-e2sar"
 	@echo "  make kill-e2sar NODE=star-dtn1-mgt.es.net"
+	@echo "  make kill-receivers NODES=\"star-dtn1-mgt.es.net wash-dtn1-mgt.es.net\""
+	@echo "  make kill-senders NODES=\"cern773-dtn1-mgt.es.net denv-dtn1-mgt.es.net\""
 	@echo ""
 	@echo "========================================================================"
 
@@ -810,5 +814,67 @@ kill-e2sar:
 	fi
 	@echo "========================================================================"
 	@echo "Kill Complete!"
+	@echo "========================================================================"
+	@echo ""
+
+kill-receivers:
+	@echo "========================================================================"
+	@echo "Stopping Receiver Processes (e2sar_perf -recv) with SIGTERM"
+	@echo "========================================================================"
+	@if [ -n "$(NODES)" ]; then \
+		TARGET_NODES="$(NODES)"; \
+	else \
+		TARGET_NODES="$(RECEIVERS_LIST)"; \
+	fi; \
+	echo "Target nodes: $$TARGET_NODES"; \
+	echo "========================================================================"; \
+	echo ""; \
+	for node in $$TARGET_NODES; do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Checking $$node for receiver processes..."; \
+		count=$$(ssh $$node "pgrep -f 'e2sar_perf.*-recv' 2>/dev/null | wc -l"); \
+		if [ "$$count" -gt 0 ]; then \
+			echo "  Found $$count receiver process(es)"; \
+			ssh $$node "pkill -TERM -f 'e2sar_perf.*-recv'" && \
+				echo "  ✓ Sent SIGTERM to receiver processes" || \
+				echo "  ✗ Failed to signal some processes"; \
+		else \
+			echo "  No receiver processes found"; \
+		fi; \
+		echo ""; \
+	done
+	@echo "========================================================================"
+	@echo "Stop Receivers Complete!"
+	@echo "========================================================================"
+	@echo ""
+
+kill-senders:
+	@echo "========================================================================"
+	@echo "Stopping Sender Processes (e2sar_perf -send) with SIGTERM"
+	@echo "========================================================================"
+	@if [ -n "$(NODES)" ]; then \
+		TARGET_NODES="$(NODES)"; \
+	else \
+		TARGET_NODES="$(SENDERS_LIST)"; \
+	fi; \
+	echo "Target nodes: $$TARGET_NODES"; \
+	echo "========================================================================"; \
+	echo ""; \
+	for node in $$TARGET_NODES; do \
+		echo "------------------------------------------------------------------------"; \
+		echo "Checking $$node for sender processes..."; \
+		count=$$(ssh $$node "pgrep -f 'e2sar_perf.*-send' 2>/dev/null | wc -l"); \
+		if [ "$$count" -gt 0 ]; then \
+			echo "  Found $$count sender process(es)"; \
+			ssh $$node "pkill -TERM -f 'e2sar_perf.*-send'" && \
+				echo "  ✓ Sent SIGTERM to sender processes" || \
+				echo "  ✗ Failed to signal some processes"; \
+		else \
+			echo "  No sender processes found"; \
+		fi; \
+		echo ""; \
+	done
+	@echo "========================================================================"
+	@echo "Stop Senders Complete!"
 	@echo "========================================================================"
 	@echo ""
