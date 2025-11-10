@@ -6,3 +6,4 @@ RUN mkdir -p /opt/
 RUN cd /opt && git clone https://github.com/esnet/ejfat_demos/
 COPY ejfat.sh /usr/local/bin/ejfat
 RUN chmod +x /usr/local/bin/ejfat
+COPY segmenter_config.ini /etc/segmenter_config.ini

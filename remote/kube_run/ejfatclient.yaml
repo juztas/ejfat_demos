@@ -1,19 +1,42 @@
+# We need to start a load balancer with reserve;
+# and that will produce URI
 apiVersion: v1
 kind: Pod
 metadata:
   name: ejfatclient
-  namespace: iri 
+  namespace: iri
   annotations:
-    k8s.v1.cni.cncf.io/networks: 'UPDATEME'
-     # An example for Multus usage (bridge/macvlan/pci-passtrhough,etc)
-     # '[{"gateway":["2001:1:1:1::1"],"ips":["2001:1:1:1::2/64"], "mac": "8a:9b:db:71:76:b6", "name":"multus2001"}]'
+    k8s.v1.cni.cncf.io/networks: '[{"gateway":["2001:48d0:3001:11a::1"],"ips":["REPLACEME"], "name":"multus11a"}]'
 spec:
+  tolerations:
+  - effect: NoSchedule
+    key: nautilus.io/reservation
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+              - k8s-gen5-01.sdsc.optiputer.net
+              - k8s-gen5-02.sdsc.optiputer.net
   containers:
     - name: ejfatclient
-      image: UPDATEME/ejfatdemo:latest
+      image: sdnsense/ejfatdemo:dev
       imagePullPolicy: Always
       command: ["/bin/sh"]
       args: ["-c", "sleep infinity"]
+      env:
+        - name: SEGMENTER_CONF
+          value: "/etc/segmenter_config.ini"
+        - name: RX_THREADS
+          value: "1"
+        - name: SEND_SOCKETS
+          value: "1"
+        - name: IP_VERSION
+          value: "-6"
       resources:
         limits:
           memory: "512Mi"
