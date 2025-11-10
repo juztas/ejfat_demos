@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import pickle
 import os
 import sys
 
@@ -8,11 +7,9 @@ sys.path.append("/e2sar-install/lib/python3/dist-packages/")
 
 import e2sar_py
 import uuid
-import time, struct, datetime
 
 import hashlib
 import hmac
-import pickle
 import zlib
 
 from preprocess import *
@@ -35,9 +32,16 @@ if os.getenv("PRECREATE_DIRS", "0") == "1":
     os.makedirs(os.path.dirname(savefile_path), exist_ok=True)
     os.makedirs(os.path.dirname(cxi_path), exist_ok=True)
 
-DP_IPV4_ADDR = os.environ.get("DP_ADDR", "127.0.0.1")
-DP_IPV4_PORT = os.environ.get("DP_PORT", 19522)
-REAS_URI = f"ejfat://useless@127.0.0.1:9876/lb/1?sync=127.0.0.1:12345&data={DP_IPV4_ADDR}:{DP_IPV4_PORT}"
+E2SARCONFIG = os.environ.get("E2SARCONFIG", None)
+# Just raise warning if file not found
+if E2SARCONFIG is not None and os.path.exists(E2SARCONFIG) is False:
+    print(f"Warning: E2SAR configuration file {E2SARCONFIG} not found.")
+    print("Continuing with default E2SAR configuration overwrite by script")
+
+
+DP_ADDR = os.environ.get("DP_ADDR", "127.0.0.1")
+DP_PORT = os.environ.get("DP_PORT", 19522)
+REAS_URI = f"ejfat://useless@127.0.0.1:9876/lb/1?sync=127.0.0.1:12345&data={DP_ADDR}:{DP_PORT}"
 
 DATA_ID = 0x0506   # decimal value: 1085
 # Set the reassembler URI
@@ -86,16 +90,14 @@ def init_ejfat():
     print("Data Plane Address (v4):", str(reas_uri.get_data_addr_v4().value()[0]))
 
     # Config the reassembler flags
-    rflags = e2sar_py.DataPlane.Reassembler.ReassemblerFlags()
-
-    # These two flags are needed to make direct connection without LB work
-    if not USECP:
-        rflags.useCP = False  # turn off CP. Default value is True
-        rflags.withLBHeader = True  # LB header will be attached since there is no LB
+    rflags = None
+    if E2SARCONFIG and os.path.exists(E2SARCONFIG):
+        print(f"Loading E2SAR configuration from file: {E2SARCONFIG}")
+        seg = e2sar_py.DataPlane.Reassembler
+        res = seg.ReassemblerFlags.getFromINI(E2SARCONFIG)
+        rflags = res.value()
     else:
-        rflags.useCP = True  # turn off CP. Default value is True
-        rflags.withLBHeader = False  # LB header will be attached since there is no LB
-
+        rflags = e2sar_py.DataPlane.Reassembler.ReassemblerFlags()
 
     print("Reassembler flags:")
     print(f"  period_ms={rflags.period_ms}")  # should be 100 according to the C++ constructor
@@ -108,11 +110,9 @@ def init_ejfat():
     print(f"  portRange = {rflags.portRange}")
     print(f"  withLBHeader = {rflags.withLBHeader}")
 
-    print(e2sar_py.IPAddress.from_string(DP_IPV4_ADDR))
-
     # Init the reassembler object
     reas = e2sar_py.DataPlane.Reassembler(
-        reas_uri, e2sar_py.IPAddress.from_string(DP_IPV4_ADDR), DP_IPV4_PORT, 1, rflags)
+        reas_uri, e2sar_py.IPAddress.from_string(DP_ADDR), DP_PORT, 1, rflags)
 
     res = reas.registerWorker(str(uuid.uuid4())) ####
     #res = reas.registerWorker("ptycho-worker") ####
